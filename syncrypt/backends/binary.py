@@ -36,9 +36,16 @@ class BinaryStorageBackend(StorageBackend):
                 .encode(self.vault.config.encoding))
         yield from self.writer.drain()
 
+        line = yield from self.reader.readline()
+        if line != b'WAITING\r\n':
+            raise Exception(line)
+
         with open(bundle.path_crypt, 'rb') as f:
             while f.tell() < bundle.file_size_crypt:
                 buf = f.read(self.buf_size)
                 self.writer.write(buf)
                 yield from self.writer.drain()
 
+        line = yield from self.reader.readline()
+        if line != b'SUCCESS\r\n':
+            raise Exception(line)
