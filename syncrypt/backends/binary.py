@@ -7,7 +7,6 @@ class BinaryStorageBackend(StorageBackend):
         self.host = host
         self.port = port
         self.auth = auth
-        self.encoding = 'utf-8'
         self.buf_size = 10 * 1024
         super(BinaryStorageBackend, self).__init__(vault)
 
@@ -18,7 +17,7 @@ class BinaryStorageBackend(StorageBackend):
 
         self.writer.write('AUTH:{0}\r\n'
                 .format(self.auth)
-                .encode(self.encoding))
+                .encode(self.vault.config.encoding))
         yield from self.writer.drain()
 
         line = yield from self.reader.readline()
@@ -29,12 +28,12 @@ class BinaryStorageBackend(StorageBackend):
     def upload(self, bundle):
         self.writer.write('UPLOAD:{0}\r\n'
                 .format(bundle.store_hash)
-                .encode(self.encoding))
+                .encode(self.vault.config.encoding))
         yield from self.writer.drain()
 
         self.writer.write('{0}\r\n'
                 .format(bundle.file_size_crypt)
-                .encode(self.encoding))
+                .encode(self.vault.config.encoding))
         yield from self.writer.drain()
 
         with open(bundle.path_crypt, 'rb') as f:

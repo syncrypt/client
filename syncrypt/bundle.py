@@ -56,7 +56,7 @@ class Bundle(object):
         self.key_size_crypt = len(encrypted_key)
 
         h = hashlib.new(hash_algo)
-        h.update(self.relpath.encode('utf-8'))
+        h.update(self.relpath.encode(self.vault.config.encoding))
         self.store_hash = h.hexdigest()
 
     def __str__(self):

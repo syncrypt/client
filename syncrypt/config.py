@@ -9,6 +9,10 @@ class VaultConfig(object):
         self._config.read(config_file)
 
     @property
+    def encoding(self):
+        return 'utf-8'
+
+    @property
     def backend_cls(self):
         if self._config['remote']['type'] == 'local':
             from .backends import LocalStorageBackend
