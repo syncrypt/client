@@ -20,7 +20,7 @@ class Bundle(object):
     'A Bundle represents a file with additional information'
 
     __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
-            'key_size', 'key_size_crypt')
+            'key_size', 'key_size_crypt', 'store_hash')
 
     def __init__(self, abspath, vault):
         self.vault = vault
@@ -54,6 +54,10 @@ class Bundle(object):
         self.file_size_crypt = encrypted_size
         self.key_size = aes_key_len >> 3
         self.key_size_crypt = len(encrypted_key)
+
+        h = hashlib.new(hash_algo)
+        h.update(self.relpath.encode('utf-8'))
+        self.store_hash = h.hexdigest()
 
     def __str__(self):
         return "<Bundle: {0.relpath} ({0.file_size_crypt} bytes encrypted)>".format(self)

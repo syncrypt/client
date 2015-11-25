@@ -28,7 +28,7 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def upload(self, bundle):
         self.writer.write('UPLOAD:{0}\r\n'
-                .format(bundle.relpath)
+                .format(bundle.store_hash)
                 .encode(self.encoding))
         yield from self.writer.drain()
 

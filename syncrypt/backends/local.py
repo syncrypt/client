@@ -25,5 +25,5 @@ class LocalStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def upload(self, bundle):
-        dest_path = os.path.join(self.path, bundle.file_hash)
+        dest_path = os.path.join(self.path, bundle.store_hash)
         shutil.copyfile(bundle.path, dest_path)
