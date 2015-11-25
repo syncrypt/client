@@ -3,15 +3,11 @@ import os
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
-from Crypto.PublicKey import RSA
 
 aes_key_len = 256
 rsa_key_len = 1024
 hash_algo = 'sha256'
 iv = 'This is an IV456'
-
-# TODO: dont generate a new key erry time
-(pubkey, privkey) = rsa.newkeys(rsa_key_len, poolsize=8)
 block_size = 16
 
 pad = lambda s: s + str.encode((block_size - len(s) % block_size) * chr(block_size - len(s) % block_size))
@@ -41,7 +37,7 @@ class Bundle(object):
             aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
 
             with open(self.path_key, 'wb') as encrypted_key_file:
-                encrypted_key = rsa.encrypt(aes_key, pubkey)
+                (encrypted_key, ) = vault.public_key.encrypt(aes_key, 0)
                 encrypted_key_file.write(encrypted_key)
 
             with open(self.path_crypt, 'wb') as encrypted_file:

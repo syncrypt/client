@@ -1,16 +1,14 @@
 import configparser
 
 class VaultConfig(object):
+    rsa_key_len = 1024
+    encoding = 'utf-8'
 
     def __init__(self):
         self._config = configparser.ConfigParser()
 
     def read(self, config_file):
         self._config.read(config_file)
-
-    @property
-    def encoding(self):
-        return 'utf-8'
 
     @property
     def backend_cls(self):

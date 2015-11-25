@@ -4,6 +4,8 @@ import os.path
 import sys
 from pprint import pprint
 
+from Crypto.PublicKey import RSA
+
 from .bundle import Bundle
 from .config import VaultConfig
 
@@ -18,8 +20,24 @@ class Vault(object):
         if os.path.exists(config_path):
             logger.info('Using config file: %s', config_path)
             self.config.read(config_path)
+
+        id_rsa_path = os.path.join(folder, '.vault', 'id_rsa')
+        id_rsa_pub_path = os.path.join(folder, '.vault', 'id_rsa.pub')
+        if not os.path.exists(id_rsa_path) or not os.path.exists(id_rsa_pub_path):
+            self.init_keys(id_rsa_path, id_rsa_pub_path)
         else:
-            logger.warn('No config found')
+            self.public_key = RSA.importKey(open(id_rsa_pub_path, 'rb').read())
+            self.private_key = RSA.importKey(open(id_rsa_path, 'rb').read())
+
+    def init_keys(self, id_rsa_path, id_rsa_pub_path):
+        logger.info('Generating RSA key pair...')
+        keys = RSA.generate(self.config.rsa_key_len)
+        with open(id_rsa_pub_path, 'wb') as id_rsa_pub:
+            id_rsa_pub.write(keys.publickey().exportKey())
+        with open(id_rsa_path, 'wb') as id_rsa:
+            id_rsa.write(keys.exportKey())
+        self.private_key = keys
+        self.public_key = keys.publickey()
 
     def get_backend_instance(self):
         Backend = self.config.backend_cls
