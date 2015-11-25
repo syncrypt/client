@@ -18,6 +18,10 @@ pad = lambda s: s + str.encode((block_size - len(s) % block_size) * chr(block_si
 
 class Bundle(object):
     'A Bundle represents a file with additional information'
+
+    __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
+            'key_size', 'key_size_crypt')
+
     def __init__(self, abspath, vault):
         self.vault = vault
         self.path = abspath

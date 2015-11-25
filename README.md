@@ -7,7 +7,11 @@ Setup in virtualenv:
     virtualenv .
     bin/pip install -e .
 
-Usage:
+Usage to test binary server:
 
-    bin/python scripts/upload.py <folder>
+    bin/python scripts/upload.py tests/testvault2/
+
+Or test local storage:
+
+    bin/python scripts/upload.py tests/testvault1/
 

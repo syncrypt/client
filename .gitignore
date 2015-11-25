@@ -56,5 +56,15 @@ docs/_build/
 # PyBuilder
 target/
 
+# virtualenv
+bin/
+include/
+lib/
+pip-selfcheck.json
+
+# vim
+*.sw?
+
+# syncrypt
 *.encrypted
 *.key
