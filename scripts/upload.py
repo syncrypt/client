@@ -1,8 +1,10 @@
+import sys
+
 import asyncio
 from syncrypt import Vault
 from syncrypt.backends.binary import BinaryStorageBackend
 
-vault = Vault('testdir')
+vault = Vault(sys.argv[1])
 
 @asyncio.coroutine
 def upload_all_bundles():
