@@ -6,11 +6,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BinaryStorageBackend(StorageBackend):
-    def __init__(self, vault, auth='foo', host='127.0.0.1', port=1337):
+
+    def __init__(self, vault, auth='foo', host='127.0.0.1', port=1337, concurrency=4):
         self.host = host
         self.port = port
         self.auth = auth
         self.buf_size = 10 * 1024
+        self.concurrency = int(concurrency)
+        self.upload_sem = asyncio.Semaphore(value=self.concurrency)
         super(BinaryStorageBackend, self).__init__(vault)
 
     @asyncio.coroutine
@@ -19,6 +22,15 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def upload(self, bundle):
+        yield from self.upload_sem.acquire()
+        try:
+            yield from self._upload(bundle)
+        finally:
+            self.upload_sem.release()
+
+    @asyncio.coroutine
+    def _upload(self, bundle):
+
         logger.info('Uploading %s', bundle)
         reader, writer = \
                 yield from asyncio.open_connection(self.host, self.port)
@@ -60,3 +72,5 @@ class BinaryStorageBackend(StorageBackend):
 
         writer.write(b'DISCONNECT\r\n')
         yield from writer.drain()
+
+        writer.close()

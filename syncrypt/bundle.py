@@ -21,6 +21,7 @@ pad = lambda s: s + str.encode((block_size - len(s) % block_size) * chr(block_si
 
 class Bundle(object):
     'A Bundle represents a file with additional information'
+    update_sem = asyncio.Semaphore(value=6)
 
     __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
             'key_size', 'key_size_crypt', 'store_hash')
@@ -35,8 +36,6 @@ class Bundle(object):
 
     @asyncio.coroutine
     def update(self):
-        logger.info('Updating %s', self)
-
         def update_hash(self):
             logger.info('Hashing %s', self)
             abspath = self.path
@@ -79,8 +78,11 @@ class Bundle(object):
                 self.key_size_crypt = len(encrypted_key)
 
         loop = asyncio.get_event_loop()
+        yield from self.update_sem.acquire()
+        logger.info('Updating %s', self)
         yield from loop.run_in_executor(None, update_hash, self)
         yield from loop.run_in_executor(None, update_crypt, self)
+        self.update_sem.release()
 
     def __str__(self):
         return "<Bundle: {0.relpath}>".format(self)
