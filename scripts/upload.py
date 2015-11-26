@@ -8,7 +8,8 @@ from syncrypt import Vault
 def update_and_upload(backend, bundle):
     yield from bundle.update()
     yield from backend.stat(bundle)
-    yield from backend.upload(bundle)
+    if bundle.needs_upload():
+        yield from backend.upload(bundle)
 
 @asyncio.coroutine
 def upload_all_bundles():

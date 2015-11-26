@@ -25,16 +25,21 @@ class Bundle(object):
 
     __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
             'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
-            'uptodate')
+            'remote_crypt_hash', 'uptodate')
 
     def __init__(self, abspath, vault):
         self.vault = vault
         self.path = abspath
         self.uptodate = False
+        self.remote_crypt_hash = None
 
         h = hashlib.new(hash_algo)
         h.update(self.relpath.encode(self.vault.config.encoding))
         self.store_hash = h.hexdigest()
+
+    def needs_upload(self):
+        return self.remote_crypt_hash is None or \
+                self.remote_crypt_hash != self.crypt_hash
 
     @asyncio.coroutine
     def update(self):

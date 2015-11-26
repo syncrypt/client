@@ -58,7 +58,11 @@ class BinaryStorageBackend(StorageBackend):
     def stat(self, bundle):
         yield from self.upload_sem.acquire()
         try:
-            yield from self._stat(bundle)
+            stat_info = yield from self._stat(bundle)
+            if not stat_info is None:
+                if b'content_hash' in stat_info:
+                    bundle.remote_crypt_hash = \
+                            stat_info[b'content_hash'].decode()
         finally:
             self.upload_sem.release()
 
@@ -76,12 +80,11 @@ class BinaryStorageBackend(StorageBackend):
             line = yield from conn.reader.readline()
             try:
                 byte_count = int(line)
-            except ValueError:
-                print("File not found")
+            except ValueError as e:
                 return None
 
             msg = yield from conn.reader.read(byte_count)
-            print (umsgpack.loads(msg))
+
             return umsgpack.loads(msg)
 
     @asyncio.coroutine
