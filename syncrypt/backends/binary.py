@@ -26,13 +26,29 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def upload(self, bundle):
-        self.writer.write('UPLOAD:{0}\r\n'
-                .format(bundle.store_hash)
+        # upload key
+        self.writer.write('KEY:{0.store_hash}:{0.key_size_crypt}\r\n'
+                .format(bundle)
                 .encode(self.vault.config.encoding))
         yield from self.writer.drain()
 
-        self.writer.write('{0}\r\n'
-                .format(bundle.file_size_crypt)
+        line = yield from self.reader.readline()
+        if line != b'WAITING\r\n':
+            raise Exception(line)
+
+        with open(bundle.path_key, 'rb') as f:
+            while f.tell() < bundle.key_size_crypt:
+                buf = f.read(self.buf_size)
+                self.writer.write(buf)
+                yield from self.writer.drain()
+
+        line = yield from self.reader.readline()
+        if line != b'SUCCESS\r\n':
+            raise Exception(line)
+
+        # upload file
+        self.writer.write('UPLOAD:{0.store_hash}:{0.file_size_crypt}\r\n'
+                .format(bundle)
                 .encode(self.vault.config.encoding))
         yield from self.writer.drain()
 
