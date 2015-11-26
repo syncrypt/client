@@ -57,3 +57,6 @@ class BinaryStorageBackend(StorageBackend):
         line = yield from reader.readline()
         if line != b'SUCCESS\r\n':
             raise Exception(line)
+
+        writer.write(b'DISCONNECT\r\n')
+        yield from writer.drain()
