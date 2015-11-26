@@ -1,7 +1,10 @@
-from .base import StorageBackend
-import time
-import asyncio
 import logging
+import time
+
+import asyncio
+import umsgpack
+
+from .base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,23 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def open(self):
         pass
+
+    @asyncio.coroutine
+    def stat(self, bundle):
+        logger.info('Stat %s', bundle)
+
+        with BinaryStorageConnection(self) as conn:
+            conn = yield from conn
+            conn.writer.write('STAT:{0.store_hash}\r\n'
+                    .format(bundle)
+                    .encode(self.vault.config.encoding))
+            yield from conn.writer.drain()
+
+            line = yield from conn.reader.readline()
+            byte_count = int(line)
+
+            msg = yield from conn.reader.read(byte_count)
+            print (umsgpack.loads(msg))
 
     @asyncio.coroutine
     def upload(self, bundle):

@@ -12,7 +12,6 @@ class VaultConfig(object):
             }
         self._config['remote'] = {
                 'type': 'binary',
-                'concurrency': 4
             }
 
     def read(self, config_file):
