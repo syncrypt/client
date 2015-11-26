@@ -6,9 +6,20 @@ class VaultConfig(object):
 
     def __init__(self):
         self._config = configparser.ConfigParser()
+        # set defaults
+        self._config['vault'] = {
+                'ignore': '^.',
+            }
+        self._config['remote'] = {
+                'type': 'binary',
+            }
 
     def read(self, config_file):
         self._config.read(config_file)
+
+    def write(self, config_file):
+        with open(config_file, 'w') as f:
+            self._config.write(f)
 
     @property
     def backend_cls(self):
