@@ -5,13 +5,17 @@ import asyncio
 from syncrypt import Vault
 
 @asyncio.coroutine
+def update_and_upload(backend, bundle):
+    yield from bundle.update()
+    yield from backend.upload(bundle)
+
+@asyncio.coroutine
 def upload_all_bundles():
     backend = vault.get_backend_instance()
     yield from backend.open()
-
-    for bundle in vault.walk():
-        print(str(bundle))
-        yield from backend.upload(bundle)
+    yield from asyncio.wait([
+        asyncio.ensure_future(update_and_upload(backend, bundle))
+            for bundle in vault.walk()])
 
 logging.basicConfig(level=logging.INFO)
 

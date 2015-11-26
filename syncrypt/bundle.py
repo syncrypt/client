@@ -1,8 +1,15 @@
 import hashlib
+import logging
 import os
+
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
+
+import asyncio
+
+logger = logging.getLogger(__name__)
+
 
 aes_key_len = 256
 rsa_key_len = 1024
@@ -26,41 +33,57 @@ class Bundle(object):
         h.update(self.relpath.encode(self.vault.config.encoding))
         self.store_hash = h.hexdigest()
 
-        # encrypt file now. eventually this will be done only if
-        # necessary and not at this place.
-        with open(abspath, 'rb') as unencrypted:
-            # TODO: dont read whole file into memory but stream it
-            original_content = unencrypted.read()
-            original_size = len(original_content)
+    @asyncio.coroutine
+    def update(self):
+        logger.info('Updating %s', self)
 
-            h = hashlib.new(hash_algo)
-            h.update(original_content)
-            original_hash = h.hexdigest()
+        def update_hash(self):
+            logger.info('Hashing %s', self)
+            abspath = self.path
+            with open(abspath, 'rb') as unencrypted:
+                # TODO: dont read whole file into memory but stream it
+                original_content = unencrypted.read()
+                original_size = len(original_content)
 
-            aes_key = os.urandom(aes_key_len >> 3)
-            aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
+                h = hashlib.new(hash_algo)
+                h.update(original_content)
+                original_hash = h.hexdigest()
+                self.file_hash = original_hash
+                self.file_size = original_size
 
-            if not os.path.exists(os.path.dirname(self.path_key)):
-                os.makedirs(os.path.dirname(self.path_key))
-            with open(self.path_key, 'wb') as encrypted_key_file:
-                (encrypted_key, ) = vault.public_key.encrypt(aes_key, 0)
-                encrypted_key_file.write(encrypted_key)
+        def update_crypt(self):
+            logger.info('Encrypting %s', self)
+            abspath = self.path
+            with open(abspath, 'rb') as unencrypted:
+                # TODO: dont read whole file into memory but stream it
+                original_content = unencrypted.read()
+                original_size = len(original_content)
+                aes_key = os.urandom(aes_key_len >> 3)
+                aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
 
-            if not os.path.exists(os.path.dirname(self.path_crypt)):
-                os.makedirs(os.path.dirname(self.path_crypt))
-            with open(self.path_crypt, 'wb') as encrypted_file:
-                enc = aes_engine.encrypt(pad(original_content))
-                encrypted_size = len(enc)
-                encrypted_file.write(enc)
+                if not os.path.exists(os.path.dirname(self.path_key)):
+                    os.makedirs(os.path.dirname(self.path_key))
+                with open(self.path_key, 'wb') as encrypted_key_file:
+                    (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
+                    encrypted_key_file.write(encrypted_key)
 
-        self.file_hash = original_hash
-        self.file_size = original_size
-        self.file_size_crypt = encrypted_size
-        self.key_size = aes_key_len >> 3
-        self.key_size_crypt = len(encrypted_key)
+                if not os.path.exists(os.path.dirname(self.path_crypt)):
+                    os.makedirs(os.path.dirname(self.path_crypt))
+                with open(self.path_crypt, 'wb') as encrypted_file:
+                    enc = aes_engine.encrypt(pad(original_content))
+                    encrypted_size = len(enc)
+                    encrypted_file.write(enc)
+
+                self.file_size_crypt = encrypted_size
+                self.key_size = aes_key_len >> 3
+                self.key_size_crypt = len(encrypted_key)
+
+        loop = asyncio.get_event_loop()
+        yield from loop.run_in_executor(None, update_hash, self)
+        yield from loop.run_in_executor(None, update_crypt, self)
 
     def __str__(self):
-        return "<Bundle: {0.relpath} ({0.file_size_crypt} bytes encrypted)>".format(self)
+        return "<Bundle: {0.relpath}>".format(self)
 
     @property
     def relpath(self):

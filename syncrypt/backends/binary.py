@@ -1,6 +1,9 @@
 from .base import StorageBackend
 import time
 import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 class BinaryStorageBackend(StorageBackend):
     def __init__(self, vault, auth='foo', host='127.0.0.1', port=1337):
@@ -12,42 +15,45 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def open(self):
-        self.reader, self.writer = \
-                yield from asyncio.open_connection(self.host, self.port)
-
-        self.writer.write('AUTH:{0}\r\n'
-                .format(self.auth)
-                .encode(self.vault.config.encoding))
-        yield from self.writer.drain()
-
-        line = yield from self.reader.readline()
-        if line != b'SUCCESS\r\n':
-            raise Exception(line)
+        pass
 
     @asyncio.coroutine
     def upload(self, bundle):
+        logger.info('Uploading %s', bundle)
+        reader, writer = \
+                yield from asyncio.open_connection(self.host, self.port)
+
+        writer.write('AUTH:{0}\r\n'
+                .format(self.auth)
+                .encode(self.vault.config.encoding))
+        yield from writer.drain()
+
+        line = yield from reader.readline()
+        if line != b'SUCCESS\r\n':
+            raise Exception(line)
+
         # upload key and file
-        self.writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}\r\n'
+        writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}\r\n'
                 .format(bundle)
                 .encode(self.vault.config.encoding))
-        yield from self.writer.drain()
+        yield from writer.drain()
 
-        line = yield from self.reader.readline()
+        line = yield from reader.readline()
         if line != b'WAITING\r\n':
             raise Exception(line)
 
         with open(bundle.path_key, 'rb') as f:
             while f.tell() < bundle.key_size_crypt:
                 buf = f.read(self.buf_size)
-                self.writer.write(buf)
-                yield from self.writer.drain()
+                writer.write(buf)
+                yield from writer.drain()
 
         with open(bundle.path_crypt, 'rb') as f:
             while f.tell() < bundle.file_size_crypt:
                 buf = f.read(self.buf_size)
-                self.writer.write(buf)
-                yield from self.writer.drain()
+                writer.write(buf)
+                yield from writer.drain()
 
-        line = yield from self.reader.readline()
+        line = yield from reader.readline()
         if line != b'SUCCESS\r\n':
             raise Exception(line)
