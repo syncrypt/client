@@ -33,6 +33,13 @@ class Vault(object):
             self.private_key = RSA.importKey(open(id_rsa_path, 'rb').read())
 
     @property
+    def crypt_path(self):
+        return os.path.join(self.folder, '.vault', 'data')
+
+    @property
+    def keys_path(self):
+        return os.path.join(self.folder, '.vault', 'keys')
+
     @property
     def config_path(self):
         return os.path.join(self.folder, '.vault', 'config')

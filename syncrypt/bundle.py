@@ -22,6 +22,10 @@ class Bundle(object):
         self.vault = vault
         self.path = abspath
 
+        h = hashlib.new(hash_algo)
+        h.update(self.relpath.encode(self.vault.config.encoding))
+        self.store_hash = h.hexdigest()
+
         # encrypt file now. eventually this will be done only if
         # necessary and not at this place.
         with open(abspath, 'rb') as unencrypted:
@@ -36,10 +40,14 @@ class Bundle(object):
             aes_key = os.urandom(aes_key_len >> 3)
             aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
 
+            if not os.path.exists(os.path.dirname(self.path_key)):
+                os.makedirs(os.path.dirname(self.path_key))
             with open(self.path_key, 'wb') as encrypted_key_file:
                 (encrypted_key, ) = vault.public_key.encrypt(aes_key, 0)
                 encrypted_key_file.write(encrypted_key)
 
+            if not os.path.exists(os.path.dirname(self.path_crypt)):
+                os.makedirs(os.path.dirname(self.path_crypt))
             with open(self.path_crypt, 'wb') as encrypted_file:
                 enc = aes_engine.encrypt(pad(original_content))
                 encrypted_size = len(enc)
@@ -51,10 +59,6 @@ class Bundle(object):
         self.key_size = aes_key_len >> 3
         self.key_size_crypt = len(encrypted_key)
 
-        h = hashlib.new(hash_algo)
-        h.update(self.relpath.encode(self.vault.config.encoding))
-        self.store_hash = h.hexdigest()
-
     def __str__(self):
         return "<Bundle: {0.relpath} ({0.file_size_crypt} bytes encrypted)>".format(self)
 
@@ -64,8 +68,10 @@ class Bundle(object):
 
     @property
     def path_crypt(self):
-        return self.path + '.encrypted'
+        return os.path.join(self.vault.crypt_path, \
+                self.store_hash[:2], self.store_hash)
 
     @property
     def path_key(self):
-        return self.path + '.key'
+        return os.path.join(self.vault.keys_path, \
+                self.store_hash[:2], self.store_hash)
