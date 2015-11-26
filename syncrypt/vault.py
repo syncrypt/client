@@ -29,8 +29,10 @@ class Vault(object):
         if not os.path.exists(id_rsa_path) or not os.path.exists(id_rsa_pub_path):
             self.init_keys(id_rsa_path, id_rsa_pub_path)
         else:
-            self.public_key = RSA.importKey(open(id_rsa_pub_path, 'rb').read())
-            self.private_key = RSA.importKey(open(id_rsa_path, 'rb').read())
+            with open(id_rsa_pub_path, 'rb') as id_rsa_pub:
+                self.public_key = RSA.importKey(id_rsa_pub.read())
+            with open(id_rsa_path, 'rb') as id_rsa:
+                self.private_key = RSA.importKey(id_rsa.read())
 
     @property
     def crypt_path(self):
