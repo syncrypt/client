@@ -54,6 +54,14 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def stat(self, bundle):
+        yield from self.upload_sem.acquire()
+        try:
+            yield from self._stat(bundle)
+        finally:
+            self.upload_sem.release()
+
+    @asyncio.coroutine
+    def _stat(self, bundle):
         logger.info('Stat %s', bundle)
 
         with BinaryStorageConnection(self) as conn:
@@ -64,7 +72,10 @@ class BinaryStorageBackend(StorageBackend):
             yield from conn.writer.drain()
 
             line = yield from conn.reader.readline()
-            byte_count = int(line)
+            try:
+                byte_count = int(line)
+            except TypeError:
+                print("File not found")
 
             msg = yield from conn.reader.read(byte_count)
             print (umsgpack.loads(msg))
