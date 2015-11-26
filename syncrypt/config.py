@@ -8,7 +8,7 @@ class VaultConfig(object):
         self._config = configparser.ConfigParser()
         # set defaults
         self._config['vault'] = {
-                'ignore': '^.',
+                'ignore': '.*,*.encrypted,*.key,.vault',
             }
         self._config['remote'] = {
                 'type': 'binary',
@@ -37,4 +37,8 @@ class VaultConfig(object):
         kwargs = dict(self._config['remote']) # copy dict
         kwargs.pop('type')
         return kwargs
+
+    @property
+    def ignore_patterns(self):
+        return self._config['vault']['ignore'].split(',')
 

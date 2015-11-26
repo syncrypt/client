@@ -1,6 +1,5 @@
 [vault]
     name = My Vault
-    ignore = ^.
 
 [remote]
     type = local

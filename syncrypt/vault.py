@@ -1,4 +1,5 @@
 import logging
+from fnmatch import fnmatch
 import os
 import os.path
 import sys
@@ -16,13 +17,12 @@ class Vault(object):
         self.folder = folder
         assert os.path.exists(folder)
 
-        config_path = os.path.join(folder, '.vault', 'config')
         self.config = VaultConfig()
-        if os.path.exists(config_path):
-            logger.info('Using config file: %s', config_path)
-            self.config.read(config_path)
+        if os.path.exists(self.config_path):
+            logger.info('Using config file: %s', self.config_path)
+            self.config.read(self.config_path)
         else:
-            self.init_config(config_path)
+            self.init_config(self.config_path)
 
         id_rsa_path = os.path.join(folder, '.vault', 'id_rsa')
         id_rsa_pub_path = os.path.join(folder, '.vault', 'id_rsa.pub')
@@ -31,6 +31,11 @@ class Vault(object):
         else:
             self.public_key = RSA.importKey(open(id_rsa_pub_path, 'rb').read())
             self.private_key = RSA.importKey(open(id_rsa_path, 'rb').read())
+
+    @property
+    @property
+    def config_path(self):
+        return os.path.join(self.folder, '.vault', 'config')
 
     def init_config(self, config_path):
         if not os.path.exists(os.path.dirname(config_path)):
@@ -55,11 +60,16 @@ class Vault(object):
         kwargs = self.config.backend_kwargs
         return Backend(self, **kwargs)
 
-    def walk(self):
+    def walk(self, subfolder=None):
         'a generator of all bundles in this vault'
-        for (dir, dunno, files) in os.walk(self.folder):
-            for f in files:
-                if f.endswith('.encrypted') or f.endswith('.key') or f.endswith('.vault'):
-                    continue
-                abspath = os.path.join(dir, f)
+        folder = self.folder
+        if subfolder:
+            folder = os.path.join(folder, subfolder)
+        for file in os.listdir(folder):
+            if any(fnmatch(file, ig) for ig in self.config.ignore_patterns):
+                continue
+            abspath = os.path.join(folder, file)
+            if os.path.isdir(abspath):
+                yield from self.walk(subfolder=os.path.relpath(abspath, self.folder))
+            else:
                 yield Bundle(abspath, vault=self)
