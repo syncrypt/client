@@ -62,11 +62,13 @@ class BinaryStorageBackend(StorageBackend):
 
         logger.info('Uploading %s', bundle)
 
+        assert bundle.uptodate
+
         with BinaryStorageConnection(self) as conn:
             conn = yield from conn
 
             # upload key and file
-            conn.writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}\r\n'
+            conn.writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}:{0.crypt_hash}\r\n'
                     .format(bundle)
                     .encode(self.vault.config.encoding))
             yield from conn.writer.drain()
@@ -90,5 +92,3 @@ class BinaryStorageBackend(StorageBackend):
             line = yield from conn.reader.readline()
             if line != b'SUCCESS\r\n':
                 raise Exception(line)
-
-

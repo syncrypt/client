@@ -24,11 +24,13 @@ class Bundle(object):
     update_sem = asyncio.Semaphore(value=6)
 
     __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
-            'key_size', 'key_size_crypt', 'store_hash')
+            'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
+            'uptodate')
 
     def __init__(self, abspath, vault):
         self.vault = vault
         self.path = abspath
+        self.uptodate = False
 
         h = hashlib.new(hash_algo)
         h.update(self.relpath.encode(self.vault.config.encoding))
@@ -68,10 +70,15 @@ class Bundle(object):
 
                 if not os.path.exists(os.path.dirname(self.path_crypt)):
                     os.makedirs(os.path.dirname(self.path_crypt))
+
+                # build hash on the fly
+                h = hashlib.new(hash_algo)
                 with open(self.path_crypt, 'wb') as encrypted_file:
+                    h.update(original_content)
                     enc = aes_engine.encrypt(pad(original_content))
                     encrypted_size = len(enc)
                     encrypted_file.write(enc)
+                self.crypt_hash = h.hexdigest()
 
                 self.file_size_crypt = encrypted_size
                 self.key_size = aes_key_len >> 3
@@ -82,6 +89,7 @@ class Bundle(object):
         logger.info('Updating %s', self)
         yield from loop.run_in_executor(None, update_hash, self)
         yield from loop.run_in_executor(None, update_crypt, self)
+        self.uptodate = True
         self.update_sem.release()
 
     def __str__(self):
