@@ -30,11 +30,13 @@ class BinaryStorageConnection(object):
         return self
 
     def __exit__(self, *args):
+        def coro():
+            self.writer.write(b'DISCONNECT\r\n')
+            #yield from self.writer.drain()
+            self.writer.close()
 
-        self.writer.write(b'DISCONNECT\r\n')
-        yield from self.writer.drain()
-
-        self.writer.close()
+        loop = asyncio.get_event_loop()
+        loop.call_soon(coro)
 
 
 class BinaryStorageBackend(StorageBackend):
@@ -74,11 +76,13 @@ class BinaryStorageBackend(StorageBackend):
             line = yield from conn.reader.readline()
             try:
                 byte_count = int(line)
-            except TypeError:
+            except ValueError:
                 print("File not found")
+                return None
 
             msg = yield from conn.reader.read(byte_count)
             print (umsgpack.loads(msg))
+            return umsgpack.loads(msg)
 
     @asyncio.coroutine
     def upload(self, bundle):
