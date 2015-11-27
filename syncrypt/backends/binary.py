@@ -11,9 +11,14 @@ logger = logging.getLogger(__name__)
 class BinaryStorageConnection(object):
     def __init__(self, storage):
         self.storage = storage
+        self.available = asyncio.Event()
+        self.available.clear()
+        self.connected = False
+        self.connecting = False
 
     @asyncio.coroutine
-    def __enter__(self):
+    def connect(self):
+        logger.info('Connecting to server...')
         self.reader, self.writer = \
                 yield from asyncio.open_connection(self.storage.host,
                                                    self.storage.port)
@@ -27,17 +32,104 @@ class BinaryStorageConnection(object):
         if line != b'SUCCESS\r\n':
             raise Exception(line)
 
+        self.connected = True
+        self.connecting = False
+        self.available.set()
+
+    @asyncio.coroutine
+    def disconnect(self):
+        self.writer.write(b'DISCONNECT\r\n')
+        yield from self.writer.drain()
+        self.writer.close()
+
+    def __enter__(self):
         return self
 
     def __exit__(self, *args):
-        def coro():
-            self.writer.write(b'DISCONNECT\r\n')
-            #yield from self.writer.drain()
-            self.writer.close()
+        self.available.set()
 
-        loop = asyncio.get_event_loop()
-        loop.call_soon(coro)
+    @asyncio.coroutine
+    def stat(self, bundle):
+        logger.info('Stat %s', bundle)
 
+        self.writer.write('STAT:{0.store_hash}\r\n'
+                .format(bundle)
+                .encode(self.storage.vault.config.encoding))
+        yield from self.writer.drain()
+
+        line = yield from self.reader.readline()
+        try:
+            byte_count = int(line)
+        except ValueError as e:
+            return None
+
+        msg = yield from self.reader.read(byte_count)
+
+        return umsgpack.loads(msg)
+
+    @asyncio.coroutine
+    def upload(self, bundle):
+
+        logger.info('Uploading %s', bundle)
+
+        assert bundle.uptodate
+
+        # upload key and file
+        self.writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}:{0.crypt_hash}\r\n'
+                .format(bundle)
+                .encode(self.storage.vault.config.encoding))
+        yield from self.writer.drain()
+
+        line = yield from self.reader.readline()
+        if line != b'WAITING\r\n':
+            raise Exception(line)
+
+        with open(bundle.path_key, 'rb') as f:
+            while f.tell() < bundle.key_size_crypt:
+                buf = f.read(self.storage.buf_size)
+                self.writer.write(buf)
+                yield from self.writer.drain()
+
+        with open(bundle.path_crypt, 'rb') as f:
+            while f.tell() < bundle.file_size_crypt:
+                buf = f.read(self.storage.buf_size)
+                self.writer.write(buf)
+                yield from self.writer.drain()
+
+        line = yield from self.reader.readline()
+        if line != b'SUCCESS\r\n':
+            raise Exception(line)
+
+class BinaryStorageManager(object):
+
+    def __init__(self, backend, concurrency):
+        self.backend = backend
+        self.concurrency = concurrency
+        self.slots = [BinaryStorageConnection(backend) for i in range(concurrency)]
+
+    @asyncio.coroutine
+    def acquire_connection(self):
+        'return an available connection or block until one is free'
+        # trigger at most one connection
+        for conn in self.slots:
+            if not conn.connected and not conn.connecting:
+                conn.connecting = True
+                asyncio.ensure_future(conn.connect())
+                break
+
+        # wait until one slot is available
+        done, running = yield from \
+                asyncio.wait([conn.available.wait() for conn in self.slots],
+                            return_when=asyncio.FIRST_COMPLETED)
+
+        # find this slot
+        for conn in self.slots:
+            if conn.connected and conn.available.is_set():
+                conn.available.clear()
+                return conn
+
+        # if we haven't found one, try again
+        return (yield from self.acquire_connection())
 
 class BinaryStorageBackend(StorageBackend):
 
@@ -48,6 +140,7 @@ class BinaryStorageBackend(StorageBackend):
         self.buf_size = 10 * 1024
         self.concurrency = int(concurrency)
         self.upload_sem = asyncio.Semaphore(value=self.concurrency)
+        self.manager = BinaryStorageManager(self, self.concurrency)
         super(BinaryStorageBackend, self).__init__(vault)
 
     @asyncio.coroutine
@@ -56,77 +149,15 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def stat(self, bundle):
-        yield from self.upload_sem.acquire()
-        try:
-            stat_info = yield from self._stat(bundle)
+        with (yield from self.manager.acquire_connection()) as conn:
+            stat_info = yield from conn.stat(bundle)
             if not stat_info is None:
                 if b'content_hash' in stat_info:
                     bundle.remote_crypt_hash = \
                             stat_info[b'content_hash'].decode()
-        finally:
-            self.upload_sem.release()
-
-    @asyncio.coroutine
-    def _stat(self, bundle):
-        logger.info('Stat %s', bundle)
-
-        with BinaryStorageConnection(self) as conn:
-            conn = yield from conn
-            conn.writer.write('STAT:{0.store_hash}\r\n'
-                    .format(bundle)
-                    .encode(self.vault.config.encoding))
-            yield from conn.writer.drain()
-
-            line = yield from conn.reader.readline()
-            try:
-                byte_count = int(line)
-            except ValueError as e:
-                return None
-
-            msg = yield from conn.reader.read(byte_count)
-
-            return umsgpack.loads(msg)
 
     @asyncio.coroutine
     def upload(self, bundle):
-        yield from self.upload_sem.acquire()
-        try:
-            yield from self._upload(bundle)
-        finally:
-            self.upload_sem.release()
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.upload(bundle)
 
-    @asyncio.coroutine
-    def _upload(self, bundle):
-
-        logger.info('Uploading %s', bundle)
-
-        assert bundle.uptodate
-
-        with BinaryStorageConnection(self) as conn:
-            conn = yield from conn
-
-            # upload key and file
-            conn.writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}:{0.crypt_hash}\r\n'
-                    .format(bundle)
-                    .encode(self.vault.config.encoding))
-            yield from conn.writer.drain()
-
-            line = yield from conn.reader.readline()
-            if line != b'WAITING\r\n':
-                raise Exception(line)
-
-            with open(bundle.path_key, 'rb') as f:
-                while f.tell() < bundle.key_size_crypt:
-                    buf = f.read(self.buf_size)
-                    conn.writer.write(buf)
-                    yield from conn.writer.drain()
-
-            with open(bundle.path_crypt, 'rb') as f:
-                while f.tell() < bundle.file_size_crypt:
-                    buf = f.read(self.buf_size)
-                    conn.writer.write(buf)
-                    yield from conn.writer.drain()
-
-            line = yield from conn.reader.readline()
-            if line != b'SUCCESS\r\n':
-                raise Exception(line)
