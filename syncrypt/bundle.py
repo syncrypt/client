@@ -25,13 +25,14 @@ class Bundle(object):
 
     __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
             'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
-            'remote_crypt_hash', 'uptodate')
+            'remote_crypt_hash', 'uptodate', 'update_handle')
 
     def __init__(self, abspath, vault):
         self.vault = vault
         self.path = abspath
         self.uptodate = False
         self.remote_crypt_hash = None
+        self.update_handle = None
 
         h = hashlib.new(hash_algo)
         h.update(self.relpath.encode(self.vault.config.encoding))
@@ -96,6 +97,21 @@ class Bundle(object):
         yield from loop.run_in_executor(None, update_crypt, self)
         self.uptodate = True
         self.update_sem.release()
+
+    def update_and_upload(self):
+        def x(bundle):
+            backend = bundle.vault.backend
+            yield from bundle.update()
+            yield from backend.stat(bundle)
+            if bundle.needs_upload():
+                yield from backend.upload(bundle)
+        asyncio.ensure_future(x(self))
+
+    def schedule_update(self):
+        if self.update_handle:
+            self.update_handle.cancel()
+        loop = asyncio.get_event_loop()
+        self.update_handle = loop.call_later(1.0, self.update_and_upload)
 
     def __str__(self):
         return "<Bundle: {0.relpath}>".format(self)

@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class Vault(object):
     def __init__(self, folder):
         self.folder = folder
+        self._bundle_cache = {}
         assert os.path.exists(folder)
 
         self.config = VaultConfig()
@@ -33,6 +34,11 @@ class Vault(object):
                 self.public_key = RSA.importKey(id_rsa_pub.read())
             with open(id_rsa_path, 'rb') as id_rsa:
                 self.private_key = RSA.importKey(id_rsa.read())
+
+        Backend = self.config.backend_cls
+        kwargs = self.config.backend_kwargs
+        # TODO make property?
+        self.backend = Backend(self, **kwargs)
 
     @property
     def crypt_path(self):
@@ -64,11 +70,6 @@ class Vault(object):
         self.private_key = keys
         self.public_key = keys.publickey()
 
-    def get_backend_instance(self):
-        Backend = self.config.backend_cls
-        kwargs = self.config.backend_kwargs
-        return Backend(self, **kwargs)
-
     def walk(self, subfolder=None):
         'a generator of all bundles in this vault'
         folder = self.folder
@@ -78,7 +79,21 @@ class Vault(object):
             if any(fnmatch(file, ig) for ig in self.config.ignore_patterns):
                 continue
             abspath = os.path.join(folder, file)
+            relpath = os.path.relpath(abspath, self.folder)
             if os.path.isdir(abspath):
-                yield from self.walk(subfolder=os.path.relpath(abspath, self.folder))
+                yield from self.walk(subfolder=relpath)
             else:
-                yield Bundle(abspath, vault=self)
+                yield self.bundle_for(relpath)
+
+    def bundle_for(self, relpath):
+        if '.vault' in relpath.split('/'):
+            return None
+
+        if os.path.isdir(os.path.join(self.folder, relpath)):
+            return None
+
+        if not relpath in self._bundle_cache:
+            self._bundle_cache[relpath] =\
+                    Bundle(os.path.join(self.folder, relpath), vault=self)
+
+        return self._bundle_cache[relpath]
