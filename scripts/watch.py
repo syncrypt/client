@@ -3,18 +3,8 @@ import os.path
 import sys
 
 import asyncio
-from aioinotify import connect_inotify
-from aioinotify.events import InotifyMask
-from hachiko.hachiko import AIOWatchdog, AIOEventHandler
+from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
-
-
-@asyncio.coroutine
-def update_and_upload(backend, bundle):
-    yield from bundle.update()
-    yield from backend.stat(bundle)
-    if bundle.needs_upload():
-        yield from backend.upload(bundle)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,3 +30,4 @@ if __name__ == '__main__':
     asyncio.ensure_future(watch_directory(vault.folder))
     loop.run_forever()
     loop.close()
+
