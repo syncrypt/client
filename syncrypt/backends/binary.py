@@ -23,6 +23,10 @@ class BinaryStorageConnection(object):
                 yield from asyncio.open_connection(self.storage.host,
                                                    self.storage.port)
 
+        # version string format: "Syncrypt x.y.z\r\n"
+        version_info = yield from self.reader.readline()
+        self.server_version = version_info.decode().strip().split(" ")[1]
+
         self.writer.write('AUTH:{0}\r\n'
                 .format(self.storage.auth)
                 .encode(self.storage.vault.config.encoding))
@@ -102,7 +106,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def version(self):
-        return '0.0.0'
+        return self.server_version
 
 class BinaryStorageManager(object):
 
