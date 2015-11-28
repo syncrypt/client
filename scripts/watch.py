@@ -6,11 +6,13 @@ import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-vault = Vault(sys.argv[1])
+class VaultEventHandler(AIOEventHandler):
+    def __init__(self, vault):
+        self.vault = vault
+        super(VaultEventHandler, self).__init__()
 
-class MyEventHandler(AIOEventHandler):
     @asyncio.coroutine
     def on_modified(self, event):
         bundle = vault.bundle_for(os.path.relpath(event.src_path, vault.folder))
@@ -18,16 +20,17 @@ class MyEventHandler(AIOEventHandler):
             bundle.schedule_update()
 
 @asyncio.coroutine
-def watch_directory(path):
-    watch = AIOWatchdog(path, event_handler=MyEventHandler())
+def watch_vault(vault):
+    logger.info('Watching %s', os.path.abspath(vault.folder))
+    watch = AIOWatchdog(vault.folder, event_handler=VaultEventHandler(vault))
     watch.start()
-    for _ in range(20):
-        yield from asyncio.sleep(100)
-    watch.stop()
+    #watch.stop()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+    vault = Vault(sys.argv[1])
     loop = asyncio.get_event_loop()
-    asyncio.ensure_future(watch_directory(vault.folder))
+    asyncio.ensure_future(watch_vault(vault))
     loop.run_forever()
     loop.close()
 
