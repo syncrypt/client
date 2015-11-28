@@ -100,6 +100,10 @@ class BinaryStorageConnection(object):
         if line != b'SUCCESS\r\n':
             raise Exception(line)
 
+    @asyncio.coroutine
+    def version(self):
+        return '0.0.0'
+
 class BinaryStorageManager(object):
 
     def __init__(self, backend, concurrency):
@@ -115,6 +119,8 @@ class BinaryStorageManager(object):
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
                 asyncio.ensure_future(conn.connect())
+                break
+            if conn.connected and conn.available.is_set():
                 break
 
         # wait until one slot is available
@@ -145,7 +151,9 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def open(self):
-        pass
+        with (yield from self.manager.acquire_connection()) as conn:
+            version = yield from conn.version()
+            logger.info('Connected to server version %s', version)
 
     @asyncio.coroutine
     def stat(self, bundle):

@@ -21,6 +21,7 @@ class VaultEventHandler(AIOEventHandler):
 
 @asyncio.coroutine
 def watch_vault(vault):
+    yield from vault.backend.open()
     logger.info('Watching %s', os.path.abspath(vault.folder))
     watch = AIOWatchdog(vault.folder, event_handler=VaultEventHandler(vault))
     watch.start()
