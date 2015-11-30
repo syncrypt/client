@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import time
@@ -5,6 +6,8 @@ import time
 import asyncio
 
 from .base import StorageBackend
+
+logger = logging.getLogger(__name__)
 
 
 class LocalStorageBackend(StorageBackend):
@@ -25,5 +28,17 @@ class LocalStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def upload(self, bundle):
+        logger.info('Uploading %s', bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)
         shutil.copyfile(bundle.path, dest_path)
+        file_info = open(bundle.store_hash + '.file_info', 'w')
+        file_info.write(bundle.crypt_hash)
+        file_info.close()
+
+    @asyncio.coroutine
+    def stat(self, bundle):
+        logger.info('Stat %s', bundle)
+        file_info = open(bundle.store_hash + '.file_info', 'r')
+        content_hash = file_info.read()
+        bundle.remote_crypt_hash = content_hash
+
