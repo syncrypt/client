@@ -7,11 +7,8 @@ Setup in virtualenv:
     virtualenv .
     bin/pip install -e .
 
-Usage to test binary server:
+Usage:
 
-    bin/python scripts/upload.py tests/testvault2/
+    bin/python scripts/syncrypt-client.py tests/testvault2/
 
-Or test local storage:
-
-    bin/python scripts/upload.py tests/testvault1/
 
