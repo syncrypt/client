@@ -23,7 +23,7 @@ class Bundle(object):
     'A Bundle represents a file with additional information'
     update_sem = asyncio.Semaphore(value=6)
 
-    __slots__ = ('path', 'vault', 'file_hash', 'file_size', 'file_size_crypt',
+    __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
             'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
             'remote_crypt_hash', 'uptodate', 'update_handle')
 
@@ -44,20 +44,6 @@ class Bundle(object):
 
     @asyncio.coroutine
     def update(self):
-        def update_hash(self):
-            logger.info('Hashing %s', self)
-            abspath = self.path
-            with open(abspath, 'rb') as unencrypted:
-                # TODO: dont read whole file into memory but stream it
-                original_content = unencrypted.read()
-                original_size = len(original_content)
-
-                h = hashlib.new(hash_algo)
-                h.update(original_content)
-                original_hash = h.hexdigest()
-                self.file_hash = original_hash
-                self.file_size = original_size
-
         def update_crypt(self):
             logger.info('Encrypting %s', self)
             abspath = self.path
@@ -93,7 +79,6 @@ class Bundle(object):
         loop = asyncio.get_event_loop()
         yield from self.update_sem.acquire()
         logger.info('Updating %s', self)
-        yield from loop.run_in_executor(None, update_hash, self)
         yield from loop.run_in_executor(None, update_crypt, self)
         self.uptodate = True
         self.update_sem.release()
