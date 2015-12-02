@@ -31,14 +31,17 @@ class LocalStorageBackend(StorageBackend):
         logger.info('Uploading %s', bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)
         shutil.copyfile(bundle.path, dest_path)
-        file_info = open(bundle.store_hash + '.file_info', 'w')
+        file_info = open(dest_path + '.file_info', 'w')
         file_info.write(bundle.crypt_hash)
         file_info.close()
 
     @asyncio.coroutine
     def stat(self, bundle):
         logger.info('Stat %s', bundle)
-        file_info = open(bundle.store_hash + '.file_info', 'r')
-        content_hash = file_info.read()
-        bundle.remote_crypt_hash = content_hash
+        dest_path = os.path.join(self.path, bundle.store_hash)
+        if os.path.exists(dest_path + '.file_info'):
+            file_info = open(dest_path + '.file_info', 'r')
+            content_hash = file_info.read()
+            bundle.remote_crypt_hash = content_hash
+            file_info.close()
 
