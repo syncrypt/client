@@ -36,6 +36,12 @@ class LocalStorageBackend(StorageBackend):
         file_info.close()
 
     @asyncio.coroutine
+    def download(self, bundle):
+        logger.info('Downloading %s', bundle)
+        dest_path = os.path.join(self.path, bundle.store_hash)
+        shutil.copyfile(dest_path, bundle.path)
+
+    @asyncio.coroutine
     def stat(self, bundle):
         logger.info('Stat %s', bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)

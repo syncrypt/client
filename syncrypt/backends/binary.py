@@ -105,6 +105,25 @@ class BinaryStorageConnection(object):
             raise Exception(line)
 
     @asyncio.coroutine
+    def download(self, bundle):
+
+        logger.info('Downloading %s', bundle)
+
+        # upload key and file
+        self.writer.write('DOWNLOAD:{0.store_hash}\r\n'
+                .format(bundle)
+                .encode(self.storage.vault.config.encoding))
+        yield from self.writer.drain()
+
+        file_size = int((yield from self.reader.readline()).strip(b'\r\n'))
+
+        with open(bundle.path_crypt, 'wb') as f:
+            while file_size > 0:
+                buf = yield from self.reader.read(self.storage.buf_size)
+                f.write(buf)
+                file_size -= len(buf)
+
+    @asyncio.coroutine
     def version(self):
         return self.server_version
 
@@ -172,4 +191,9 @@ class BinaryStorageBackend(StorageBackend):
     def upload(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.upload(bundle)
+
+    @asyncio.coroutine
+    def download(self, bundle):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.download(bundle)
 

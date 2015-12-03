@@ -11,5 +11,8 @@ class StorageBackend(object):
     def upload(self, bundle):
         raise NotImplementedError()
 
+    def download(self, bundle):
+        raise NotImplementedError()
+
     def stat(self, bundle):
         raise NotImplementedError()
