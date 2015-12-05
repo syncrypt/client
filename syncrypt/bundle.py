@@ -38,7 +38,8 @@ class Bundle(object):
         h.update(self.relpath.encode(self.vault.config.encoding))
         self.store_hash = h.hexdigest()
 
-    def needs_upload(self):
+    @property
+    def remote_hash_differs(self):
         return self.remote_crypt_hash is None or \
                 self.remote_crypt_hash != self.crypt_hash
 
@@ -85,11 +86,7 @@ class Bundle(object):
 
     def update_and_upload(self):
         def x(bundle):
-            backend = bundle.vault.backend
-            yield from bundle.update()
-            yield from backend.stat(bundle)
-            if bundle.needs_upload():
-                yield from backend.upload(bundle)
+            yield from bundle.vault.push_bundle(bundle)
         asyncio.ensure_future(x(self))
 
     def schedule_update(self):

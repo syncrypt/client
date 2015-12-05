@@ -16,7 +16,7 @@ class SyncryptApp(AIOEventHandler):
     @asyncio.coroutine
     def start(self):
         yield from self.vault.backend.open()
-        yield from self.sync_all()
+        yield from self.push()
         logger.info('Watching %s', os.path.abspath(self.vault.folder))
         self.watchdog = AIOWatchdog(self.vault.folder, event_handler=self)
         self.watchdog.start()
@@ -32,18 +32,31 @@ class SyncryptApp(AIOEventHandler):
             bundle.schedule_update()
 
     @asyncio.coroutine
-    def sync_all(self):
+    def push(self):
         yield from asyncio.wait([
-            asyncio.ensure_future(self.update_and_upload(self.vault.backend, bundle))
+            asyncio.ensure_future(self.push_bundle(self.vault.backend, bundle))
                 for bundle in self.vault.walk()])
 
     @asyncio.coroutine
-    def update_and_upload(self, backend, bundle):
+    def pull(self):
+        yield from asyncio.wait([
+            asyncio.ensure_future(self.pull_bundle(self.vault.backend, bundle))
+                for bundle in self.vault.walk()])
+
+    @asyncio.coroutine
+    def push_bundle(self, backend, bundle):
         'update bundle and maybe upload'
-        # TODO rename function
         yield from bundle.update()
         yield from backend.stat(bundle)
-        if bundle.needs_upload():
+        if bundle.remote_hash_differs:
             yield from backend.upload(bundle)
+
+    @asyncio.coroutine
+    def pull_bundle(self, backend, bundle):
+        'update bundle and maybe download'
+        yield from bundle.update()
+        yield from backend.stat(bundle)
+        if bundle.remote_hash_differs:
+            yield from backend.download(bundle)
 
 

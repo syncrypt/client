@@ -48,7 +48,7 @@ class LocalStorageTests(TestCase):
         app = SyncryptApp(vault)
         loop = asyncio.get_event_loop()
         loop.run_until_complete(vault.backend.open())
-        loop.run_until_complete(app.sync_all())
+        loop.run_until_complete(app.push())
 
     def test_upload(self):
         vault = Vault('tests/testvault1')

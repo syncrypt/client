@@ -7,8 +7,19 @@ Setup in virtualenv:
     virtualenv .
     bin/pip install -e .
 
-Usage:
+Pull current directory:
 
-    bin/python scripts/syncrypt-client.py tests/testvault2/
+    bin/python scripts/syncrypt-client.py pull
 
+Push current directory:
+
+    bin/python scripts/syncrypt-client.py push
+
+Watch current directory:
+
+    bin/python scripts/syncrypt-client.py watch
+
+Alternate directory can be specified with ``-d``:
+
+    bin/python scripts/syncrypt-client.py -d ~/myfolder watch
 
