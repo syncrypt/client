@@ -23,3 +23,6 @@ Alternate directory can be specified with ``-d``:
 
     bin/syncrypt -d ~/myfolder watch
 
+Run tests:
+
+    bin/python tests/test_all.py
