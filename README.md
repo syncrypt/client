@@ -25,4 +25,5 @@ Alternate directory can be specified with ``-d``:
 
 Run tests:
 
+    bin/pip install -e '.[test]'
     bin/python tests/test_all.py
