@@ -26,7 +26,7 @@ setup(
 
     # Author details
     author='Hannes Gräuler',
-    author_email='lordi@syncrypt.space',
+    author_email='hannes@smasi.de',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -46,6 +46,8 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+
+    scripts=['scripts/syncrypt'],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:

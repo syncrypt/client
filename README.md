@@ -9,17 +9,17 @@ Setup in virtualenv:
 
 Pull current directory:
 
-    bin/python scripts/syncrypt-client.py pull
+    bin/syncrypt pull
 
 Push current directory:
 
-    bin/python scripts/syncrypt-client.py push
+    bin/syncrypt push
 
 Watch current directory:
 
-    bin/python scripts/syncrypt-client.py watch
+    bin/syncrypt watch
 
 Alternate directory can be specified with ``-d``:
 
-    bin/python scripts/syncrypt-client.py -d ~/myfolder watch
+    bin/syncrypt -d ~/myfolder watch
 
