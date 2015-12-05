@@ -197,3 +197,7 @@ class BinaryStorageBackend(StorageBackend):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.download(bundle)
 
+    @asyncio.coroutine
+    def wipe(self):
+        pass
+
