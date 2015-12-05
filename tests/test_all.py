@@ -1,3 +1,4 @@
+import unittest
 from test_binary import *
 from test_local import *
 

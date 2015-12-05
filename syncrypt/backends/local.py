@@ -51,3 +51,7 @@ class LocalStorageBackend(StorageBackend):
             bundle.remote_crypt_hash = content_hash
             file_info.close()
 
+    @asyncio.coroutine
+    def wipe(self):
+        if os.path.exists(self.path):
+            shutil.rmtree(self.path)

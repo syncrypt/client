@@ -44,7 +44,14 @@ class Bundle(object):
                 self.remote_crypt_hash != self.crypt_hash
 
     @asyncio.coroutine
-    def update(self):
+    def decrypt(self):
+        'decrypt file (retrieve from .vault)'
+        pass
+
+    @asyncio.coroutine
+    def encrypt(self):
+        'encrypt file (store in .vault)'
+
         def update_crypt(self):
             logger.info('Encrypting %s', self)
             abspath = self.path
@@ -79,7 +86,6 @@ class Bundle(object):
 
         loop = asyncio.get_event_loop()
         yield from self.update_sem.acquire()
-        logger.info('Updating %s', self)
         yield from loop.run_in_executor(None, update_crypt, self)
         self.uptodate = True
         self.update_sem.release()
