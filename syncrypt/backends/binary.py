@@ -162,6 +162,8 @@ class BinaryStorageManager(object):
                 asyncio.wait([conn.available.wait() for conn in self.slots],
                             return_when=asyncio.FIRST_COMPLETED)
 
+        for f in running: f.cancel()
+
         # find this slot
         for conn in self.slots:
             if conn.connected and conn.available.is_set():
