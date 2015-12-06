@@ -53,50 +53,48 @@ class Bundle(object):
     def encrypt(self):
         'encrypt file (store in .vault)'
 
-        def update_crypt(self):
-
-            logger.info('Encrypting %s', self)
-            unencrypted = yield from aiofiles.open(self.path, 'rb')
-
-            try:
-                # TODO: dont read whole file into memory but stream it
-                original_content = yield from unencrypted.read()
-                original_size = len(original_content)
-                aes_key = os.urandom(aes_key_len >> 3)
-                aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
-
-                if not os.path.exists(os.path.dirname(self.path_key)):
-                    os.makedirs(os.path.dirname(self.path_key))
-                with open(self.path_key, 'wb') as encrypted_key_file:
-                    (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
-                    encrypted_key_file.write(encrypted_key)
-
-                if not os.path.exists(os.path.dirname(self.path_crypt)):
-                    os.makedirs(os.path.dirname(self.path_crypt))
-
-                # build hash on the fly
-                h = hashlib.new(hash_algo)
-
-                encrypted_file = yield from aiofiles.open(self.path_crypt, 'wb')
-                try:
-                    h.update(original_content)
-                    enc = aes_engine.encrypt(pad(original_content))
-                    encrypted_size = len(enc)
-                    yield from encrypted_file.write(enc)
-                finally:
-                    yield from encrypted_file.close()
-                self.crypt_hash = h.hexdigest()
-
-                self.file_size_crypt = encrypted_size
-                self.key_size = aes_key_len >> 3
-                self.key_size_crypt = len(encrypted_key)
-            finally:
-                yield from unencrypted.close()
-
         loop = asyncio.get_event_loop()
         yield from self.update_sem.acquire()
-        yield from update_crypt(self)
+
+        logger.info('Encrypting %s', self)
+        unencrypted = yield from aiofiles.open(self.path, 'rb')
+
+        try:
+            # TODO: dont read whole file into memory but stream it
+            original_content = yield from unencrypted.read()
+            original_size = len(original_content)
+            aes_key = os.urandom(aes_key_len >> 3)
+            aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
+
+            if not os.path.exists(os.path.dirname(self.path_key)):
+                os.makedirs(os.path.dirname(self.path_key))
+            with open(self.path_key, 'wb') as encrypted_key_file:
+                (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
+                encrypted_key_file.write(encrypted_key)
+
+            if not os.path.exists(os.path.dirname(self.path_crypt)):
+                os.makedirs(os.path.dirname(self.path_crypt))
+
+            # build hash on the fly
+            h = hashlib.new(hash_algo)
+
+            encrypted_file = yield from aiofiles.open(self.path_crypt, 'wb')
+            try:
+                h.update(original_content)
+                enc = aes_engine.encrypt(pad(original_content))
+                encrypted_size = len(enc)
+                yield from encrypted_file.write(enc)
+            finally:
+                yield from encrypted_file.close()
+            self.crypt_hash = h.hexdigest()
+
+            self.file_size_crypt = encrypted_size
+            self.key_size = aes_key_len >> 3
+            self.key_size_crypt = len(encrypted_key)
+        finally:
+            yield from unencrypted.close()
         self.uptodate = True
+
         self.update_sem.release()
 
     def update_and_upload(self):
