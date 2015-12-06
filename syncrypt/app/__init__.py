@@ -33,12 +33,14 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def push(self):
+        yield from self.vault.backend.open()
         yield from asyncio.wait([
             asyncio.ensure_future(self.push_bundle(self.vault.backend, bundle))
                 for bundle in self.vault.walk()])
 
     @asyncio.coroutine
     def pull(self):
+        yield from self.vault.backend.open()
         yield from asyncio.wait([
             asyncio.ensure_future(self.pull_bundle(self.vault.backend, bundle))
                 for bundle in self.vault.walk()])

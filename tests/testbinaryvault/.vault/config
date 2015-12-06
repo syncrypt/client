@@ -3,6 +3,7 @@
 
 [remote]
     type = binary
-    auth = foo
+    username = test@syncrypt.space
+    password = test!password
     host = 127.0.0.1
     port = 1337

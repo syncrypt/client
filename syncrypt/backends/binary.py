@@ -27,14 +27,25 @@ class BinaryStorageConnection(object):
         version_info = yield from self.reader.readline()
         self.server_version = version_info.decode().strip().split(" ")[1]
 
-        self.writer.write('AUTH:{0}\r\n'
-                .format(self.storage.auth)
-                .encode(self.storage.vault.config.encoding))
-        yield from self.writer.drain()
+        if self.storage.auth:
+            self.writer.write('AUTH:{0}\r\n'
+                    .format(self.storage.auth)
+                    .encode(self.storage.vault.config.encoding))
+            yield from self.writer.drain()
 
-        line = yield from self.reader.readline()
-        if line != b'SUCCESS\r\n':
-            raise Exception(line)
+            line = yield from self.reader.readline()
+            if line != b'SUCCESS\r\n':
+                raise Exception(line)
+        else:
+            # we don't have auth token yet
+            logger.debug('Log into server...')
+            self.writer.write('LOGIN:{0}:{1}:{2}\r\n'
+                    .format(self.storage.username, self.storage.password, 'vault-id')
+                    .encode(self.storage.vault.config.encoding))
+            yield from self.writer.drain()
+
+            auth_token = yield from self.reader.readline()
+            self.storage.auth = auth_token.decode(self.storage.vault.config.encoding).strip('\r\n')
 
         self.connected = True
         self.connecting = False
@@ -162,10 +173,14 @@ class BinaryStorageManager(object):
 
 class BinaryStorageBackend(StorageBackend):
 
-    def __init__(self, vault, auth='foo', host='127.0.0.1', port=1337, concurrency=4):
+    def __init__(self, vault, auth='foo', host='127.0.0.1', port=1337,
+            concurrency=4, username=None, password=None):
         self.host = host
         self.port = port
-        self.auth = auth
+        self.username = username
+        self.password = password
+        #self.auth = auth
+        self.auth = None
         self.buf_size = 10 * 1024
         self.concurrency = int(concurrency)
         self.upload_sem = asyncio.Semaphore(value=self.concurrency)
@@ -176,7 +191,7 @@ class BinaryStorageBackend(StorageBackend):
     def open(self):
         with (yield from self.manager.acquire_connection()) as conn:
             version = yield from conn.version()
-            logger.info('Connected to server version %s', version)
+            logger.info('Logged in to server version %s with user %s', version, self.username)
 
     @asyncio.coroutine
     def stat(self, bundle):
