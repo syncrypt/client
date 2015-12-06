@@ -1,4 +1,5 @@
 import hashlib
+import aiofiles
 import logging
 import os
 
@@ -53,11 +54,13 @@ class Bundle(object):
         'encrypt file (store in .vault)'
 
         def update_crypt(self):
+
             logger.info('Encrypting %s', self)
-            abspath = self.path
-            with open(abspath, 'rb') as unencrypted:
+            unencrypted = yield from aiofiles.open(self.path, 'rb')
+
+            try:
                 # TODO: dont read whole file into memory but stream it
-                original_content = unencrypted.read()
+                original_content = yield from unencrypted.read()
                 original_size = len(original_content)
                 aes_key = os.urandom(aes_key_len >> 3)
                 aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
@@ -73,20 +76,26 @@ class Bundle(object):
 
                 # build hash on the fly
                 h = hashlib.new(hash_algo)
-                with open(self.path_crypt, 'wb') as encrypted_file:
+
+                encrypted_file = yield from aiofiles.open(self.path_crypt, 'wb')
+                try:
                     h.update(original_content)
                     enc = aes_engine.encrypt(pad(original_content))
                     encrypted_size = len(enc)
-                    encrypted_file.write(enc)
+                    yield from encrypted_file.write(enc)
+                finally:
+                    yield from encrypted_file.close()
                 self.crypt_hash = h.hexdigest()
 
                 self.file_size_crypt = encrypted_size
                 self.key_size = aes_key_len >> 3
                 self.key_size_crypt = len(encrypted_key)
+            finally:
+                yield from unencrypted.close()
 
         loop = asyncio.get_event_loop()
         yield from self.update_sem.acquire()
-        yield from loop.run_in_executor(None, update_crypt, self)
+        yield from update_crypt(self)
         self.uptodate = True
         self.update_sem.release()
 
