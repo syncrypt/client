@@ -175,14 +175,13 @@ class BinaryStorageManager(object):
 
 class BinaryStorageBackend(StorageBackend):
 
-    def __init__(self, vault, auth='foo', host='127.0.0.1', port=1337,
+    def __init__(self, vault, auth=None, host='127.0.0.1', port=1337,
             concurrency=4, username=None, password=None):
         self.host = host
         self.port = port
         self.username = username
         self.password = password
-        #self.auth = auth
-        self.auth = None
+        self.auth = auth
         self.buf_size = 10 * 1024
         self.concurrency = int(concurrency)
         self.upload_sem = asyncio.Semaphore(value=self.concurrency)
