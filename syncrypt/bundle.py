@@ -98,8 +98,12 @@ class Bundle(object):
         self.update_sem.release()
 
     def update_and_upload(self):
+        backend = self.vault.backend
         def x(bundle):
-            yield from bundle.vault.push_bundle(bundle)
+            yield from bundle.encrypt()
+            yield from backend.stat(bundle)
+            if bundle.remote_hash_differs:
+                yield from backend.upload(bundle)
         asyncio.ensure_future(x(self))
 
     def schedule_update(self):
