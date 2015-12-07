@@ -18,7 +18,7 @@ class VaultTestCase(asynctest.TestCase):
         if os.path.exists('tests/testvault'):
             shutil.rmtree('tests/testvault')
         shutil.copytree(self.folder, 'tests/testvault')
-        self.vault = Vault(self.folder)
+        self.vault = Vault('tests/testvault')
         self.loop.run_until_complete(self.vault.backend.wipe())
 
     #def tearDown(self):

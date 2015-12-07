@@ -21,8 +21,10 @@ block_size = 16
 pad = lambda s: s + str.encode((block_size - len(s) % block_size) * chr(block_size - len(s) % block_size))
 
 class Bundle(object):
-    'A Bundle represents a file with additional information'
-    update_sem = asyncio.Semaphore(value=6)
+    'A Bundle represents a file and some additional information'
+
+    encrypt_semaphore = asyncio.Semaphore(value=4)
+    decrypt_semaphore = asyncio.Semaphore(value=4)
 
     __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
             'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
@@ -47,18 +49,27 @@ class Bundle(object):
     @asyncio.coroutine
     def decrypt(self):
         'decrypt file (retrieve from .vault)'
-        pass
+
+        yield from self.decrypt_semaphore.acquire()
+        logger.info('Decrypting %s', self)
+
+        unencrypted = yield from aiofiles.open(self.path, 'wb')
+        try:
+            #yield from unencrypted.write(b'hallo')
+            pass
+        finally:
+            yield from unencrypted.close()
+
+        self.decrypt_semaphore.release()
 
     @asyncio.coroutine
     def encrypt(self):
         'encrypt file (store in .vault)'
 
-        loop = asyncio.get_event_loop()
-        yield from self.update_sem.acquire()
-
+        yield from self.encrypt_semaphore.acquire()
         logger.info('Encrypting %s', self)
-        unencrypted = yield from aiofiles.open(self.path, 'rb')
 
+        unencrypted = yield from aiofiles.open(self.path, 'rb')
         try:
             # TODO: dont read whole file into memory but stream it
             original_content = yield from unencrypted.read()
@@ -95,7 +106,7 @@ class Bundle(object):
             yield from unencrypted.close()
         self.uptodate = True
 
-        self.update_sem.release()
+        self.encrypt_semaphore.release()
 
     def update_and_upload(self):
         backend = self.vault.backend

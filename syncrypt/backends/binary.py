@@ -126,7 +126,17 @@ class BinaryStorageConnection(object):
                 .encode(self.storage.vault.config.encoding))
         yield from self.writer.drain()
 
+        key_size = int((yield from self.reader.readline()).strip(b'\r\n'))
         file_size = int((yield from self.reader.readline()).strip(b'\r\n'))
+
+        logger.info('Downloading key ({0} bytes) and content ({1} bytes)'\
+                .format(key_size, file_size))
+
+        with open(bundle.path_key, 'wb') as f:
+            while key_size > 0:
+                buf = yield from self.reader.read(min(self.storage.buf_size, key_size))
+                f.write(buf)
+                key_size -= len(buf)
 
         with open(bundle.path_crypt, 'wb') as f:
             while file_size > 0:

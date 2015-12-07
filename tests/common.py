@@ -36,27 +36,40 @@ class CommonTestsMixin(object):
 
     def test_app(self):
         app = SyncryptApp(self.vault)
-        yield from self.vault.backend.open()
         yield from app.push()
-"""
-    def test_upload(self):
-        backend = vault.backend
 
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(backend.open())
+    def test_download(self):
+        'for all files -> upload file, delete file, download file'
+        backend = self.vault.backend
 
-        for bundle in list(vault.walk()):
+        yield from backend.open()
+
+        for bundle in list(self.vault.walk()):
             # upload file
-            loop.run_until_complete(bundle.encrypt())
+            yield from bundle.encrypt()
 
             stat = os.stat(bundle.path_crypt)
             crypt_size = stat.st_size
 
-            loop.run_until_complete(backend.upload(bundle))
+            with open(bundle.path, 'rb') as x:
+                original_content = x.read()
+
+            yield from backend.upload(bundle)
+
+            # delete file
+            os.remove(bundle.path)
 
             # download file
-            loop.run_until_complete(backend.download(bundle))
+            yield from backend.download(bundle)
+
 
             stat = os.stat(bundle.path_crypt)
+
             self.assertEqual(stat.st_size, crypt_size)
-            """
+
+            yield from bundle.decrypt()
+
+            with open(bundle.path, 'rb') as x:
+                current_content = x.read()
+
+            self.assertEqual(original_content, current_content)
