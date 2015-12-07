@@ -138,6 +138,17 @@ class BinaryStorageConnection(object):
     def version(self):
         return self.server_version
 
+    @asyncio.coroutine
+    def wipe(self):
+        self.writer.write('WIPE-VAULT\r\n'
+                .encode(self.storage.vault.config.encoding))
+        yield from self.writer.drain()
+
+        line = yield from self.reader.readline()
+        if line != b'SUCCESS\r\n':
+            raise Exception(line)
+
+
 class BinaryStorageManager(object):
 
     def __init__(self, backend, concurrency):
@@ -215,5 +226,6 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def wipe(self):
-        pass
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.wipe()
 
