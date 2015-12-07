@@ -86,8 +86,10 @@ class Vault(object):
                 yield self.bundle_for(relpath)
 
     def bundle_for(self, relpath):
-        if '.vault' in relpath.split('/'):
-            return None
+        # check if path should be ignored
+        for filepart in relpath.split('/'):
+            if any(fnmatch(filepart, ig) for ig in self.config.ignore_patterns):
+                return None
 
         if os.path.isdir(os.path.join(self.folder, relpath)):
             return None
