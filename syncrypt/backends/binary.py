@@ -116,7 +116,6 @@ class BinaryStorageConnection(object):
             while f.tell() < bundle.file_size_crypt:
                 buf = f.read(self.storage.buf_size)
                 self.writer.write(buf)
-                print(f.tell())
                 bytes_written += len(buf)
                 yield from self.writer.drain()
         assert bytes_written == bundle.file_size_crypt
