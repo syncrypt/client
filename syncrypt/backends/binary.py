@@ -99,17 +99,27 @@ class BinaryStorageConnection(object):
         if line != b'WAITING\r\n':
             raise Exception(line)
 
+        logger.info('Uploading key ({0} bytes) and content ({1} bytes)'\
+                .format(bundle.key_size_crypt, bundle.file_size_crypt))
+
+        bytes_written = 0
         with open(bundle.path_key, 'rb') as f:
             while f.tell() < bundle.key_size_crypt:
                 buf = f.read(self.storage.buf_size)
                 self.writer.write(buf)
+                bytes_written += len(buf)
                 yield from self.writer.drain()
+        assert bytes_written == bundle.key_size_crypt
 
+        bytes_written = 0
         with open(bundle.path_crypt, 'rb') as f:
             while f.tell() < bundle.file_size_crypt:
                 buf = f.read(self.storage.buf_size)
                 self.writer.write(buf)
+                print(f.tell())
+                bytes_written += len(buf)
                 yield from self.writer.drain()
+        assert bytes_written == bundle.file_size_crypt
 
         line = yield from self.reader.readline()
         if line != b'SUCCESS\r\n':
@@ -137,12 +147,14 @@ class BinaryStorageConnection(object):
                 buf = yield from self.reader.read(min(self.storage.buf_size, key_size))
                 f.write(buf)
                 key_size -= len(buf)
+            assert key_size == 0
 
         with open(bundle.path_crypt, 'wb') as f:
             while file_size > 0:
-                buf = yield from self.reader.read(self.storage.buf_size)
+                buf = yield from self.reader.read(min(self.storage.buf_size, file_size))
                 f.write(buf)
                 file_size -= len(buf)
+            assert file_size == 0, file_size
 
     @asyncio.coroutine
     def version(self):
