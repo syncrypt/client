@@ -18,7 +18,19 @@ hash_algo = 'sha256'
 iv = 'This is an IV456'
 block_size = 16
 
-pad = lambda s: s + str.encode((block_size - len(s) % block_size) * chr(block_size - len(s) % block_size))
+class PKCS5Padding(object):
+    @staticmethod
+    def pad(s):
+        return s + str.encode((block_size - len(s) % block_size) * chr(block_size - len(s) % block_size))
+
+    @staticmethod
+    def unpad(s):
+        num_pad_chars = s[-1]
+        if s[-num_pad_chars:] == s[-1:] * num_pad_chars:
+            return s[:-num_pad_chars]
+        else:
+            return s
+
 
 class Bundle(object):
     'A Bundle represents a file and some additional information'
@@ -53,11 +65,23 @@ class Bundle(object):
         yield from self.decrypt_semaphore.acquire()
         logger.info('Decrypting %s', self)
 
-        unencrypted = yield from aiofiles.open(self.path, 'wb')
+        key_file = yield from aiofiles.open(self.path_key, 'rb')
         try:
-            #yield from unencrypted.write(b'hallo')
-            pass
+            encrypted_key = yield from key_file.read()
+            aes_key = self.vault.private_key.decrypt(encrypted_key)
+            assert len(aes_key) == aes_key_len >> 3
         finally:
+            yield from key_file.close()
+
+        aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
+        unencrypted = yield from aiofiles.open(self.path, 'wb')
+        encrypted = yield from aiofiles.open(self.path_crypt, 'rb')
+        try:
+            crypt_content = yield from encrypted.read()
+            original_content = aes_engine.decrypt(crypt_content)
+            yield from unencrypted.write(PKCS5Padding.unpad(original_content))
+        finally:
+            yield from encrypted.close()
             yield from unencrypted.close()
 
         self.decrypt_semaphore.release()
@@ -80,6 +104,7 @@ class Bundle(object):
             if not os.path.exists(os.path.dirname(self.path_key)):
                 os.makedirs(os.path.dirname(self.path_key))
             with open(self.path_key, 'wb') as encrypted_key_file:
+
                 (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
                 encrypted_key_file.write(encrypted_key)
 
@@ -92,7 +117,7 @@ class Bundle(object):
             encrypted_file = yield from aiofiles.open(self.path_crypt, 'wb')
             try:
                 h.update(original_content)
-                enc = aes_engine.encrypt(pad(original_content))
+                enc = aes_engine.encrypt(PKCS5Padding.pad(original_content))
                 encrypted_size = len(enc)
                 yield from encrypted_file.write(enc)
             finally:
