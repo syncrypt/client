@@ -7,6 +7,10 @@ Setup in virtualenv:
     virtualenv .
     bin/pip install -e .
 
+Init current directory (will ask for username and password):
+
+    bin/syncrypt init
+
 Pull current directory:
 
     bin/syncrypt pull
