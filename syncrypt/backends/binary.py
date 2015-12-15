@@ -243,7 +243,7 @@ class BinaryStorageBackend(StorageBackend):
     def open(self):
         with (yield from self.manager.acquire_connection()) as conn:
             version = yield from conn.version()
-            logger.info('Logged in to server version %s with user %s', version, self.username)
+            logger.info('Logged in to server (version %s)', version)
 
     @asyncio.coroutine
     def stat(self, bundle):
