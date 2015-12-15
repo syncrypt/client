@@ -23,7 +23,7 @@ class Vault(object):
             logger.info('Using config file: %s', self.config_path)
             self.config.read(self.config_path)
         else:
-            self.init_config(self.config_path)
+            self.write_config(self.config_path)
 
         id_rsa_path = os.path.join(folder, '.vault', 'id_rsa')
         id_rsa_pub_path = os.path.join(folder, '.vault', 'id_rsa.pub')
@@ -52,7 +52,9 @@ class Vault(object):
     def config_path(self):
         return os.path.join(self.folder, '.vault', 'config')
 
-    def init_config(self, config_path):
+    def write_config(self, config_path=None):
+        if config_path is None:
+            config_path = self.config_path
         if not os.path.exists(os.path.dirname(config_path)):
             os.makedirs(os.path.dirname(config_path))
         logger.info('Writing config to %s', config_path)

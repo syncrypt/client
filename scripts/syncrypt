@@ -9,7 +9,7 @@ import asyncio
 from syncrypt import Vault
 from syncrypt.app import SyncryptApp
 
-COMMANDS = ['pull', 'push', 'watch']
+COMMANDS = ['init', 'pull', 'push', 'watch']
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +26,9 @@ vault = Vault(config.directory)
 app = SyncryptApp(vault)
 loop = asyncio.get_event_loop()
 
-if config.command == 'watch':
+if config.command == 'init':
+    loop.run_until_complete(app.init())
+elif config.command == 'watch':
     asyncio.ensure_future(app.start())
     loop.run_forever()
 elif config.command == 'pull':

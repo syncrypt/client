@@ -5,6 +5,7 @@ import sys
 import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
+from syncrypt.backends.base import StorageBackendInvalidAuth
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,16 @@ class SyncryptApp(AIOEventHandler):
     def __init__(self, vault):
         self.vault = vault
         super(SyncryptApp, self).__init__()
+
+    @asyncio.coroutine
+    def init(self):
+        try:
+            yield from self.vault.backend.open()
+            logger.warn('Vault already initialized')
+            return
+        except StorageBackendInvalidAuth:
+            pass
+        yield from self.vault.backend.init()
 
     @asyncio.coroutine
     def start(self):

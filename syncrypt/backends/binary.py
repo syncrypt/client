@@ -4,7 +4,8 @@ import time
 import asyncio
 import umsgpack
 
-from .base import StorageBackend
+from .base import StorageBackend, StorageBackendInvalidAuth
+from syncrypt.utils import readline_from_stdin
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class BinaryStorageConnection(object):
 
             line = yield from self.reader.readline()
             if line != b'SUCCESS\r\n':
-                raise Exception(line)
+                raise StorageBackendInvalidAuth(line)
         else:
             # we don't have auth token yet
             logger.debug('Log into server...')
@@ -44,7 +45,10 @@ class BinaryStorageConnection(object):
                     .encode(self.storage.vault.config.encoding))
             yield from self.writer.drain()
 
-            auth_token = yield from self.reader.readline()
+            line = yield from self.reader.readline()
+            if line == b'':
+                raise StorageBackendInvalidAuth(line)
+            auth_token = line
             self.storage.auth = auth_token.decode(self.storage.vault.config.encoding).strip('\r\n')
 
         self.connected = True
@@ -184,7 +188,7 @@ class BinaryStorageManager(object):
         for conn in self.slots:
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
-                asyncio.ensure_future(conn.connect())
+                yield from conn.connect()
                 break
             if conn.connected and conn.available.is_set():
                 break
@@ -219,6 +223,21 @@ class BinaryStorageBackend(StorageBackend):
         self.upload_sem = asyncio.Semaphore(value=self.concurrency)
         self.manager = BinaryStorageManager(self, self.concurrency)
         super(BinaryStorageBackend, self).__init__(vault)
+
+    @asyncio.coroutine
+    def init(self):
+        print('Username for {}: '.format(self.host), end='', flush=True)
+        self.username = yield from readline_from_stdin()
+        print('Password: ', end='', flush=True)
+        self.password = yield from readline_from_stdin(password=True)
+        try:
+            with (yield from self.manager.acquire_connection()) as conn:
+                # after successful login, write back config
+                self.vault.config.update('remote', {'auth': self.auth})
+                self.vault.write_config()
+                print('OK')
+        except StorageBackendInvalidAuth:
+            logger.error('Invalid auth')
 
     @asyncio.coroutine
     def open(self):

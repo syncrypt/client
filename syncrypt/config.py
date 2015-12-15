@@ -32,6 +32,9 @@ class VaultConfig(object):
         else:
             raise Exception(self._config['remote']['type'])
 
+    def update(self, section, dct):
+        self._config[section].update(dct)
+
     @property
     def backend_kwargs(self):
         kwargs = dict(self._config['remote']) # copy dict
