@@ -226,7 +226,7 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def init(self):
-        print('Username for {}: '.format(self.host), end='', flush=True)
+        print('Email for {}: '.format(self.host), end='', flush=True)
         self.username = yield from readline_from_stdin()
         print('Password: ', end='', flush=True)
         self.password = yield from readline_from_stdin(password=True)
