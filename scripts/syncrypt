@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import logging.config
 import os.path
 import sys
 
@@ -10,17 +11,41 @@ from syncrypt import Vault
 from syncrypt.app import SyncryptApp
 
 COMMANDS = ['init', 'pull', 'push', 'watch']
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
 parser.add_argument('command', metavar='cmd', type=str,
         choices=COMMANDS, help='Command to run: ' + ', '.join(COMMANDS))
 parser.add_argument('-d', metavar='DIRECTORY', type=str, default='.',
         dest='directory', help='directory (default: .)')
+parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
+        dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
 
 config = parser.parse_args()
+
+logging.config.dictConfig({
+    'version': 1,
+    'formatters': {
+        'colored': {
+            '()': 'colorlog.ColoredFormatter',
+            'format':
+                '%(log_color)s%(levelname)s:%(name)s:%(message)s',
+        }
+    },
+    'handlers': {
+        'stream': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'colored',
+            'level': config.loglevel
+        },
+    },
+    'loggers': {
+        'syncrypt': {
+            'handlers': ['stream'],
+            'level': config.loglevel
+        },
+    },
+})
 
 vault = Vault(config.directory)
 app = SyncryptApp(vault)
@@ -37,3 +62,4 @@ elif config.command == 'push':
     loop.run_until_complete(app.push())
 
 loop.close()
+

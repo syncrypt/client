@@ -27,6 +27,8 @@ Alternate directory can be specified with ``-d``:
 
     bin/syncrypt -d ~/myfolder watch
 
+Debug logging can be activated via ``-l DEBUG``.
+
 Run tests:
 
     bin/pip install -e '.[test]'

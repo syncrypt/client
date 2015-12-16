@@ -61,6 +61,7 @@ setup(
         'pycrypto',
         'aiofiles',
         'umsgpack',
+        'colorlog',
         'hachiko'
     ],
 
