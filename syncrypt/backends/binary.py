@@ -19,7 +19,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def connect(self):
-        logger.info('Connecting to server...')
+        logger.debug('Connecting to server...')
         self.reader, self.writer = \
                 yield from asyncio.open_connection(self.storage.host,
                                                    self.storage.port)
@@ -36,6 +36,7 @@ class BinaryStorageConnection(object):
 
             line = yield from self.reader.readline()
             if line != b'SUCCESS\r\n':
+                yield from self.disconnect()
                 raise StorageBackendInvalidAuth(line)
         else:
             # we don't have auth token yet
@@ -47,6 +48,7 @@ class BinaryStorageConnection(object):
 
             line = yield from self.reader.readline()
             if line == b'':
+                yield from self.disconnect()
                 raise StorageBackendInvalidAuth(line)
             auth_token = line
             self.storage.auth = auth_token.decode(self.storage.vault.config.encoding).strip('\r\n')
@@ -57,9 +59,16 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def disconnect(self):
-        self.writer.write(b'DISCONNECT\r\n')
-        yield from self.writer.drain()
+        logger.debug('Disconnecting from server...')
+        try:
+            self.writer.write(b'DISCONNECT\r\n')
+            yield from self.writer.drain()
+        except:
+            pass
         self.writer.close()
+        self.connected = False
+        self.connecting = False
+        self.available.set()
 
     def __enter__(self):
         return self
@@ -226,8 +235,10 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def init(self):
-        print('Email for {}: '.format(self.host), end='', flush=True)
-        self.username = yield from readline_from_stdin()
+        self.username = None
+        while not self.username:
+            print('Email for {}: '.format(self.host), end='', flush=True)
+            self.username = yield from readline_from_stdin()
         print('Password: ', end='', flush=True)
         self.password = yield from readline_from_stdin(password=True)
         try:

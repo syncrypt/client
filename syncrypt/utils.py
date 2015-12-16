@@ -5,7 +5,10 @@ import sys
 def stdio(loop):
     reader = asyncio.StreamReader(loop=loop)
     reader_protocol = asyncio.StreamReaderProtocol(reader)
-    yield from loop.connect_read_pipe(lambda: reader_protocol, sys.stdin)
+    try:
+        yield from loop.connect_read_pipe(lambda: reader_protocol, sys.stdin)
+    except ValueError as e:
+        raise e from None # hide exception stack
     return reader
 
 @asyncio.coroutine

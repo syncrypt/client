@@ -25,14 +25,17 @@ class SyncryptApp(AIOEventHandler):
         yield from self.vault.backend.init()
 
     @asyncio.coroutine
-    def start(self):
+    def open_or_init(self):
         try:
             yield from self.vault.backend.open()
         except StorageBackendInvalidAuth:
             # retry after logging in & getting auth token
             yield from self.vault.backend.init()
-            yield from self.vault.backend.open()
+            yield from self.open_or_init()
 
+    @asyncio.coroutine
+    def start(self):
+        yield from self.open_or_init()
         yield from self.push()
         logger.info('Watching %s', os.path.abspath(self.vault.folder))
         self.watchdog = AIOWatchdog(self.vault.folder, event_handler=self)
@@ -50,14 +53,14 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def push(self):
-        yield from self.vault.backend.open()
+        yield from self.open_or_init()
         yield from asyncio.wait([
             asyncio.ensure_future(self.push_bundle(self.vault.backend, bundle))
                 for bundle in self.vault.walk()])
 
     @asyncio.coroutine
     def pull(self):
-        yield from self.vault.backend.open()
+        yield from self.open_or_init()
         yield from asyncio.wait([
             asyncio.ensure_future(self.pull_bundle(self.vault.backend, bundle))
                 for bundle in self.vault.walk()])
