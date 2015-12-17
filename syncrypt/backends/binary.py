@@ -50,10 +50,11 @@ class BinaryStorageConnection(object):
             line = yield from self.reader.readline()
 
             login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
-            if login_response[0] == '' or login_response[0] == 'ERROR':
+            if login_response[0] == 'SUCCESS' and login_response[1] != '':
+                self.storage.auth = login_response[1]
+            else:
                 yield from self.disconnect()
                 raise StorageBackendInvalidAuth(line)
-            self.storage.auth = login_response[0]
 
         self.connected = True
         self.connecting = False
