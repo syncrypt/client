@@ -64,12 +64,11 @@ class BinaryStorageConnection(object):
         try:
             self.writer.write(b'DISCONNECT\r\n')
             yield from self.writer.drain()
-        except:
-            pass
-        self.writer.close()
-        self.connected = False
-        self.connecting = False
-        self.available.set()
+        finally:
+            self.writer.close()
+            self.connected = False
+            self.connecting = False
+            self.available.set()
 
     def __enter__(self):
         return self
