@@ -3,6 +3,7 @@ import time
 
 import asyncio
 import umsgpack
+from getpass import getpass
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 from syncrypt.utils import readline_from_stdin
@@ -240,8 +241,7 @@ class BinaryStorageBackend(StorageBackend):
         while not self.username:
             print('Email for {}: '.format(self.host), end='', flush=True)
             self.username = yield from readline_from_stdin()
-        print('Password: ', end='', flush=True)
-        self.password = yield from readline_from_stdin(password=True)
+        self.password = getpass()
         try:
             with (yield from self.manager.acquire_connection()) as conn:
                 # after successful login, write back config
