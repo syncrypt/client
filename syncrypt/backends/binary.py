@@ -47,11 +47,12 @@ class BinaryStorageConnection(object):
             yield from self.writer.drain()
 
             line = yield from self.reader.readline()
-            if line == b'':
+
+            login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
+            if login_response[0] == '' or login_response[0] == 'ERROR':
                 yield from self.disconnect()
                 raise StorageBackendInvalidAuth(line)
-            auth_token = line
-            self.storage.auth = auth_token.decode(self.storage.vault.config.encoding).strip('\r\n')
+            self.storage.auth = login_response[0]
 
         self.connected = True
         self.connecting = False
