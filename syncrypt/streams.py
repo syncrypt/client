@@ -52,8 +52,8 @@ class EncryptingStreamReader(object):
             return b''
         self.original_hash.update(data)
         self.original_size += len(data)
-        logger.debug('Encrypting %d bytes', len(data))
         enc_data = self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
+        logger.debug('Encrypted %d bytes -> %d bytes', len(data), len(enc_data))
         self.encrypted_hash.update(enc_data)
         self.encrypted_size += len(enc_data)
         return enc_data
