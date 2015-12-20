@@ -8,17 +8,9 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
-# todo: move to config
-hash_algo = 'sha256'
-iv = 'This is an IV456'
-block_size = 16
-
-aes_key_len = 256
-rsa_key_len = 1024
-
 class PKCS5Padding(object):
     @staticmethod
-    def pad(s):
+    def pad(s, block_size):
         return s + str.encode((block_size - len(s) % block_size) *
                 chr(block_size - len(s) % block_size))
 
@@ -37,11 +29,13 @@ class EncryptingStreamReader(object):
     @asyncio.coroutine
     def open(self):
         self.original = yield from aiofiles.open(self.bundle.path, 'rb')
-        self.original_hash = hashlib.new(hash_algo)
-        self.encrypted_hash = hashlib.new(hash_algo)
+        self.original_hash = hashlib.new(self.bundle.vault.config.hash_algo)
+        self.encrypted_hash = hashlib.new(self.bundle.vault.config.hash_algo)
         self.original_size = 0
         self.encrypted_size = 0
-        self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
+        self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
+                self.bundle.vault.config.iv)
+        self.block_size = self.bundle.vault.config.block_size
         return self
 
     @asyncio.coroutine
@@ -56,7 +50,7 @@ class EncryptingStreamReader(object):
         self.original_hash.update(data)
         self.original_size += len(data)
         logger.debug('Encrypting %d bytes', len(data))
-        enc_data = self.aes.encrypt(PKCS5Padding.pad(data))
+        enc_data = self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
         self.encrypted_hash.update(enc_data)
         self.encrypted_size += len(enc_data)
         return enc_data
@@ -74,7 +68,8 @@ class DecryptingStreamWriter(object):
     @asyncio.coroutine
     def open(self):
         self.original = yield from aiofiles.open(self.bundle.path, 'wb')
-        self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
+        self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
+                self.bundle.vault.config.iv)
         if self.bundle.key is None:
             yield from self.bundle.load_key()
 

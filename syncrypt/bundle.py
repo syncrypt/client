@@ -12,27 +12,6 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
-
-aes_key_len = 256
-rsa_key_len = 1024
-hash_algo = 'sha256'
-iv = 'This is an IV456'
-block_size = 16
-
-class PKCS5Padding(object):
-    @staticmethod
-    def pad(s):
-        return s + str.encode((block_size - len(s) % block_size) * chr(block_size - len(s) % block_size))
-
-    @staticmethod
-    def unpad(s):
-        num_pad_chars = s[-1]
-        if s[-num_pad_chars:] == s[-1:] * num_pad_chars:
-            return s[:-num_pad_chars]
-        else:
-            return s
-
-
 class Bundle(object):
     'A Bundle represents a file and some additional information'
 
@@ -40,7 +19,7 @@ class Bundle(object):
     decrypt_semaphore = asyncio.Semaphore(value=8)
 
     __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
-            'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
+            'key_size_crypt', 'store_hash', 'crypt_hash',
             'remote_crypt_hash', 'uptodate', 'update_handle', 'key')
 
     def __init__(self, abspath, vault):
@@ -50,9 +29,13 @@ class Bundle(object):
         self.remote_crypt_hash = None
         self.update_handle = None
 
-        h = hashlib.new(hash_algo)
+        h = hashlib.new(self.vault.config.hash_algo)
         h.update(self.relpath.encode(self.vault.config.encoding))
         self.store_hash = h.hexdigest()
+
+    @property
+    def key_size(self):
+        return self.vault.config.aes_key_len >> 3
 
     @property
     def remote_hash_differs(self):
@@ -65,9 +48,8 @@ class Bundle(object):
         try:
             encrypted_key = yield from key_file.read()
             self.key = self.vault.private_key.decrypt(encrypted_key)
-            self.key_size = aes_key_len >> 3
             self.key_size_crypt = len(encrypted_key)
-            assert len(self.key) == aes_key_len >> 3
+            assert len(self.key) == self.key_size
         finally:
             yield from key_file.close()
 
@@ -80,8 +62,7 @@ class Bundle(object):
             (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
             encrypted_key_file.write(encrypted_key)
         self.key = aes_key
-        self.key_size = aes_key_len >> 3
-        self.key_size_crypt = len(encrypted_key)
+        assert len(self.key) == self.key_size
 
     def encrypting_reader(self):
         return EncryptingStreamReader(self)

@@ -3,6 +3,10 @@ import configparser
 class VaultConfig(object):
     rsa_key_len = 1024
     encoding = 'utf-8'
+    aes_key_len = 256
+    hash_algo = 'sha256'
+    iv = 'This is an IV456'
+    block_size = 16
 
     def __init__(self):
         self._config = configparser.ConfigParser()
