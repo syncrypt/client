@@ -55,12 +55,13 @@ class Bundle(object):
 
     @asyncio.coroutine
     def generate_key(self):
-        aes_key = os.urandom(aes_key_len >> 3)
+        aes_key = os.urandom(self.key_size)
         if not os.path.exists(os.path.dirname(self.path_key)):
             os.makedirs(os.path.dirname(self.path_key))
         with open(self.path_key, 'wb') as encrypted_key_file:
             (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
             encrypted_key_file.write(encrypted_key)
+            self.key_size_crypt = len(encrypted_key)
         self.key = aes_key
         assert len(self.key) == self.key_size
 
