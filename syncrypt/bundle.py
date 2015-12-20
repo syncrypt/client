@@ -1,12 +1,13 @@
 import hashlib
-import aiofiles
 import logging
 import os
 
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
+from .streams import EncryptingStreamReader, DecryptingStreamWriter
 
+import aiofiles
 import asyncio
 
 logger = logging.getLogger(__name__)
@@ -35,12 +36,12 @@ class PKCS5Padding(object):
 class Bundle(object):
     'A Bundle represents a file and some additional information'
 
-    encrypt_semaphore = asyncio.Semaphore(value=4)
-    decrypt_semaphore = asyncio.Semaphore(value=4)
+    encrypt_semaphore = asyncio.Semaphore(value=8)
+    decrypt_semaphore = asyncio.Semaphore(value=8)
 
     __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
             'key_size', 'key_size_crypt', 'store_hash', 'crypt_hash',
-            'remote_crypt_hash', 'uptodate', 'update_handle')
+            'remote_crypt_hash', 'uptodate', 'update_handle', 'key')
 
     def __init__(self, abspath, vault):
         self.vault = vault
@@ -61,6 +62,7 @@ class Bundle(object):
     @asyncio.coroutine
     def decrypt(self):
         'decrypt file (retrieve from .vault)'
+        return
 
         yield from self.decrypt_semaphore.acquire()
         logger.info('Decrypting %s', self)
@@ -72,6 +74,11 @@ class Bundle(object):
             assert len(aes_key) == aes_key_len >> 3
         finally:
             yield from key_file.close()
+
+        decrypting_writer = self.decrypting_writer()
+        with (yield from decrypting_writer.open()):
+            while True:
+                pass
 
         aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
         unencrypted = yield from aiofiles.open(self.path, 'wb')
@@ -87,50 +94,43 @@ class Bundle(object):
         self.decrypt_semaphore.release()
 
     @asyncio.coroutine
+    def generate_key(self):
+        aes_key = os.urandom(aes_key_len >> 3)
+        if not os.path.exists(os.path.dirname(self.path_key)):
+            os.makedirs(os.path.dirname(self.path_key))
+        with open(self.path_key, 'wb') as encrypted_key_file:
+            (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
+            encrypted_key_file.write(encrypted_key)
+        self.key = aes_key
+        self.key_size = aes_key_len >> 3
+        self.key_size_crypt = len(encrypted_key)
+
+    def encrypting_reader(self):
+        return EncryptingStreamReader(self)
+
+    def decrypting_writer(self):
+        return DecryptingStreamWriter(self)
+
+    @asyncio.coroutine
     def encrypt(self):
         'encrypt file (store in .vault)'
 
         yield from self.encrypt_semaphore.acquire()
         logger.info('Encrypting %s', self)
 
-        unencrypted = yield from aiofiles.open(self.path, 'rb')
+        yield from self.generate_key()
+
+        reader = self.encrypting_reader()
+
         try:
-            # TODO: dont read whole file into memory but stream it
-            original_content = yield from unencrypted.read()
-            original_size = len(original_content)
-            aes_key = os.urandom(aes_key_len >> 3)
-            aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
-
-            if not os.path.exists(os.path.dirname(self.path_key)):
-                os.makedirs(os.path.dirname(self.path_key))
-            with open(self.path_key, 'wb') as encrypted_key_file:
-
-                (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
-                encrypted_key_file.write(encrypted_key)
-
-            if not os.path.exists(os.path.dirname(self.path_crypt)):
-                os.makedirs(os.path.dirname(self.path_crypt))
-
-            # build hash on the fly
-            h = hashlib.new(hash_algo)
-
-            encrypted_file = yield from aiofiles.open(self.path_crypt, 'wb')
-            try:
-                h.update(original_content)
-                enc = aes_engine.encrypt(PKCS5Padding.pad(original_content))
-                encrypted_size = len(enc)
-                yield from encrypted_file.write(enc)
-            finally:
-                yield from encrypted_file.close()
-            self.crypt_hash = h.hexdigest()
-
-            self.file_size_crypt = encrypted_size
-            self.key_size = aes_key_len >> 3
-            self.key_size_crypt = len(encrypted_key)
+            yield from reader.open()
+            yield from reader.consume()
         finally:
-            yield from unencrypted.close()
-        self.uptodate = True
+            yield from reader.close()
 
+        self.crypt_hash = reader.encrypted_hash.digest().hex()
+        self.file_size_crypt = reader.encrypted_size
+        self.uptodate = True
         self.encrypt_semaphore.release()
 
     def update_and_upload(self):

@@ -94,7 +94,6 @@ class BinaryStorageConnection(object):
             return None
 
         msg = yield from self.reader.read(byte_count)
-
         return umsgpack.loads(msg)
 
     @asyncio.coroutine
@@ -127,12 +126,18 @@ class BinaryStorageConnection(object):
         assert bytes_written == bundle.key_size_crypt
 
         bytes_written = 0
-        with open(bundle.path_crypt, 'rb') as f:
-            while f.tell() < bundle.file_size_crypt:
-                buf = f.read(self.storage.buf_size)
+        reader = bundle.encrypting_reader()
+        try:
+            yield from reader.open()
+            while True:
+                buf = yield from reader.read(self.storage.buf_size)
+                if len(buf) == 0:
+                    break
                 self.writer.write(buf)
                 bytes_written += len(buf)
                 yield from self.writer.drain()
+        finally:
+            yield from reader.close()
         assert bytes_written == bundle.file_size_crypt
 
         line = yield from self.reader.readline()
@@ -144,7 +149,7 @@ class BinaryStorageConnection(object):
 
         logger.info('Downloading %s', bundle)
 
-        # upload key and file
+        # download key and file
         self.writer.write('DOWNLOAD:{0.store_hash}\r\n'
                 .format(bundle)
                 .encode(self.storage.vault.config.encoding))
@@ -163,12 +168,16 @@ class BinaryStorageConnection(object):
                 key_size -= len(buf)
             assert key_size == 0
 
-        with open(bundle.path_crypt, 'wb') as f:
+        writer = bundle.decrypting_writer()
+        try:
+            yield from writer.open()
             while file_size > 0:
                 buf = yield from self.reader.read(min(self.storage.buf_size, file_size))
-                f.write(buf)
+                yield from writer.write(buf)
                 file_size -= len(buf)
             assert file_size == 0, file_size
+        finally:
+            yield from writer.close()
 
     @asyncio.coroutine
     def version(self):
