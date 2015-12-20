@@ -13,7 +13,7 @@ from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 class CommonTestsMixin(object):
     @asynctest.ignore_loop
     def test_vault(self):
-        self.assertEqual(len(list(self.vault.walk())), 3)
+        self.assertEqual(len(list(self.vault.walk())), 4)
 
     @asynctest.ignore_loop
     def test_encrypt(self):
