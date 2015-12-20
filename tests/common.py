@@ -44,15 +44,17 @@ class CommonTestsMixin(object):
 
         yield from backend.open()
 
-        for bundle in list(self.vault.walk()):
+        bundles = list(self.vault.walk())
+        files = [b.path for b in bundles]
+        original_contents = {}
+
+        for bundle in bundles:
             # upload file
             yield from bundle.encrypt()
 
-            stat = os.stat(bundle.path_crypt)
-            crypt_size = stat.st_size
 
             with open(bundle.path, 'rb') as x:
-                original_content = x.read()
+                original_contents[bundle.path] = x.read()
 
             yield from backend.upload(bundle)
 
@@ -62,14 +64,26 @@ class CommonTestsMixin(object):
             # download file
             yield from backend.download(bundle)
 
+            with open(bundle.path, 'rb') as x:
+                current_content = x.read()
 
-            stat = os.stat(bundle.path_crypt)
+            self.assertEqual(original_contents[bundle.path], current_content)
 
-            self.assertEqual(stat.st_size, crypt_size)
+            # delete file
+            os.remove(bundle.path)
 
-            yield from bundle.decrypt()
+        # Now we download all files AGAIN, this time by generate a NEW bundle,
+        # because we don't want old keys to be present
+
+        self.vault.clear_bundle_cache()
+
+        for f in files:
+            bundle = self.vault.bundle_for(os.path.relpath(f, self.vault.folder))
+
+            # download file
+            yield from backend.download(bundle)
 
             with open(bundle.path, 'rb') as x:
                 current_content = x.read()
 
-            self.assertEqual(original_content, current_content)
+            self.assertEqual(original_contents[bundle.path], current_content)

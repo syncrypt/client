@@ -168,6 +168,8 @@ class BinaryStorageConnection(object):
                 key_size -= len(buf)
             assert key_size == 0
 
+        yield from bundle.load_key()
+
         writer = bundle.decrypting_writer()
         try:
             yield from writer.open()

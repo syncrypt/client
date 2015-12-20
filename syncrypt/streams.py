@@ -75,6 +75,8 @@ class DecryptingStreamWriter(object):
     def open(self):
         self.original = yield from aiofiles.open(self.bundle.path, 'wb')
         self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
+        if self.bundle.key is None:
+            yield from self.bundle.load_key()
 
     @asyncio.coroutine
     def close(self):

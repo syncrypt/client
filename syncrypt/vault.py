@@ -87,6 +87,9 @@ class Vault(object):
             else:
                 yield self.bundle_for(relpath)
 
+    def clear_bundle_cache(self):
+        self._bundle_cache = {}
+
     def bundle_for(self, relpath):
         # check if path should be ignored
         for filepart in relpath.split('/'):

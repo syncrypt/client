@@ -60,38 +60,14 @@ class Bundle(object):
                 self.remote_crypt_hash != self.crypt_hash
 
     @asyncio.coroutine
-    def decrypt(self):
-        'decrypt file (retrieve from .vault)'
-        return
-
-        yield from self.decrypt_semaphore.acquire()
-        logger.info('Decrypting %s', self)
-
+    def load_key(self):
         key_file = yield from aiofiles.open(self.path_key, 'rb')
         try:
             encrypted_key = yield from key_file.read()
-            aes_key = self.vault.private_key.decrypt(encrypted_key)
-            assert len(aes_key) == aes_key_len >> 3
+            self.key = self.vault.private_key.decrypt(encrypted_key)
+            assert len(self.key) == aes_key_len >> 3
         finally:
             yield from key_file.close()
-
-        decrypting_writer = self.decrypting_writer()
-        with (yield from decrypting_writer.open()):
-            while True:
-                pass
-
-        aes_engine = AES.new(aes_key, AES.MODE_CBC, iv)
-        unencrypted = yield from aiofiles.open(self.path, 'wb')
-        encrypted = yield from aiofiles.open(self.path_crypt, 'rb')
-        try:
-            crypt_content = yield from encrypted.read()
-            original_content = aes_engine.decrypt(crypt_content)
-            yield from unencrypted.write(PKCS5Padding.unpad(original_content))
-        finally:
-            yield from encrypted.close()
-            yield from unencrypted.close()
-
-        self.decrypt_semaphore.release()
 
     @asyncio.coroutine
     def generate_key(self):
@@ -154,11 +130,6 @@ class Bundle(object):
     @property
     def relpath(self):
         return os.path.relpath(self.path, self.vault.folder)
-
-    @property
-    def path_crypt(self):
-        return os.path.join(self.vault.crypt_path, \
-                self.store_hash[:2], self.store_hash)
 
     @property
     def path_key(self):
