@@ -66,5 +66,4 @@ pip-selfcheck.json
 *.sw?
 
 # syncrypt
-*.encrypted
-*.key
+.vault
