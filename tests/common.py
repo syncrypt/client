@@ -34,6 +34,34 @@ class CommonTestsMixin(object):
             yield from backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
 
+    def test_upload_2(self):
+        backend = self.vault.backend
+
+        bundles = list(self.vault.walk())
+        files = [b.path for b in bundles]
+        keys = {}
+
+        yield from backend.open()
+
+        for bundle in self.vault.walk():
+            yield from bundle.encrypt()
+            keys[bundle.path] = bundle.key
+            yield from backend.stat(bundle)
+            self.assertEqual(bundle.remote_hash_differs, True)
+            yield from backend.upload(bundle)
+            yield from backend.stat(bundle)
+            self.assertEqual(bundle.remote_hash_differs, False)
+
+        self.vault.clear_bundle_cache()
+
+        for f in files:
+            bundle = self.vault.bundle_for(os.path.relpath(f, self.vault.folder))
+            yield from bundle.encrypt()
+            self.assertEqual(bundle.key, keys[bundle.path])
+            yield from backend.stat(bundle)
+            self.assertEqual(bundle.remote_hash_differs, False)
+
+
     def test_app(self):
         app = SyncryptApp(self.vault)
         yield from app.push()

@@ -65,6 +65,8 @@ class Bundle(object):
         try:
             encrypted_key = yield from key_file.read()
             self.key = self.vault.private_key.decrypt(encrypted_key)
+            self.key_size = aes_key_len >> 3
+            self.key_size_crypt = len(encrypted_key)
             assert len(self.key) == aes_key_len >> 3
         finally:
             yield from key_file.close()
@@ -94,7 +96,10 @@ class Bundle(object):
         yield from self.encrypt_semaphore.acquire()
         logger.info('Encrypting %s', self)
 
-        yield from self.generate_key()
+        try:
+            yield from self.load_key()
+        except:
+            yield from self.generate_key()
 
         reader = self.encrypting_reader()
 
