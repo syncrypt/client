@@ -25,7 +25,7 @@ class CommonTestsMixin(object):
         yield from backend.open()
 
         for bundle in self.vault.walk():
-            yield from bundle.encrypt()
+            yield from bundle.update()
             yield from backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
             yield from backend.stat(bundle)
@@ -44,7 +44,7 @@ class CommonTestsMixin(object):
         yield from backend.open()
 
         for bundle in self.vault.walk():
-            yield from bundle.encrypt()
+            yield from bundle.update()
             keys[bundle.path] = bundle.key
             yield from backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
@@ -56,7 +56,7 @@ class CommonTestsMixin(object):
 
         for f in files:
             bundle = self.vault.bundle_for(os.path.relpath(f, self.vault.folder))
-            yield from bundle.encrypt()
+            yield from bundle.update()
             self.assertEqual(bundle.key, keys[bundle.path])
             yield from backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
@@ -78,8 +78,7 @@ class CommonTestsMixin(object):
 
         for bundle in bundles:
             # upload file
-            yield from bundle.encrypt()
-
+            yield from bundle.update()
 
             with open(bundle.path, 'rb') as x:
                 original_contents[bundle.path] = x.read()

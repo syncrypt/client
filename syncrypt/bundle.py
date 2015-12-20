@@ -90,11 +90,11 @@ class Bundle(object):
         return DecryptingStreamWriter(self)
 
     @asyncio.coroutine
-    def encrypt(self):
-        'encrypt file (store in .vault)'
+    def update(self):
+        'update encrypted hash (store in .vault)'
 
         yield from self.encrypt_semaphore.acquire()
-        logger.info('Encrypting %s', self)
+        logger.info('Updating %s', self)
 
         try:
             yield from self.load_key()
@@ -117,7 +117,7 @@ class Bundle(object):
     def update_and_upload(self):
         backend = self.vault.backend
         def x(bundle):
-            yield from bundle.encrypt()
+            yield from bundle.update()
             yield from backend.stat(bundle)
             if bundle.remote_hash_differs:
                 yield from backend.upload(bundle)

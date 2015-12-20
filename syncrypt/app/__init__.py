@@ -67,19 +67,17 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def push_bundle(self, backend, bundle):
-        'encrypt bundle and maybe upload'
-        yield from bundle.encrypt()
+        'update bundle and maybe upload'
+        yield from bundle.update()
         yield from backend.stat(bundle)
         if bundle.remote_hash_differs:
             yield from backend.upload(bundle)
 
     @asyncio.coroutine
     def pull_bundle(self, backend, bundle):
-        'encrypt, maybe download, and then decrypt'
-        yield from bundle.encrypt()
+        'update, maybe download, and then decrypt'
+        yield from bundle.update()
         yield from backend.stat(bundle)
         if bundle.remote_hash_differs:
             yield from backend.download(bundle)
-            yield from bundle.decrypt()
-
 
