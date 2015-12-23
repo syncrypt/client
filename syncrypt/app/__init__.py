@@ -6,12 +6,15 @@ import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
 from syncrypt.backends.base import StorageBackendInvalidAuth
+from syncrypt.limiter import JoinableSemaphore
 
 logger = logging.getLogger(__name__)
 
 class SyncryptApp(AIOEventHandler):
+
     def __init__(self, vault):
         self.vault = vault
+        self.bundle_action_semaphore = JoinableSemaphore(8)
         super(SyncryptApp, self).__init__()
 
     @asyncio.coroutine
@@ -54,16 +57,20 @@ class SyncryptApp(AIOEventHandler):
     @asyncio.coroutine
     def push(self):
         yield from self.open_or_init()
-        yield from asyncio.wait([
-            asyncio.ensure_future(self.push_bundle(self.vault.backend, bundle))
-                for bundle in self.vault.walk()])
+        for bundle in self.vault.walk():
+            yield from self.bundle_action_semaphore.acquire()
+            task = asyncio.Task(self.push_bundle(self.vault.backend, bundle))
+            asyncio.get_event_loop().call_soon(task)
+        yield from self.bundle_action_semaphore.join()
 
     @asyncio.coroutine
     def pull(self):
         yield from self.open_or_init()
-        yield from asyncio.wait([
-            asyncio.ensure_future(self.pull_bundle(self.vault.backend, bundle))
-                for bundle in self.vault.walk()])
+        for bundle in self.vault.walk():
+            yield from self.bundle_action_semaphore.acquire()
+            task = asyncio.Task(self.pull_bundle(self.vault.backend, bundle))
+            asyncio.get_event_loop().call_soon(task)
+        yield from self.bundle_action_semaphore.join()
 
     @asyncio.coroutine
     def push_bundle(self, backend, bundle):
@@ -72,12 +79,15 @@ class SyncryptApp(AIOEventHandler):
         yield from backend.stat(bundle)
         if bundle.remote_hash_differs:
             yield from backend.upload(bundle)
+        yield from self.bundle_action_semaphore.release()
 
     @asyncio.coroutine
     def pull_bundle(self, backend, bundle):
         'update, maybe download, and then decrypt'
+        yield from self.bundle_action_semaphore.acquire()
         yield from bundle.update()
         yield from backend.stat(bundle)
         if bundle.remote_hash_differs:
             yield from backend.download(bundle)
+        yield from self.bundle_action_semaphore.release()
 
