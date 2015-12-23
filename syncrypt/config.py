@@ -17,6 +17,13 @@ class VaultConfig(object):
         self._config['remote'] = {
                 'type': 'binary',
             }
+        self._config['app'] = {
+                'concurrency': 8,
+            }
+
+    def __getattr__(self, item):
+        if item in self._config:
+            return self._config[item]
 
     def read(self, config_file):
         self._config.read(config_file)

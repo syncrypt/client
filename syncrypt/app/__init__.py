@@ -14,7 +14,8 @@ class SyncryptApp(AIOEventHandler):
 
     def __init__(self, vault):
         self.vault = vault
-        self.bundle_action_semaphore = JoinableSemaphore(8)
+        self.concurrency = int(self.vault.config.app['concurrency'])
+        self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
         super(SyncryptApp, self).__init__()
 
     @asyncio.coroutine
