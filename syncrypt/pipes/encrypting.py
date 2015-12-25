@@ -8,23 +8,6 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
-class PKCS5Padding(object):
-    @staticmethod
-    def pad(s, block_size):
-        if len(s) % block_size > 0:
-            return s + str.encode((block_size - len(s) % block_size) *
-                    chr(block_size - len(s) % block_size))
-        else:
-            return s
-
-    @staticmethod
-    def unpad(s):
-        num_pad_chars = s[-1]
-        if s[-num_pad_chars:] == s[-1:] * num_pad_chars:
-            return s[:-num_pad_chars]
-        else:
-            return s
-
 class EncryptingStreamReader(object):
     def __init__(self, bundle):
         self.bundle = bundle
@@ -63,25 +46,3 @@ class EncryptingStreamReader(object):
         while True:
             if len((yield from self.read(100*1024))) == 0:
                 break
-
-class DecryptingStreamWriter(object):
-    def __init__(self, bundle):
-        self.bundle = bundle
-
-    @asyncio.coroutine
-    def open(self):
-        self.original = yield from aiofiles.open(self.bundle.path, 'wb')
-        self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
-                self.bundle.vault.config.iv)
-        if self.bundle.key is None:
-            yield from self.bundle.load_key()
-
-    @asyncio.coroutine
-    def close(self):
-        yield from self.original.close()
-
-    @asyncio.coroutine
-    def write(self, data):
-        logger.debug('Decrypting %d bytes', len(data))
-        original_content = self.aes.decrypt(data)
-        yield from self.original.write(PKCS5Padding.unpad(original_content))
