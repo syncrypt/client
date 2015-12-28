@@ -5,7 +5,7 @@ import os
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
-from .streams import EncryptingStreamReader, DecryptingStreamWriter
+from .pipes import EncryptingStreamReader, DecryptingStreamWriter
 
 import aiofiles
 import asyncio
