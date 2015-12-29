@@ -67,11 +67,14 @@ class Bundle(object):
 
     def encrypting_reader(self):
         return FileReader(self.path) \
-                >> Buffered(self.vault.config.block_size) \
+                >> Buffered(self.vault.config.enc_buf_size) \
                 >> Encrypt(self)
 
     def decrypting_writer(self, source):
-        return source >> Decrypt(self) >> FileWriter(self.path)
+        return source \
+                >> Buffered(self.vault.config.enc_buf_size) \
+                >> Decrypt(self) \
+                >> FileWriter(self.path)
 
     @asyncio.coroutine
     def update(self):
