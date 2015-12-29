@@ -1,4 +1,5 @@
 import asyncio
+import aiofiles
 
 #
 #
@@ -16,6 +17,10 @@ class Pipe(object):
 
     @asyncio.coroutine
     def read(self, count=-1):
+        pass
+
+    @asyncio.coroutine
+    def close(self):
         pass
 
     def add_input(self, input):
@@ -73,3 +78,21 @@ class Buffered(Pipe):
         retbuf = self.buf[:self.buf_size]
         self.buf = self.buf[self.buf_size:]
         return retbuf
+
+class FileReader(Pipe):
+    # simple wrapper for aiofiles
+    def __init__(self, filename):
+        self.filename = filename
+        self.handle = None
+        super(FileReader, self).__init__()
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        if self.handle is None and not self._eof:
+            self.handle = yield from aiofiles.open(self.filename)
+        return (yield from self.handle.read(count))
+
+    @asyncio.coroutine
+    def close(self):
+        yield from self.handle.close()
+

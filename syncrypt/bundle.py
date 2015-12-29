@@ -5,7 +5,7 @@ import os
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
-from .pipes import EncryptingStreamReader, DecryptingStreamWriter
+from .pipes import Encrypt, Decrypt, Buffered, FileReader
 
 import aiofiles
 import asyncio
@@ -66,10 +66,12 @@ class Bundle(object):
         assert len(self.key) == self.key_size
 
     def encrypting_reader(self):
-        return EncryptingStreamReader(self)
+        return FileReader(self.path) \
+                >> Buffered(self.bundle.vault.config.block_size) \
+                >> Encrypt(self)
 
     def decrypting_writer(self):
-        return DecryptingStreamWriter(self)
+        return Decrypt(self) >> FileWriter(self.path)
 
     @asyncio.coroutine
     def update(self):

@@ -4,9 +4,10 @@ import shutil
 import os
 
 import asyncio
+import aiofiles
 import asynctest
 
-from syncrypt.pipes import Once, Repeat, Buffered
+from syncrypt.pipes import Once, Repeat, Buffered, FileReader
 
 __all__ = ('PipesTests',)
 
@@ -54,6 +55,13 @@ class PipesTests(asynctest.TestCase):
 
         contents = yield from buffered.read()
         self.assertEqual(contents, b'')
+
+    @asynctest.ignore_loop
+    def test_filereader(self):
+        stream = FileReader('tests/testbinaryvault/README.md')
+        contents = yield from stream.read()
+        self.assertEqual(len(contents), 640)
+        yield from stream.close()
 
 if __name__ == '__main__':
     unittest.main()
