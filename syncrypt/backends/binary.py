@@ -42,7 +42,7 @@ class BinaryStorageConnection(object):
         else:
             # we don't have auth token yet
             logger.debug('Log into server...')
-            self.writer.write('LOGIN:{0}:{1}:{2}\r\n'
+            self.writer.write('VAULT_LOGIN:{0}:{1}:{2}\r\n'
                     .format(self.storage.username, self.storage.password, 'vault-id')
                     .encode(self.storage.vault.config.encoding))
             yield from self.writer.drain()
