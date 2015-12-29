@@ -1,13 +1,13 @@
-import unittest
+import os
 import os.path
 import shutil
-import os
+import unittest
 
-import asyncio
 import aiofiles
+import asyncio
 import asynctest
-
-from syncrypt.pipes import Once, Repeat, Buffered, FileReader
+from syncrypt.pipes import (Buffered, FileReader, Once, Repeat, SnappyCompress,
+                            SnappyDecompress)
 
 __all__ = ('PipesTests',)
 
@@ -60,8 +60,34 @@ class PipesTests(asynctest.TestCase):
     def test_filereader(self):
         stream = FileReader('tests/testbinaryvault/README.md')
         contents = yield from stream.read()
-        self.assertEqual(len(contents), 640)
         yield from stream.close()
+        self.assertEqual(len(contents), 640)
+
+    @asynctest.ignore_loop
+    def test_compression(self):
+        compressed = FileReader('tests/testbinaryvault/README.md') >> SnappyCompress()
+        contents = yield from compressed.read()
+        yield from compressed.close()
+        self.assertLess(len(contents), 640)
+        compressed = Once(contents) >> SnappyDecompress()
+        contents = yield from compressed.read()
+        yield from compressed.close()
+        self.assertEqual(len(contents), 640)
+
+    @asynctest.ignore_loop
+    def test_compression_2(self):
+        compressed = FileReader('tests/testbinaryvault/random200k') \
+                >> SnappyCompress() \
+                >> Buffered(521) \
+                >> SnappyDecompress()
+        length = 0
+        while True:
+            contents = yield from compressed.read()
+            if len(contents) == 0:
+                break
+            length += len(contents)
+        yield from compressed.close()
+        self.assertEqual(length, 200*1024)
 
 if __name__ == '__main__':
     unittest.main()

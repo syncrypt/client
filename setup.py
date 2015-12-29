@@ -62,7 +62,8 @@ setup(
         'aiofiles',
         'umsgpack',
         'colorlog',
-        'hachiko'
+        'hachiko',
+        'python-snappy'
     ],
 
     # List additional groups of dependencies here (e.g. development

@@ -14,14 +14,19 @@ import aiofiles
 class Pipe(object):
     def __init__(self):
         self._eof = False
+        self.input = None
 
     @asyncio.coroutine
     def read(self, count=-1):
-        pass
+        if self.input:
+            return self.input.read(count)
+        else:
+            raise NotImplementedError()
 
     @asyncio.coroutine
     def close(self):
-        pass
+        if self.input:
+            return self.input.close()
 
     def add_input(self, input):
         self.input = input
@@ -89,7 +94,7 @@ class FileReader(Pipe):
     @asyncio.coroutine
     def read(self, count=-1):
         if self.handle is None and not self._eof:
-            self.handle = yield from aiofiles.open(self.filename)
+            self.handle = yield from aiofiles.open(self.filename, 'rb')
         return (yield from self.handle.read(count))
 
     @asyncio.coroutine
