@@ -44,7 +44,6 @@ class Decrypt(Pipe):
 
     @asyncio.coroutine
     def read(self, count=-1):
-        print("Whhaat!")
         if self.aes is None:
             self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
                     self.bundle.vault.config.iv)
