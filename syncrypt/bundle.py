@@ -5,10 +5,12 @@ import os
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
-from .pipes import Encrypt, Decrypt, Buffered, FileReader, FileWriter
 
 import aiofiles
 import asyncio
+
+from .pipes import (Buffered, Decrypt, Encrypt, FileReader, FileWriter,
+                    SnappyCompress, SnappyDecompress)
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,7 @@ class Bundle(object):
 
     def encrypting_reader(self):
         return FileReader(self.path) \
+                >> SnappyCompress() \
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> Encrypt(self)
 
@@ -74,6 +77,7 @@ class Bundle(object):
         return source \
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> Decrypt(self) \
+                >> SnappyDecompress() \
                 >> FileWriter(self.path)
 
     @asyncio.coroutine
