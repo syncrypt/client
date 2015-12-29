@@ -7,6 +7,7 @@ class VaultConfig(object):
     hash_algo = 'sha256'
     iv = 'This is an IV456'
     block_size = 16
+    enc_buf_size = block_size * 10 * 1024
 
     def __init__(self):
         self._config = configparser.ConfigParser()

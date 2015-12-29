@@ -6,7 +6,7 @@ import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
 from syncrypt.backends.base import StorageBackendInvalidAuth
-from syncrypt.limiter import JoinableSemaphore
+from syncrypt.utils.limiter import JoinableSemaphore
 
 logger = logging.getLogger(__name__)
 

@@ -5,10 +5,12 @@ import os
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
-from .streams import EncryptingStreamReader, DecryptingStreamWriter
 
 import aiofiles
 import asyncio
+
+from .pipes import (Buffered, Decrypt, Encrypt, FileReader, FileWriter,
+                    SnappyCompress, SnappyDecompress)
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +68,17 @@ class Bundle(object):
         assert len(self.key) == self.key_size
 
     def encrypting_reader(self):
-        return EncryptingStreamReader(self)
+        return FileReader(self.path) \
+                >> SnappyCompress() \
+                >> Buffered(self.vault.config.enc_buf_size) \
+                >> Encrypt(self)
 
-    def decrypting_writer(self):
-        return DecryptingStreamWriter(self)
+    def decrypting_writer(self, source):
+        return source \
+                >> Buffered(self.vault.config.enc_buf_size) \
+                >> Decrypt(self) \
+                >> SnappyDecompress() \
+                >> FileWriter(self.path)
 
     @asyncio.coroutine
     def update(self):
@@ -86,7 +95,6 @@ class Bundle(object):
         reader = self.encrypting_reader()
 
         try:
-            yield from reader.open()
             yield from reader.consume()
         finally:
             yield from reader.close()
