@@ -1,12 +1,13 @@
 import logging
 import time
+from getpass import getpass
 
 import asyncio
 import umsgpack
-from getpass import getpass
+from syncrypt.pipes import StreamReader, Limit
+from syncrypt.utils.stdin import readline_from_stdin
 
 from .base import StorageBackend, StorageBackendInvalidAuth
-from syncrypt.utils import readline_from_stdin
 
 logger = logging.getLogger(__name__)
 
@@ -128,9 +129,8 @@ class BinaryStorageConnection(object):
         bytes_written = 0
         reader = bundle.encrypting_reader()
         try:
-            yield from reader.open()
             while True:
-                buf = yield from reader.read(self.storage.buf_size)
+                buf = yield from reader.read()
                 if len(buf) == 0:
                     break
                 self.writer.write(buf)
@@ -170,16 +170,11 @@ class BinaryStorageConnection(object):
 
         yield from bundle.load_key()
 
-        writer = bundle.decrypting_writer()
+        sink = bundle.decrypting_writer(StreamReader(self.reader) >> Limit(file_size))
         try:
-            yield from writer.open()
-            while file_size > 0:
-                buf = yield from self.reader.read(min(self.storage.buf_size, file_size))
-                yield from writer.write(buf)
-                file_size -= len(buf)
-            assert file_size == 0, file_size
+            yield from sink.consume()
         finally:
-            yield from writer.close()
+            yield from sink.close()
 
     @asyncio.coroutine
     def version(self):

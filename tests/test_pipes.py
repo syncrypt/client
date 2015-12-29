@@ -6,8 +6,8 @@ import unittest
 import aiofiles
 import asyncio
 import asynctest
-from syncrypt.pipes import (Buffered, FileReader, Once, Repeat, SnappyCompress,
-                            SnappyDecompress)
+from syncrypt.pipes import (Buffered, FileReader, Limit, Once, Repeat,
+                            SnappyCompress, SnappyDecompress, StreamReader)
 
 __all__ = ('PipesTests',)
 
@@ -88,6 +88,20 @@ class PipesTests(asynctest.TestCase):
             length += len(contents)
         yield from compressed.close()
         self.assertEqual(length, 200*1024)
+
+    @asynctest.ignore_loop
+    def test_limit(self):
+        for limit in (0, 1, 10, 141, 1241, 2000):
+            limited = FileReader('tests/testbinaryvault/random12k') \
+                    >> Limit(limit)
+            length = 0
+            while True:
+                contents = yield from limited.read()
+                if len(contents) == 0:
+                    break
+                length += len(contents)
+            yield from limited.close()
+            self.assertEqual(length, limit)
 
 if __name__ == '__main__':
     unittest.main()

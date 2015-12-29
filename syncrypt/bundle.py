@@ -5,7 +5,7 @@ import os
 import Crypto.Util.number
 import rsa
 from Crypto.Cipher import AES
-from .pipes import Encrypt, Decrypt, Buffered, FileReader
+from .pipes import Encrypt, Decrypt, Buffered, FileReader, FileWriter
 
 import aiofiles
 import asyncio
@@ -67,11 +67,11 @@ class Bundle(object):
 
     def encrypting_reader(self):
         return FileReader(self.path) \
-                >> Buffered(self.bundle.vault.config.block_size) \
+                >> Buffered(self.vault.config.block_size) \
                 >> Encrypt(self)
 
-    def decrypting_writer(self):
-        return Decrypt(self) >> FileWriter(self.path)
+    def decrypting_writer(self, source):
+        return source >> Decrypt(self) >> FileWriter(self.path)
 
     @asyncio.coroutine
     def update(self):
@@ -88,7 +88,6 @@ class Bundle(object):
         reader = self.encrypting_reader()
 
         try:
-            yield from reader.open()
             yield from reader.consume()
         finally:
             yield from reader.close()

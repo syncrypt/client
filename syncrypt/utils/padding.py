@@ -9,6 +9,8 @@ class PKCS5Padding(object):
 
     @staticmethod
     def unpad(s):
+        if len(s) == 0:
+            return s
         num_pad_chars = s[-1]
         if s[-num_pad_chars:] == s[-1:] * num_pad_chars:
             return s[:-num_pad_chars]
