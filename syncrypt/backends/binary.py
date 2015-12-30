@@ -155,11 +155,19 @@ class BinaryStorageConnection(object):
                 .encode(self.storage.vault.config.encoding))
         yield from self.writer.drain()
 
+        content_hash_size = int((yield from self.reader.readline()).strip(b'\r\n'))
         key_size = int((yield from self.reader.readline()).strip(b'\r\n'))
         file_size = int((yield from self.reader.readline()).strip(b'\r\n'))
 
-        logger.info('Downloading key ({0} bytes) and content ({1} bytes)'\
-                .format(key_size, file_size))
+        logger.info('Downloading content hash ({0}) key ({1} bytes) and content ({2} bytes)'\
+                .format(contenthkey_size, key_size, file_size))
+
+        # read content hash
+        # TODO: verify content hash locally and send error to server
+        #       if they don't match
+        content_hash = yield from self.reader.read(content_hash_size)
+        assert len(content_hash) == content_hash_size
+        logger.info('content hash: %s', content_hash)
 
         with open(bundle.path_key, 'wb') as f:
             while key_size > 0:
