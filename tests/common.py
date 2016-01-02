@@ -7,6 +7,7 @@ import asyncio
 import asynctest
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
+from syncrypt.config import VaultConfig
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 
 
@@ -61,9 +62,9 @@ class CommonTestsMixin(object):
             yield from backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
 
-
-    def test_app(self):
-        app = SyncryptApp(self.vault)
+    def test_app_push(self):
+        app = SyncryptApp(VaultConfig())
+        app.add_vault(self.vault)
         yield from app.push()
 
     def test_download(self):

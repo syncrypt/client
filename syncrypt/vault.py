@@ -40,6 +40,9 @@ class Vault(object):
         # TODO make property?
         self.backend = Backend(self, **kwargs)
 
+    def __str__(self):
+        return '<Vault: {0}>'.format(self.folder)
+
     @property
     def crypt_path(self):
         return os.path.join(self.folder, '.vault', 'data')

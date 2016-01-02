@@ -11,12 +11,20 @@ from syncrypt.utils.limiter import JoinableSemaphore
 logger = logging.getLogger(__name__)
 
 class SyncryptApp(AIOEventHandler):
+    '''This is the Syncrypt daemon that can orchestrate multiple vaults and
+    report status via a HTTP interface'''
+    # TODO rename to SyncryptDaemon
 
-    def __init__(self, vault):
-        self.vault = vault
-        self.concurrency = int(self.vault.config.app['concurrency'])
+    def __init__(self, config):
+        self.vaults = []
+        self.config = config
+        self.concurrency = int(self.config.app['concurrency'])
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
+        self.watchdogs = {}
         super(SyncryptApp, self).__init__()
+
+    def add_vault(self, vault):
+        self.vaults.append(vault)
 
     @asyncio.coroutine
     def init(self):
@@ -29,25 +37,26 @@ class SyncryptApp(AIOEventHandler):
         yield from self.vault.backend.init()
 
     @asyncio.coroutine
-    def open_or_init(self):
+    def open_or_init(self, vault):
         try:
-            yield from self.vault.backend.open()
+            yield from vault.backend.open()
         except StorageBackendInvalidAuth:
             # retry after logging in & getting auth token
-            yield from self.vault.backend.init()
-            yield from self.open_or_init()
+            yield from vault.backend.init()
+            yield from open_or_init(vault)
 
     @asyncio.coroutine
     def start(self):
-        yield from self.open_or_init()
         yield from self.push()
-        logger.info('Watching %s', os.path.abspath(self.vault.folder))
-        self.watchdog = AIOWatchdog(self.vault.folder, event_handler=self)
-        self.watchdog.start()
+        for vault in self.vaults:
+            logger.info('Watching %s', os.path.abspath(vault.folder))
+            self.watchdogs[vault.folder] = AIOWatchdog(vault.folder, event_handler=self)
+            self.watchdogs[vault.folder].start()
 
     @asyncio.coroutine
     def stop(self):
-        self.watchdog.stop()
+        for watchdog in self.watchdogs.values():
+            watchdog.stop()
 
     @asyncio.coroutine
     def on_modified(self, event):
@@ -57,20 +66,22 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def push(self):
-        yield from self.open_or_init()
-        for bundle in self.vault.walk():
-            yield from self.bundle_action_semaphore.acquire()
-            task = asyncio.Task(self.push_bundle(self.vault.backend, bundle))
-            asyncio.get_event_loop().call_soon(task)
+        for vault in self.vaults:
+            yield from self.open_or_init(vault)
+            for bundle in vault.walk():
+                yield from self.bundle_action_semaphore.acquire()
+                task = asyncio.Task(self.push_bundle(vault.backend, bundle))
+                asyncio.get_event_loop().call_soon(task)
         yield from self.bundle_action_semaphore.join()
 
     @asyncio.coroutine
     def pull(self):
-        yield from self.open_or_init()
-        for bundle in self.vault.walk():
-            yield from self.bundle_action_semaphore.acquire()
-            task = asyncio.Task(self.pull_bundle(self.vault.backend, bundle))
-            asyncio.get_event_loop().call_soon(task)
+        for vault in self.vaults:
+            yield from self.open_or_init(vault)
+            for bundle in vault.walk():
+                yield from self.bundle_action_semaphore.acquire()
+                task = asyncio.Task(self.pull_bundle(vault.backend, bundle))
+                asyncio.get_event_loop().call_soon(task)
         yield from self.bundle_action_semaphore.join()
 
     @asyncio.coroutine
@@ -80,12 +91,13 @@ class SyncryptApp(AIOEventHandler):
         yield from backend.stat(bundle)
         if bundle.remote_hash_differs:
             yield from backend.upload(bundle)
+        logger.debug('Release action semaphore')
         yield from self.bundle_action_semaphore.release()
+        logger.debug('Released action semaphore')
 
     @asyncio.coroutine
     def pull_bundle(self, backend, bundle):
         'update, maybe download, and then decrypt'
-        yield from self.bundle_action_semaphore.acquire()
         yield from bundle.update()
         yield from backend.stat(bundle)
         if bundle.remote_hash_differs:

@@ -9,6 +9,7 @@ import sys
 import asyncio
 from syncrypt import Vault
 from syncrypt.app import SyncryptApp
+from syncrypt.config import VaultConfig
 
 COMMANDS = ['init', 'pull', 'push', 'watch']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
@@ -16,12 +17,16 @@ LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
 parser.add_argument('command', metavar='cmd', type=str,
         choices=COMMANDS, help='Command to run: ' + ', '.join(COMMANDS))
-parser.add_argument('-d', metavar='DIRECTORY', type=str, default='.',
-        dest='directory', help='directory (default: .)')
+parser.add_argument('-d', metavar='DIRECTORY', type=str,
+        action='append',dest='directory', help='directory (default: .)')
 parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
         dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
 
 config = parser.parse_args()
+
+app = SyncryptApp(VaultConfig())
+for directory in config.directory:
+    app.add_vault(Vault(directory))
 
 logging.config.dictConfig({
     'version': 1,
@@ -47,8 +52,6 @@ logging.config.dictConfig({
     },
 })
 
-vault = Vault(config.directory)
-app = SyncryptApp(vault)
 loop = asyncio.get_event_loop()
 
 if config.command == 'init':
