@@ -17,6 +17,7 @@ class VaultConfig(object):
             }
         self._config['remote'] = {
                 'type': 'binary',
+                'ssl': False
             }
         self._config['app'] = {
                 'concurrency': 8,
@@ -51,6 +52,7 @@ class VaultConfig(object):
     def backend_kwargs(self):
         kwargs = dict(self._config['remote']) # copy dict
         kwargs.pop('type')
+        kwargs['ssl'] = not (kwargs['ssl'].lower() in ['no', 'false', '0'])
         return kwargs
 
     @property

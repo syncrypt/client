@@ -1,10 +1,11 @@
 import logging
+import ssl
 import time
 from getpass import getpass
 
 import asyncio
 import umsgpack
-from syncrypt.pipes import StreamReader, Limit
+from syncrypt.pipes import Limit, StreamReader
 from syncrypt.utils.stdin import readline_from_stdin
 
 from .base import StorageBackend, StorageBackendInvalidAuth
@@ -22,9 +23,15 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def connect(self):
         logger.debug('Connecting to server...')
+
+        if self.storage.ssl:
+            sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        else:
+            sc = None
+
         self.reader, self.writer = \
                 yield from asyncio.open_connection(self.storage.host,
-                                                   self.storage.port)
+                                                   self.storage.port, ssl=sc)
 
         # version string format: "Syncrypt x.y.z\r\n"
         version_info = yield from self.reader.readline()
@@ -233,9 +240,10 @@ class BinaryStorageManager(object):
 class BinaryStorageBackend(StorageBackend):
 
     def __init__(self, vault, auth=None, host='127.0.0.1', port=1337,
-            concurrency=4, username=None, password=None):
+            concurrency=4, username=None, password=None, ssl=False):
         self.host = host
         self.port = port
+        self.ssl = ssl
         self.username = username
         self.password = password
         self.auth = auth
