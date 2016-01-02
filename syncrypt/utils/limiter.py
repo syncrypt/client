@@ -21,3 +21,4 @@ class JoinableSemaphore():
     @asyncio.coroutine
     def join(self):
         yield from self.empty
+        if self.empty.locked(): self.empty.release()
