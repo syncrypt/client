@@ -86,7 +86,6 @@ class Bundle(object):
 
         try:
             yield from sink.consume()
-            print (hash_pipe, assert_hash)
             if assert_hash and hash_pipe.hash != assert_hash:
                 # TODO: restore original file and alert server
                 raise Exception('hash mismatch!')

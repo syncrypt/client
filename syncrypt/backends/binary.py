@@ -4,7 +4,7 @@ from getpass import getpass
 
 import asyncio
 import umsgpack
-from syncrypt.pipes import StreamReader, Limit, Hash
+from syncrypt.pipes import StreamReader, Limit
 from syncrypt.utils.stdin import readline_from_stdin
 
 from .base import StorageBackend, StorageBackendInvalidAuth
@@ -176,7 +176,6 @@ class BinaryStorageConnection(object):
 
         yield from bundle.load_key()
 
-        hash_pipe = Hash(bundle)
         yield from bundle.write_encrypted_stream(
                 StreamReader(self.reader) >> Limit(file_size),
                 assert_hash=content_hash)
