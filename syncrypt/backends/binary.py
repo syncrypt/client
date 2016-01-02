@@ -160,7 +160,7 @@ class BinaryStorageConnection(object):
         file_size = int((yield from self.reader.readline()).strip(b'\r\n'))
 
         logger.info('Downloading content hash ({0}) key ({1} bytes) and content ({2} bytes)'\
-                .format(contenthkey_size, key_size, file_size))
+                .format(content_hash_size, key_size, file_size))
 
         # read content hash
         # TODO: verify content hash locally and send error to server
