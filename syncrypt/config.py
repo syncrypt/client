@@ -51,8 +51,11 @@ class VaultConfig(object):
     @property
     def backend_kwargs(self):
         kwargs = dict(self._config['remote']) # copy dict
+        if 'ssl' in kwargs and kwargs['type'] == 'binary':
+            kwargs['ssl'] = not (kwargs['ssl'].lower() in ['no', 'false', '0'])
+        else:
+            del kwargs['ssl']
         kwargs.pop('type')
-        kwargs['ssl'] = not (kwargs['ssl'].lower() in ['no', 'false', '0'])
         return kwargs
 
     @property

@@ -6,6 +6,7 @@ import time
 import asyncio
 
 from .base import StorageBackend
+from syncrypt.pipes import FileReader, FileWriter
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,12 @@ class LocalStorageBackend(StorageBackend):
         logger.info('Uploading %s', bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)
         shutil.copyfile(bundle.path, dest_path)
+        yield from bundle.load_key()
+        s = bundle.read_encrypted_stream() >> FileWriter(dest_path)
+        try:
+            yield from s.consume()
+        finally:
+            yield from s.close()
         file_info = open(dest_path + '.file_info', 'w')
         file_info.write(bundle.crypt_hash)
         file_info.close()
@@ -38,8 +45,15 @@ class LocalStorageBackend(StorageBackend):
     @asyncio.coroutine
     def download(self, bundle):
         logger.info('Downloading %s', bundle)
+
         dest_path = os.path.join(self.path, bundle.store_hash)
-        shutil.copyfile(dest_path, bundle.path)
+
+        yield from bundle.load_key()
+        s = FileReader(dest_path)
+        try:
+            yield from bundle.write_encrypted_stream(s)
+        finally:
+            yield from s.close()
 
     @asyncio.coroutine
     def stat(self, bundle):
