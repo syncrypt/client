@@ -11,14 +11,37 @@ from syncrypt.utils.padding import PKCS5Padding
 
 logger = logging.getLogger(__name__)
 
+class Hash(Pipe):
+    'Hash (and count) everything that comes through this pipe'
+
+    def __init__(self, bundle):
+        super(Hash, self).__init__()
+        self._hash = hashlib.new(bundle.vault.config.hash_algo)
+        self._size = 0
+
+    def __str__(self):
+        return "<Hash: {0} ({1} bytes)>".format(self.hash, self.size)
+
+    @property
+    def size(self):
+        return self._size
+
+    @property
+    def hash(self):
+        return self._hash.hexdigest()
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        data = yield from self.input.read(count)
+        if len(data) != 0:
+            self._hash.update(data)
+            self._size += len(data)
+        return data
+
 class Encrypt(Pipe):
     def __init__(self, bundle):
         super(Encrypt, self).__init__()
         self.bundle = bundle
-        self.original_hash = hashlib.new(self.bundle.vault.config.hash_algo)
-        self.encrypted_hash = hashlib.new(self.bundle.vault.config.hash_algo)
-        self.original_size = 0
-        self.encrypted_size = 0
         self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
                 self.bundle.vault.config.iv)
         self.block_size = self.bundle.vault.config.block_size
@@ -28,12 +51,8 @@ class Encrypt(Pipe):
         data = yield from self.input.read(count)
         if len(data) == 0:
             return b''
-        self.original_hash.update(data)
-        self.original_size += len(data)
         enc_data = self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
         logger.debug('Encrypted %d bytes -> %d bytes', len(data), len(enc_data))
-        self.encrypted_hash.update(enc_data)
-        self.encrypted_size += len(enc_data)
         return enc_data
 
 class Decrypt(Pipe):

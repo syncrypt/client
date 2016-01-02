@@ -4,7 +4,7 @@ from getpass import getpass
 
 import asyncio
 import umsgpack
-from syncrypt.pipes import StreamReader, Limit
+from syncrypt.pipes import StreamReader, Limit, Hash
 from syncrypt.utils.stdin import readline_from_stdin
 
 from .base import StorageBackend, StorageBackendInvalidAuth
@@ -127,7 +127,7 @@ class BinaryStorageConnection(object):
         assert bytes_written == bundle.key_size_crypt
 
         bytes_written = 0
-        reader = bundle.encrypting_reader()
+        reader = bundle.read_encrypted_stream()
         try:
             while True:
                 buf = yield from reader.read()
@@ -163,11 +163,9 @@ class BinaryStorageConnection(object):
                 .format(content_hash_size, key_size, file_size))
 
         # read content hash
-        # TODO: verify content hash locally and send error to server
-        #       if they don't match
-        content_hash = yield from self.reader.read(content_hash_size)
+        content_hash = (yield from self.reader.read(content_hash_size)).decode()
         assert len(content_hash) == content_hash_size
-        logger.info('content hash: %s', content_hash)
+        logger.debug('content hash: %s', content_hash)
 
         with open(bundle.path_key, 'wb') as f:
             while key_size > 0:
@@ -178,11 +176,10 @@ class BinaryStorageConnection(object):
 
         yield from bundle.load_key()
 
-        sink = bundle.decrypting_writer(StreamReader(self.reader) >> Limit(file_size))
-        try:
-            yield from sink.consume()
-        finally:
-            yield from sink.close()
+        hash_pipe = Hash(bundle)
+        yield from bundle.write_encrypted_stream(
+                StreamReader(self.reader) >> Limit(file_size),
+                assert_hash=content_hash)
 
     @asyncio.coroutine
     def version(self):

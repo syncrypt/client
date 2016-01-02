@@ -10,7 +10,7 @@ import aiofiles
 import asyncio
 
 from .pipes import (Buffered, Decrypt, Encrypt, FileReader, FileWriter,
-                    SnappyCompress, SnappyDecompress)
+                    SnappyCompress, SnappyDecompress, Hash)
 
 logger = logging.getLogger(__name__)
 
@@ -67,18 +67,31 @@ class Bundle(object):
         self.key = aes_key
         assert len(self.key) == self.key_size
 
-    def encrypting_reader(self):
+    def read_encrypted_stream(self):
         return FileReader(self.path) \
                 >> SnappyCompress() \
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> Encrypt(self)
 
-    def decrypting_writer(self, source):
-        return source \
+    @asyncio.coroutine
+    def write_encrypted_stream(self, stream, assert_hash=None):
+        hash_pipe = Hash(self)
+
+        sink = stream \
                 >> Buffered(self.vault.config.enc_buf_size) \
+                >> hash_pipe \
                 >> Decrypt(self) \
                 >> SnappyDecompress() \
                 >> FileWriter(self.path)
+
+        try:
+            yield from sink.consume()
+            print (hash_pipe, assert_hash)
+            if assert_hash and hash_pipe.hash != assert_hash:
+                # TODO: restore original file and alert server
+                raise Exception('hash mismatch!')
+        finally:
+            yield from sink.close()
 
     @asyncio.coroutine
     def update(self):
@@ -92,15 +105,14 @@ class Bundle(object):
         except:
             yield from self.generate_key()
 
-        reader = self.encrypting_reader()
-
+        hashing_reader = self.read_encrypted_stream() >> Hash(self)
         try:
-            yield from reader.consume()
+            yield from hashing_reader.consume()
         finally:
-            yield from reader.close()
+            yield from hashing_reader.close()
 
-        self.crypt_hash = reader.encrypted_hash.digest().hex()
-        self.file_size_crypt = reader.encrypted_size
+        self.crypt_hash = hashing_reader.hash
+        self.file_size_crypt = hashing_reader.size
         self.uptodate = True
         self.encrypt_semaphore.release()
 
