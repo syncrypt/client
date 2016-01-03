@@ -23,6 +23,11 @@ class SyncryptApp(AIOEventHandler):
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
         self.watchdogs = {}
         self.api = SyncryptAPI(self)
+        self.stats = {
+            'uploads': 0,
+            'downloads': 0,
+            'stats': 0
+            }
         super(SyncryptApp, self).__init__()
 
     def add_vault(self, vault):
@@ -92,8 +97,10 @@ class SyncryptApp(AIOEventHandler):
         'update bundle and maybe upload'
         yield from bundle.update()
         yield from backend.stat(bundle)
+        self.stats['stats'] += 1
         if bundle.remote_hash_differs:
             yield from backend.upload(bundle)
+            self.stats['uploads'] += 1
         logger.debug('Release action semaphore')
         yield from self.bundle_action_semaphore.release()
         logger.debug('Released action semaphore')
@@ -103,7 +110,9 @@ class SyncryptApp(AIOEventHandler):
         'update, maybe download, and then decrypt'
         yield from bundle.update()
         yield from backend.stat(bundle)
+        self.stats['stats'] += 1
         if bundle.remote_hash_differs:
             yield from backend.download(bundle)
+            self.stats['downloads'] += 1
         yield from self.bundle_action_semaphore.release()
 
