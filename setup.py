@@ -60,6 +60,7 @@ setup(
     install_requires=[
         'pycrypto',
         'aiofiles',
+        'aiohttp',
         'umsgpack',
         'colorlog',
         'hachiko',

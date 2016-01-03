@@ -7,6 +7,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.utils.limiter import JoinableSemaphore
+from .api import SyncryptAPI
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class SyncryptApp(AIOEventHandler):
         self.concurrency = int(self.config.app['concurrency'])
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
         self.watchdogs = {}
+        self.api = SyncryptAPI(self)
         super(SyncryptApp, self).__init__()
 
     def add_vault(self, vault):
@@ -47,6 +49,7 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def start(self):
+        yield from self.api.start_web()
         yield from self.push()
         for vault in self.vaults:
             logger.info('Watching %s', os.path.abspath(vault.folder))
