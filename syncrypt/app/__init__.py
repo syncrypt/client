@@ -101,9 +101,7 @@ class SyncryptApp(AIOEventHandler):
         if bundle.remote_hash_differs:
             yield from backend.upload(bundle)
             self.stats['uploads'] += 1
-        logger.debug('Release action semaphore')
         yield from self.bundle_action_semaphore.release()
-        logger.debug('Released action semaphore')
 
     @asyncio.coroutine
     def pull_bundle(self, backend, bundle):
