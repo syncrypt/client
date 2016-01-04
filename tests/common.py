@@ -1,14 +1,16 @@
+import json
 import os
 import os.path
 import shutil
 import unittest
 
+import aiohttp
 import asyncio
 import asynctest
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
-from syncrypt.config import VaultConfig
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
+from syncrypt.config import VaultConfig
 
 
 class CommonTestsMixin(object):
@@ -71,6 +73,13 @@ class CommonTestsMixin(object):
         app = SyncryptApp(VaultConfig())
         app.add_vault(self.vault)
         yield from app.start()
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
+        c = yield from r.json()
+
+        self.assertEqual(len(c), 1) # only one vault
+
+        yield from r.release()
 
         yield from app.stop()
 
