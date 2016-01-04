@@ -17,7 +17,7 @@ class VaultConfig(object):
             }
         self._config['remote'] = {
                 'type': 'binary',
-                'ssl': False
+                'ssl': True
             }
         self._config['app'] = {
                 'concurrency': 8,
