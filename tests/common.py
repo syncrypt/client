@@ -67,6 +67,13 @@ class CommonTestsMixin(object):
         app.add_vault(self.vault)
         yield from app.push()
 
+    def test_app_watchdog(self):
+        app = SyncryptApp(VaultConfig())
+        app.add_vault(self.vault)
+        yield from app.start()
+
+        yield from app.stop()
+
     def test_download(self):
         'for all files -> upload file, delete file, download file'
         backend = self.vault.backend

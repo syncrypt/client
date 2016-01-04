@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 class SyncryptAPI(object):
     def __init__(self, app):
         self.app = app
+        self.server = None
 
     @asyncio.coroutine
     def list_vaults(self, request):
@@ -19,11 +20,16 @@ class SyncryptAPI(object):
         return web.Response(body=json.dumps(self.app.stats).encode('utf-8'))
 
     @asyncio.coroutine
-    def start_web(self):
+    def start(self):
         loop = asyncio.get_event_loop()
         app = web.Application(loop=loop)
         app.router.add_route('GET', '/vaults', self.list_vaults)
         app.router.add_route('GET', '/stats', self.stats)
-        srv = yield from loop.create_server(app.make_handler(), '127.0.0.1', 28080)
+        self.server = yield from loop.create_server(app.make_handler(), '127.0.0.1', 28080)
         logger.info("REST API Server started at http://127.0.0.1:28080")
-        return srv
+
+    @asyncio.coroutine
+    def stop(self):
+        if self.server:
+            self.server.close()
+            yield from self.server.wait_closed()

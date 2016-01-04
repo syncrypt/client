@@ -54,7 +54,7 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def start(self):
-        yield from self.api.start_web()
+        yield from self.api.start()
         yield from self.push()
         for vault in self.vaults:
             logger.info('Watching %s', os.path.abspath(vault.folder))
@@ -65,6 +65,7 @@ class SyncryptApp(AIOEventHandler):
     def stop(self):
         for watchdog in self.watchdogs.values():
             watchdog.stop()
+        yield from self.api.stop()
 
     @asyncio.coroutine
     def on_modified(self, event):
