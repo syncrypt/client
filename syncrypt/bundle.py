@@ -140,4 +140,4 @@ class Bundle(object):
     @property
     def path_key(self):
         return os.path.join(self.vault.keys_path, \
-                self.store_hash[:2], self.store_hash)
+                self.store_hash[:2], self.store_hash[2:])
