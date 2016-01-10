@@ -8,9 +8,11 @@ from Crypto.Cipher import AES
 
 import aiofiles
 import asyncio
+import umsgpack
 
-from .pipes import (Buffered, Decrypt, Encrypt, FileReader, FileWriter,
-                    SnappyCompress, SnappyDecompress, Hash)
+from .pipes import (Buffered, Decrypt, DecryptRSA, Encrypt, EncryptRSA,
+                    FileReader, FileWriter, Hash, Once, SnappyCompress,
+                    SnappyDecompress)
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,23 @@ class Bundle(object):
         self.store_hash = h.hexdigest()
 
     @property
+    def bundle_size(self):
+        return len(self.serialized_bundle)
+
+    @property
+    def serialized_bundle(self):
+        return umsgpack.dumps(self.bundle)
+
+    @property
+    def bundle(self):
+        return {
+            'filename': os.path.relpath(self.path, self.vault.folder),
+            'key': self.key,
+            'hash': b'\0' * 32,
+            'key_size': self.key_size
+        }
+
+    @property
     def key_size(self):
         return self.vault.config.aes_key_len >> 3
 
@@ -49,7 +68,8 @@ class Bundle(object):
         key_file = yield from aiofiles.open(self.path_key, 'rb')
         try:
             encrypted_key = yield from key_file.read()
-            self.key = self.vault.private_key.decrypt(encrypted_key)
+            fileinfo = umsgpack.loads(encrypted_key)
+            self.key = fileinfo[b'key']
             self.key_size_crypt = len(encrypted_key)
             assert len(self.key) == self.key_size
         finally:
@@ -57,15 +77,22 @@ class Bundle(object):
 
     @asyncio.coroutine
     def generate_key(self):
-        aes_key = os.urandom(self.key_size)
+        self.key = os.urandom(self.key_size)
         if not os.path.exists(os.path.dirname(self.path_key)):
             os.makedirs(os.path.dirname(self.path_key))
-        with open(self.path_key, 'wb') as encrypted_key_file:
-            (encrypted_key, ) = self.vault.public_key.encrypt(aes_key, 0)
-            encrypted_key_file.write(encrypted_key)
-            self.key_size_crypt = len(encrypted_key)
-        self.key = aes_key
         assert len(self.key) == self.key_size
+
+        sink = Once(self.serialized_bundle) >> FileWriter(self.path_key)
+        try:
+            yield from sink.consume()
+        finally:
+            yield from sink.close()
+
+    def encrypted_fileinfo_reader(self):
+        return Once(self.serialized_bundle) \
+                >> SnappyCompress() \
+                >> Buffered(self.vault.config.rsa_enc_block_size) \
+                >> EncryptRSA(self)
 
     def read_encrypted_stream(self):
         return FileReader(self.path) \
@@ -93,6 +120,20 @@ class Bundle(object):
             yield from sink.close()
 
     @asyncio.coroutine
+    def write_encrypted_fileinfo(self, stream):
+        logger.info("Updating fileinfo on disk")
+        sink = stream \
+                >> Buffered(self.vault.config.rsa_dec_block_size) \
+                >> DecryptRSA(self) \
+                >> SnappyDecompress() \
+                >> FileWriter(self.path_key)
+
+        try:
+            yield from sink.consume()
+        finally:
+            yield from sink.close()
+
+    @asyncio.coroutine
     def update(self):
         'update encrypted hash (store in .vault)'
 
@@ -101,7 +142,7 @@ class Bundle(object):
 
         try:
             yield from self.load_key()
-        except:
+        except FileNotFoundError:
             yield from self.generate_key()
 
         hashing_reader = self.read_encrypted_stream() >> Hash(self)

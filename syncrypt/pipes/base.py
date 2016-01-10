@@ -20,9 +20,22 @@ class Pipe(object):
 
     @asyncio.coroutine
     def consume(self):
+        'read all data from this pipe, but forget about it'
         while True:
             if len((yield from self.read())) == 0:
                 break
+
+    @asyncio.coroutine
+    def readall(self):
+        'read all data from this pipe and return that'
+        data = b''
+        while True:
+            new_data = yield from self.read()
+            if len(new_data) == 0:
+                break
+            data += new_data
+        yield from self.close()
+        return data
 
     def add_input(self, input):
         self.input = input

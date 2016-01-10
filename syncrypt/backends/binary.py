@@ -114,9 +114,12 @@ class BinaryStorageConnection(object):
 
         assert bundle.uptodate
 
+        fileinfo = yield from bundle.encrypted_fileinfo_reader().readall()
+        fileinfo_size = len(fileinfo)
+
         # upload key and file
-        self.writer.write('UPLOAD:{0.store_hash}:{0.key_size_crypt}:{0.file_size_crypt}:{0.crypt_hash}\r\n'
-                .format(bundle)
+        self.writer.write('UPLOAD:{0.store_hash}:{fileinfo_size}:{0.file_size_crypt}:{0.crypt_hash}\r\n'
+                .format(bundle, fileinfo_size=fileinfo_size)
                 .encode(self.storage.vault.config.encoding))
         yield from self.writer.drain()
 
@@ -124,17 +127,13 @@ class BinaryStorageConnection(object):
         if line != b'WAITING\r\n':
             raise Exception(line)
 
-        logger.info('Uploading key ({0} bytes) and content ({1} bytes)'\
-                .format(bundle.key_size_crypt, bundle.file_size_crypt))
+        logger.info('Uploading bundle (fileinfo: {0} bytes, content: {1} bytes)'\
+                .format(fileinfo_size, bundle.file_size_crypt))
 
         bytes_written = 0
-        with open(bundle.path_key, 'rb') as f:
-            while f.tell() < bundle.key_size_crypt:
-                buf = f.read(self.storage.buf_size)
-                self.writer.write(buf)
-                bytes_written += len(buf)
-                yield from self.writer.drain()
-        assert bytes_written == bundle.key_size_crypt
+        self.writer.write(fileinfo)
+        bytes_written += len(fileinfo)
+        assert bytes_written == fileinfo_size
 
         bytes_written = 0
         reader = bundle.read_encrypted_stream()
@@ -169,7 +168,7 @@ class BinaryStorageConnection(object):
         key_size = int((yield from self.reader.readline()).strip(b'\r\n'))
         file_size = int((yield from self.reader.readline()).strip(b'\r\n'))
 
-        logger.info('Downloading content hash ({0}) key ({1} bytes) and content ({2} bytes)'\
+        logger.info('Downloading content hash ({0} bytes), fileinfo ({1} bytes) and content ({2} bytes)'\
                 .format(content_hash_size, key_size, file_size))
 
         # read content hash
@@ -177,12 +176,9 @@ class BinaryStorageConnection(object):
         assert len(content_hash) == content_hash_size
         logger.debug('content hash: %s', content_hash)
 
-        with open(bundle.path_key, 'wb') as f:
-            while key_size > 0:
-                buf = yield from self.reader.read(min(self.storage.buf_size, key_size))
-                f.write(buf)
-                key_size -= len(buf)
-            assert key_size == 0
+        yield from bundle.write_encrypted_fileinfo(
+                StreamReader(self.reader) >> Limit(key_size)
+                )
 
         yield from bundle.load_key()
 

@@ -7,6 +7,8 @@ class VaultConfig(object):
     hash_algo = 'sha256'
     iv = 'This is an IV456'
     block_size = 16
+    rsa_dec_block_size = 128
+    rsa_enc_block_size = 117
     enc_buf_size = block_size * 10 * 1024
 
     def __init__(self):
