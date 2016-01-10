@@ -65,7 +65,7 @@ class Bundle(object):
 
     @asyncio.coroutine
     def load_key(self):
-        key_file = yield from aiofiles.open(self.path_key, 'rb')
+        key_file = yield from aiofiles.open(self.path_fileinfo, 'rb')
         try:
             encrypted_key = yield from key_file.read()
             fileinfo = umsgpack.loads(encrypted_key)
@@ -78,11 +78,11 @@ class Bundle(object):
     @asyncio.coroutine
     def generate_key(self):
         self.key = os.urandom(self.key_size)
-        if not os.path.exists(os.path.dirname(self.path_key)):
-            os.makedirs(os.path.dirname(self.path_key))
+        if not os.path.exists(os.path.dirname(self.path_fileinfo)):
+            os.makedirs(os.path.dirname(self.path_fileinfo))
         assert len(self.key) == self.key_size
 
-        sink = Once(self.serialized_bundle) >> FileWriter(self.path_key)
+        sink = Once(self.serialized_bundle) >> FileWriter(self.path_fileinfo)
         yield from sink.consume()
 
     def encrypted_fileinfo_reader(self):
@@ -121,7 +121,7 @@ class Bundle(object):
                 >> Buffered(self.vault.config.rsa_dec_block_size) \
                 >> DecryptRSA(self) \
                 >> SnappyDecompress() \
-                >> FileWriter(self.path_key)
+                >> FileWriter(self.path_fileinfo)
 
         yield from sink.consume()
 
@@ -168,6 +168,6 @@ class Bundle(object):
         return os.path.relpath(self.path, self.vault.folder)
 
     @property
-    def path_key(self):
-        return os.path.join(self.vault.keys_path, \
+    def path_fileinfo(self):
+        return os.path.join(self.vault.fileinfo_path, \
                 self.store_hash[:2], self.store_hash[2:])
