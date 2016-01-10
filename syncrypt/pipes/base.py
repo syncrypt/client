@@ -20,10 +20,13 @@ class Pipe(object):
 
     @asyncio.coroutine
     def consume(self):
-        'read all data from this pipe, but forget about it'
-        while True:
-            if len((yield from self.read())) == 0:
-                break
+        'read all data from this pipe, but forget about that data'
+        try:
+            while True:
+                if len((yield from self.read())) == 0:
+                    break
+        finally:
+            yield from self.close()
 
     @asyncio.coroutine
     def readall(self):

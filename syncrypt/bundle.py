@@ -83,10 +83,7 @@ class Bundle(object):
         assert len(self.key) == self.key_size
 
         sink = Once(self.serialized_bundle) >> FileWriter(self.path_key)
-        try:
-            yield from sink.consume()
-        finally:
-            yield from sink.close()
+        yield from sink.consume()
 
     def encrypted_fileinfo_reader(self):
         return Once(self.serialized_bundle) \
@@ -111,13 +108,11 @@ class Bundle(object):
                 >> SnappyDecompress() \
                 >> FileWriter(self.path)
 
-        try:
-            yield from sink.consume()
-            if assert_hash and hash_pipe.hash != assert_hash:
-                # TODO: restore original file and alert server
-                raise Exception('hash mismatch!')
-        finally:
-            yield from sink.close()
+        yield from sink.consume()
+
+        if assert_hash and hash_pipe.hash != assert_hash:
+            # TODO: restore original file and alert server
+            raise Exception('hash mismatch!')
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):
@@ -128,10 +123,7 @@ class Bundle(object):
                 >> SnappyDecompress() \
                 >> FileWriter(self.path_key)
 
-        try:
-            yield from sink.consume()
-        finally:
-            yield from sink.close()
+        yield from sink.consume()
 
     @asyncio.coroutine
     def update(self):
@@ -146,10 +138,7 @@ class Bundle(object):
             yield from self.generate_key()
 
         hashing_reader = self.read_encrypted_stream() >> Hash(self)
-        try:
-            yield from hashing_reader.consume()
-        finally:
-            yield from hashing_reader.close()
+        yield from hashing_reader.consume()
 
         self.crypt_hash = hashing_reader.hash
         self.file_size_crypt = hashing_reader.size
