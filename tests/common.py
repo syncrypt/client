@@ -103,6 +103,12 @@ class CommonTestsMixin(object):
         self.assertEqual(c['stats'], 16)
         yield from r.release()
 
+        r = yield from aiohttp.get('http://127.0.0.1:28080/config')
+        c = yield from r.json()
+        self.assertIn('remote', c.keys())
+        self.assertIn('api', c.keys())
+        yield from r.release()
+
         yield from app.stop()
 
     def test_download(self):

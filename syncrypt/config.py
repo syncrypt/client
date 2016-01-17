@@ -24,6 +24,13 @@ class VaultConfig(object):
         self._config['app'] = {
                 'concurrency': 8,
             }
+        self._config['api'] = {
+                'host': '127.0.0.1',
+                'port': '28080'
+            }
+
+    def as_dict(self):
+        return {s:dict(self._config.items(s)) for s in self._config.sections()}
 
     def __getattr__(self, item):
         if item in self._config:
