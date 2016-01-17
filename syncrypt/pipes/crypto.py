@@ -2,6 +2,7 @@ import hashlib
 import logging
 
 from Crypto.Cipher import AES
+from Crypto.Cipher import PKCS1_v1_5
 
 import aiofiles
 import asyncio
@@ -72,4 +73,34 @@ class Decrypt(Pipe):
         logger.debug('Decrypting %d bytes', len(data))
         original_content = self.aes.decrypt(data)
         return PKCS5Padding.unpad(original_content)
+
+class EncryptRSA(Pipe):
+    def __init__(self, bundle):
+        super(EncryptRSA, self).__init__()
+        self.bundle = bundle
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        data = yield from self.input.read(count)
+        if len(data) > 0:
+            enc_data = PKCS1_v1_5.new(self.bundle.vault.public_key).encrypt(data)
+            logger.debug('RSA Encrypted %d -> %d bytes', len(data), len(enc_data))
+            return enc_data
+        else:
+            return data
+
+class DecryptRSA(Pipe):
+    def __init__(self, bundle):
+        self.bundle = bundle
+        super(DecryptRSA, self).__init__()
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        data = yield from self.input.read(count)
+        if len(data) > 0:
+            dec_data = PKCS1_v1_5.new(self.bundle.vault.private_key).decrypt(data, 0)
+            logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
+            return dec_data
+        else:
+            return data
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import argparse
 import logging
 import logging.config
@@ -10,8 +9,9 @@ import asyncio
 from syncrypt import Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.config import VaultConfig
+from syncrypt.utils.daemon import Daemon
 
-COMMANDS = ['init', 'pull', 'push', 'watch']
+COMMANDS = ['init', 'pull', 'push', 'watch', 'start', 'stop', 'restart']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
@@ -53,16 +53,23 @@ logging.config.dictConfig({
 })
 
 loop = asyncio.get_event_loop()
-
 if config.command == 'init':
     loop.run_until_complete(app.init())
 elif config.command == 'watch':
-    asyncio.ensure_future(app.start())
+    loop.run_until_complete(app.start())
     loop.run_forever()
 elif config.command == 'pull':
     loop.run_until_complete(app.pull())
 elif config.command == 'push':
     loop.run_until_complete(app.push())
+elif config.command in ('start', 'stop', 'restart'):
+    class SyncryptDaemon(Daemon):
+        def run(self):
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(app.start())
+            loop.run_forever()
+    syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
+    getattr(syncryptd, config.command)()
 
 loop.close()
 

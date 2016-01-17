@@ -48,8 +48,8 @@ class Vault(object):
         return os.path.join(self.folder, '.vault', 'data')
 
     @property
-    def keys_path(self):
-        return os.path.join(self.folder, '.vault', 'keys')
+    def fileinfo_path(self):
+        return os.path.join(self.folder, '.vault', 'fileinfo')
 
     @property
     def config_path(self):

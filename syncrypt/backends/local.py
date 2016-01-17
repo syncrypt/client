@@ -34,10 +34,7 @@ class LocalStorageBackend(StorageBackend):
         shutil.copyfile(bundle.path, dest_path)
         yield from bundle.load_key()
         s = bundle.read_encrypted_stream() >> FileWriter(dest_path)
-        try:
-            yield from s.consume()
-        finally:
-            yield from s.close()
+        yield from s.consume()
         file_info = open(dest_path + '.file_info', 'w')
         file_info.write(bundle.crypt_hash)
         file_info.close()
