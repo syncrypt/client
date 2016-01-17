@@ -69,6 +69,14 @@ class CommonTestsMixin(object):
         app.add_vault(self.vault)
         yield from app.push()
 
+    def test_app_push1(self):
+        app = SyncryptApp(VaultConfig())
+        app.add_vault(self.vault)
+        yield from app.open_or_init(self.vault)
+        bundle = list(self.vault.walk())[0]
+        yield from app.push_bundle(bundle)
+        yield from app.wait()
+
     def test_app_watchdog(self):
         app = SyncryptApp(VaultConfig())
         app.add_vault(self.vault)
@@ -76,9 +84,23 @@ class CommonTestsMixin(object):
 
         r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
         c = yield from r.json()
-
         self.assertEqual(len(c), 1) # only one vault
+        yield from r.release()
 
+        r = yield from aiohttp.get('http://127.0.0.1:28080/stats')
+        c = yield from r.json()
+        self.assertEqual(c['downloads'], 0)
+        self.assertEqual(c['uploads'], 8)
+        self.assertEqual(c['stats'], 8)
+        yield from r.release()
+
+        yield from app.push()
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/stats')
+        c = yield from r.json()
+        self.assertEqual(c['downloads'], 0)
+        self.assertEqual(c['uploads'], 8)
+        self.assertEqual(c['stats'], 16)
         yield from r.release()
 
         yield from app.stop()

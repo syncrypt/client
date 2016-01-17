@@ -74,44 +74,54 @@ class SyncryptApp(AIOEventHandler):
             bundle.schedule_update()
 
     @asyncio.coroutine
+    def push_bundle(self, bundle):
+        yield from self.bundle_action_semaphore.acquire()
+        asyncio.get_event_loop().create_task(self._push_bundle(bundle))
+
+    @asyncio.coroutine
+    def pull_bundle(self, bundle):
+        yield from self.bundle_action_semaphore.acquire()
+        asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
+
+    @asyncio.coroutine
     def push(self):
         for vault in self.vaults:
             yield from self.open_or_init(vault)
             for bundle in vault.walk():
-                yield from self.bundle_action_semaphore.acquire()
-                task = asyncio.Task(self.push_bundle(vault.backend, bundle))
-                asyncio.get_event_loop().call_soon(task)
-        yield from self.bundle_action_semaphore.join()
+                yield from self.push_bundle(bundle)
+        yield from self.wait()
 
     @asyncio.coroutine
     def pull(self):
         for vault in self.vaults:
             yield from self.open_or_init(vault)
             for bundle in vault.walk():
-                yield from self.bundle_action_semaphore.acquire()
-                task = asyncio.Task(self.pull_bundle(vault.backend, bundle))
-                asyncio.get_event_loop().call_soon(task)
+                yield from self.pull_bundle(bundle)
+        yield from self.wait()
+
+    @asyncio.coroutine
+    def wait(self):
         yield from self.bundle_action_semaphore.join()
 
     @asyncio.coroutine
-    def push_bundle(self, backend, bundle):
+    def _push_bundle(self, bundle):
         'update bundle and maybe upload'
         yield from bundle.update()
-        yield from backend.stat(bundle)
+        yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
         if bundle.remote_hash_differs:
-            yield from backend.upload(bundle)
+            yield from bundle.vault.backend.upload(bundle)
             self.stats['uploads'] += 1
         yield from self.bundle_action_semaphore.release()
 
     @asyncio.coroutine
-    def pull_bundle(self, backend, bundle):
+    def _pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
         yield from bundle.update()
-        yield from backend.stat(bundle)
+        yield from bundle.vault.backend.backend.stat(bundle)
         self.stats['stats'] += 1
         if bundle.remote_hash_differs:
-            yield from backend.download(bundle)
+            yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
         yield from self.bundle_action_semaphore.release()
 
