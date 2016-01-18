@@ -25,7 +25,7 @@ parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
 config = parser.parse_args()
 
 app = SyncryptApp(VaultConfig())
-for directory in config.directory:
+for directory in (['.'] if config.directory is None else config.directory):
     app.add_vault(Vault(directory))
 
 logging.config.dictConfig({
