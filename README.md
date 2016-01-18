@@ -27,6 +27,14 @@ Alternate directory can be specified with ``-d``:
 
     bin/syncrypt -d ~/myfolder watch
 
+Run daemon:
+
+     bin/syncrypt -d ~/myfolder start
+
+Query API:
+
+     curl http://127.0.0.1:28080/stats
+
 Debug logging can be activated via ``-l DEBUG``.
 
 Run tests:
