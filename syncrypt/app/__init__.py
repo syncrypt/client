@@ -35,13 +35,14 @@ class SyncryptApp(AIOEventHandler):
 
     @asyncio.coroutine
     def init(self):
-        try:
-            yield from self.vault.backend.open()
-            logger.warn('Vault already initialized')
-            return
-        except StorageBackendInvalidAuth:
-            pass
-        yield from self.vault.backend.init()
+        for vault in self.vaults:
+            try:
+                yield from vault.backend.open()
+                logger.warn('Vault %s already initialized', vault.folder)
+                continue
+            except StorageBackendInvalidAuth:
+                pass
+            yield from vault.backend.init()
 
     @asyncio.coroutine
     def open_or_init(self, vault):
