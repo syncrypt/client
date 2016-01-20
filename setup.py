@@ -47,7 +47,10 @@ setup(
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
-    scripts=['scripts/syncrypt'],
+    scripts=[
+        'scripts/syncrypt_tool',
+        'scripts/syncrypt_daemon',
+    ],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:

@@ -12,9 +12,11 @@ from .api import SyncryptAPI
 logger = logging.getLogger(__name__)
 
 class SyncryptApp(AIOEventHandler):
-    '''This is the Syncrypt daemon that can orchestrate multiple vaults and
-    report status via a HTTP interface'''
-    # TODO rename to SyncryptDaemon
+    '''
+    The Syncrypt daemon app that can orchestrate multiple vaults and report
+    status via a HTTP interface. It is designed to be the cross-platform
+    core of syncrypt-desktop.
+    '''
 
     def __init__(self, config):
         self.vaults = []
