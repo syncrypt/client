@@ -36,28 +36,28 @@ Add a vault:
 
      curl http://127.0.0.1:28080/vaults/add?path=/path/to/the/folder
 
-## Syncrypt Tool
+## Syncrypt CLI
 
-``syncrypt_tool`` is a low level tool to run core functionality directly from
+``syncrypt`` is a low level tool to run core functionality directly from
 the command line. It is intended as a debug tool and must not run at the same
 time as the daemon.
 
 Init current directory (will ask for username and password):
 
-    syncrypt_tool init
+    syncrypt init
 
 Pull or push current directory:
 
-    syncrypt_tool pull/push
+    syncrypt pull/push
 
 Watch current directory (this is like a daemon running the foreground as it
 also provides the HTTP interface):
 
-    syncrypt_tool watch
+    syncrypt watch
 
 Alternate directories can be specified with ``-d``:
 
-    syncrypt_tool -d ~/myfolder watch
+    syncrypt -d ~/myfolder watch
 
 Debug logging can be activated via ``-l DEBUG``.
 

@@ -48,7 +48,7 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     scripts=[
-        'scripts/syncrypt_tool',
+        'scripts/syncrypt',
         'scripts/syncrypt_daemon',
     ],
 
