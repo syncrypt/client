@@ -2,6 +2,7 @@ import json
 import os
 import os.path
 import shutil
+import time
 import unittest
 
 import aiohttp
@@ -76,6 +77,32 @@ class CommonTestsMixin(object):
         bundle = list(self.vault.walk())[0]
         yield from app.push_bundle(bundle)
         yield from app.wait()
+
+    def test_app_start_without_vaults(self):
+        app = SyncryptApp(VaultConfig())
+        yield from app.start()
+
+        yield from asyncio.sleep(0.1)
+        
+        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
+        c = yield from r.json()
+        self.assertEqual(len(c), 0) # no vault
+        yield from r.release()
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults/add?path=' + self.vault.folder)
+        c = yield from r.json()
+        self.assertEqual(c['status'], 'ok')
+        yield from r.release()
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
+        c = yield from r.json()
+        self.assertEqual(len(c), 1) # one vault
+        yield from r.release()
+
+        # TODO actually we need to wait for backend future here
+        yield from asyncio.sleep(1.0)
+
+        yield from app.stop()
 
     def test_app_watchdog(self):
         app = SyncryptApp(VaultConfig())

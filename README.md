@@ -24,9 +24,17 @@ Run the daemon:
 
      syncrypt_daemon start/stop/restart
 
-Query API:
+Query statistics:
 
      curl http://127.0.0.1:28080/stats
+
+Query all vaults:
+
+     curl http://127.0.0.1:28080/vaults
+
+Add a vault:
+
+     curl http://127.0.0.1:28080/vaults/add?path=/path/to/the/folder
 
 ## Syncrypt Tool
 

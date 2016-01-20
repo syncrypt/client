@@ -28,9 +28,16 @@ class SyncryptAPI(object):
         return JSONResponse(self.app.config.as_dict())
 
     @asyncio.coroutine
+    def add_vault(self, request):
+        vault = self.app.add_vault_by_path(request.GET['path'])
+        asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
+        return JSONResponse({'status': 'ok'})
+
+    @asyncio.coroutine
     def start(self):
         loop = asyncio.get_event_loop()
         app = web.Application(loop=loop)
+        app.router.add_route('GET', '/vaults/add', self.add_vault)
         app.router.add_route('GET', '/vaults', self.list_vaults)
         app.router.add_route('GET', '/stats', self.get_stats)
         app.router.add_route('GET', '/config', self.get_config)

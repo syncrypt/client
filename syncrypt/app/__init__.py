@@ -32,8 +32,12 @@ class SyncryptApp(AIOEventHandler):
             }
         super(SyncryptApp, self).__init__()
 
+    def add_vault_by_path(self, path):
+        return self.add_vault(Vault(path))
+
     def add_vault(self, vault):
         self.vaults.append(vault)
+        return vault
 
     @asyncio.coroutine
     def init(self):

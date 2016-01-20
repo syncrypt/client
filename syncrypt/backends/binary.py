@@ -20,9 +20,11 @@ class BinaryStorageConnection(object):
         self.connected = False
         self.connecting = False
 
+    def __repr__(self):
+        return "<Slot %d %d %d>" % (self.connecting, self.connected, self.available.is_set())
+
     @asyncio.coroutine
     def connect(self):
-        logger.debug('Connecting to server...')
 
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
@@ -32,9 +34,12 @@ class BinaryStorageConnection(object):
         else:
             sc = None
 
+        logger.debug('Connecting to server %s:%d ssl=%s...', self.storage.host,
+                int(self.storage.port), bool(sc))
+
         self.reader, self.writer = \
                 yield from asyncio.open_connection(self.storage.host,
-                                                   self.storage.port, ssl=sc)
+                                                   int(self.storage.port), ssl=sc)
 
         # version string format: "Syncrypt x.y.z\r\n"
         version_info = yield from self.reader.readline()
@@ -220,6 +225,8 @@ class BinaryStorageManager(object):
             if conn.connected and conn.available.is_set():
                 break
 
+        logger.debug("Wait for empty slot in: %s", self.slots)
+
         # wait until one slot is available
         done, running = yield from \
                 asyncio.wait([conn.available.wait() for conn in self.slots],
@@ -248,7 +255,6 @@ class BinaryStorageBackend(StorageBackend):
         self.auth = auth
         self.buf_size = 10 * 1024
         self.concurrency = int(concurrency)
-        self.upload_sem = asyncio.Semaphore(value=self.concurrency)
         self.manager = BinaryStorageManager(self, self.concurrency)
         super(BinaryStorageBackend, self).__init__(vault)
 
