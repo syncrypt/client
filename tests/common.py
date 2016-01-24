@@ -83,18 +83,18 @@ class CommonTestsMixin(object):
         yield from app.start()
 
         yield from asyncio.sleep(0.1)
-        
-        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
         c = yield from r.json()
         self.assertEqual(len(c), 0) # no vault
         yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults/add?path=' + self.vault.folder)
+        r = yield from aiohttp.put('http://127.0.0.1:28080/v1/vault/', data=self.vault.folder)
         c = yield from r.json()
-        self.assertEqual(c['status'], 'ok')
+        self.assertGreater(len(c['resource_uri']), 5)
         yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
         c = yield from r.json()
         self.assertEqual(len(c), 1) # one vault
         yield from r.release()
@@ -109,7 +109,7 @@ class CommonTestsMixin(object):
         app.add_vault(self.vault)
         yield from app.start()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/vaults')
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
         c = yield from r.json()
         self.assertEqual(len(c), 1) # only one vault
         yield from r.release()
