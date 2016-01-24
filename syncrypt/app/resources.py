@@ -1,8 +1,12 @@
 # tastypie-like asyncio-aware resources
-from aiohttp import web
+import hashlib
 import json
-import asyncio
 import logging
+import os.path
+
+import asyncio
+from aiohttp import web
+
 
 class JSONResponse(web.Response):
     def __init__(self, obj):
@@ -16,9 +20,9 @@ class Resource(object):
     def add_routes(self, router):
         opts = {'version': self.version, 'name': self.resource_name}
         router.add_route('PUT', '/{version}/{name}/'.format(**opts), self.dispatch_put)
-        router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.delete_obj)
         router.add_route('GET', '/{version}/{name}/'.format(**opts), self.dispatch_list)
         router.add_route('GET', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_get)
+        router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_delete)
 
     def dehydrate(self, obj):
         'obj -> serializable dict'
@@ -38,6 +42,12 @@ class Resource(object):
         return JSONResponse(self.dehydrate(obj))
 
     @asyncio.coroutine
+    def dispatch_delete(self, request):
+        obj = yield from self.get_obj(request)
+        yield from self.delete_obj(obj)
+        return JSONResponse({}) # return 200 without data
+
+    @asyncio.coroutine
     def dispatch_put(self, request):
         obj = yield from self.put_obj(request)
         return JSONResponse(self.dehydrate(obj))
@@ -55,7 +65,7 @@ class Resource(object):
         raise NotImplementedError
 
     @asyncio.coroutine
-    def delete_obj(self, request):
+    def delete_obj(self, obj):
         raise NotImplementedError
 
     def get_resource_uri(self, obj):
@@ -70,7 +80,9 @@ class VaultResource(Resource):
         super(VaultResource, self).__init__()
 
     def get_id(self, v):
-        return v.folder
+        hash = hashlib.new('md5')
+        hash.update(os.path.abspath(v.folder.encode()))
+        return hash.hexdigest()
 
     def dehydrate(self, v):
         dct = super(VaultResource, self).dehydrate(v)
@@ -86,6 +98,10 @@ class VaultResource(Resource):
         for v in self.app.vaults:
             if self.get_id(v) == request.match_info['id']:
                 return v
+
+    @asyncio.coroutine
+    def delete_obj(self, obj):
+        self.app.remove_vault(obj)
 
     @asyncio.coroutine
     def put_obj(self, request):

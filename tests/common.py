@@ -94,9 +94,19 @@ class CommonTestsMixin(object):
         self.assertGreater(len(c['resource_uri']), 5)
         yield from r.release()
 
+        teh_vault = c['resource_uri']
+
         r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
         c = yield from r.json()
         self.assertEqual(len(c), 1) # one vault
+        yield from r.release()
+
+        r = yield from aiohttp.delete('http://127.0.0.1:28080' + teh_vault)
+        yield from r.release()
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+        c = yield from r.json()
+        self.assertEqual(len(c), 0) # no vault
         yield from r.release()
 
         # TODO actually we need to wait for backend future here

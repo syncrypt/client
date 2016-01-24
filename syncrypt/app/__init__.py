@@ -39,6 +39,10 @@ class SyncryptApp(AIOEventHandler):
         self.vaults.append(vault)
         return vault
 
+    def remove_vault(self, vault):
+        # TODO: close open connections etc
+        self.vaults.remove(vault)
+
     @asyncio.coroutine
     def init(self):
         for vault in self.vaults:
