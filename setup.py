@@ -67,6 +67,7 @@ setup(
         'umsgpack',
         'colorlog',
         'hachiko',
+        'pyqt5',
         'python-snappy'
     ],
 
