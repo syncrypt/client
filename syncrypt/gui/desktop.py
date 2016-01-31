@@ -46,14 +46,19 @@ class SyncryptStore(QtCore.QObject):
             self.replies.remove(reply)
         reply.finished.connect(finished)
 
+    def setConnected(self, connected=True):
+        self.connected = connected
+        self.connectedChanged.emit()
+
     def updateVaults_finished(self, reply):
         if reply.error() == 0:
             content = reply.readAll()
             print (bytes(content))
             self.vaults = json.loads(bytes(content).decode())
             self.vaultsChanged.emit()
-            self.connected = True
-            self.connectedChanged.emit()
+            self.setConnected(True)
+        else:
+            self.setConnected(False)
 
     def updateStats_finished(self, reply):
         if reply.error() == 0:
@@ -61,8 +66,9 @@ class SyncryptStore(QtCore.QObject):
             print (bytes(content))
             self.stats = json.loads(bytes(content).decode())
             self.statsChanged.emit()
-            self.connected = True
-            self.connectedChanged.emit()
+            self.setConnected(True)
+        else:
+            self.setConnected(False)
 
     def updateVaults(self):
         self.get('vault/', self.updateVaults_finished)
@@ -81,6 +87,11 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
         self.store.statsChanged.connect(self.refreshStatusBar)
         self.store.updateVaults()
         self.store.updateStats()
+
+        self.statsTimer = QtCore.QTimer(self)
+        self.statsTimer.setInterval(2500)
+        self.statsTimer.timeout.connect(self.store.updateStats)
+        self.statsTimer.start()
 
     def refreshStatusBar(self):
         if self.store.connected:
