@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'main.ui'
+# Form implementation generated from reading ui file 'syncrypt/gui/main.ui'
 #
 # Created by: PyQt5 UI code generator 5.5.1
 #
@@ -29,6 +29,8 @@ class Ui_SyncryptWindow(object):
         self.menuHilfe.setObjectName("menuHilfe")
         self.menuHilfe_2 = QtWidgets.QMenu(self.menubar)
         self.menuHilfe_2.setObjectName("menuHilfe_2")
+        self.menuDEBUG = QtWidgets.QMenu(self.menubar)
+        self.menuDEBUG.setObjectName("menuDEBUG")
         SyncryptWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(SyncryptWindow)
         self.statusbar.setObjectName("statusbar")
@@ -41,11 +43,18 @@ class Ui_SyncryptWindow(object):
         self.actionAdd_a_Vault.setObjectName("actionAdd_a_Vault")
         self.action_Quit = QtWidgets.QAction(SyncryptWindow)
         self.action_Quit.setObjectName("action_Quit")
+        self.actionDebugPullAll = QtWidgets.QAction(SyncryptWindow)
+        self.actionDebugPullAll.setObjectName("actionDebugPullAll")
+        self.actionDebugPushAll = QtWidgets.QAction(SyncryptWindow)
+        self.actionDebugPushAll.setObjectName("actionDebugPushAll")
         self.menuHilfe.addAction(self.actionAdd_a_Vault)
         self.menuHilfe.addAction(self.action_Quit)
         self.menuHilfe_2.addAction(self.actionFeedback_senden)
         self.menuHilfe_2.addAction(self.action_ber)
+        self.menuDEBUG.addAction(self.actionDebugPullAll)
+        self.menuDEBUG.addAction(self.actionDebugPushAll)
         self.menubar.addAction(self.menuHilfe.menuAction())
+        self.menubar.addAction(self.menuDEBUG.menuAction())
         self.menubar.addAction(self.menuHilfe_2.menuAction())
 
         self.retranslateUi(SyncryptWindow)
@@ -56,8 +65,11 @@ class Ui_SyncryptWindow(object):
         SyncryptWindow.setWindowTitle(_translate("SyncryptWindow", "Syncrypt"))
         self.menuHilfe.setTitle(_translate("SyncryptWindow", "Syncrypt"))
         self.menuHilfe_2.setTitle(_translate("SyncryptWindow", "Help"))
+        self.menuDEBUG.setTitle(_translate("SyncryptWindow", "DEBUG"))
         self.actionFeedback_senden.setText(_translate("SyncryptWindow", "Feedback senden"))
         self.action_ber.setText(_translate("SyncryptWindow", "Über"))
         self.actionAdd_a_Vault.setText(_translate("SyncryptWindow", "Add a Vault..."))
         self.action_Quit.setText(_translate("SyncryptWindow", "&Quit"))
+        self.actionDebugPullAll.setText(_translate("SyncryptWindow", "Pull all"))
+        self.actionDebugPushAll.setText(_translate("SyncryptWindow", "Push all"))
 

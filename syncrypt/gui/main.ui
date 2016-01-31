@@ -60,7 +60,15 @@
     <addaction name="actionFeedback_senden"/>
     <addaction name="action_ber"/>
    </widget>
+   <widget class="QMenu" name="menuDEBUG">
+    <property name="title">
+     <string>DEBUG</string>
+    </property>
+    <addaction name="actionDebugPullAll"/>
+    <addaction name="actionDebugPushAll"/>
+   </widget>
    <addaction name="menuHilfe"/>
+   <addaction name="menuDEBUG"/>
    <addaction name="menuHilfe_2"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -82,6 +90,16 @@
   <action name="action_Quit">
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="actionDebugPullAll">
+   <property name="text">
+    <string>Pull all</string>
+   </property>
+  </action>
+  <action name="actionDebugPushAll">
+   <property name="text">
+    <string>Push all</string>
    </property>
   </action>
  </widget>

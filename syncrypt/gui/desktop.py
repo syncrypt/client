@@ -6,6 +6,7 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from .ui_main import Ui_SyncryptWindow
 from .ui_vaultitem import Ui_VaultItem
+from .utils import WrappedSignal
 
 import json
 
@@ -35,14 +36,14 @@ class SyncryptStore(QtCore.QObject):
         self.connected = False
         self.qnam = QNetworkAccessManager()
 
-    def get(self, url, cb):
+    def get(self, url, cb=None):
         print("Querying " + (self.api_url + url))
         url = QUrl(self.api_url + url)
         reply = self.qnam.get(QNetworkRequest(url))
         self.replies.append(reply)
         def finished():
             print ("Network reply _finished", reply.error())
-            cb(reply)
+            if cb: cb(reply)
             self.replies.remove(reply)
         reply.finished.connect(finished)
 
@@ -76,6 +77,12 @@ class SyncryptStore(QtCore.QObject):
     def updateStats(self):
         self.get('stats', self.updateStats_finished)
 
+    def pull(self):
+        self.get('pull')
+
+    def push(self):
+        self.get('push')
+
 class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
     def __init__(self, parent=None):
         super(SyncryptDesktop, self).__init__(parent)
@@ -92,6 +99,9 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
         self.statsTimer.setInterval(2500)
         self.statsTimer.timeout.connect(self.store.updateStats)
         self.statsTimer.start()
+
+        self.actionDebugPushAll.triggered.connect(self.store.push)
+        self.actionDebugPullAll.triggered.connect(self.store.pull)
 
     def refreshStatusBar(self):
         if self.store.connected:

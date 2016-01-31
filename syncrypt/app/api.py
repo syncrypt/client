@@ -17,6 +17,16 @@ class SyncryptAPI(object):
         return JSONResponse(self.app.stats)
 
     @asyncio.coroutine
+    def get_push(self, request):
+        asyncio.get_event_loop().create_task(self.app.push())
+        return JSONResponse({})
+
+    @asyncio.coroutine
+    def get_pull(self, request):
+        asyncio.get_event_loop().create_task(self.app.pull())
+        return JSONResponse({})
+
+    @asyncio.coroutine
     def get_config(self, request):
         return JSONResponse(self.app.config.as_dict())
 
@@ -28,6 +38,8 @@ class SyncryptAPI(object):
         VaultResource(self.app).add_routes(self.web_app.router)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
+        self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
+        self.web_app.router.add_route('GET', '/v1/push', self.get_push)
         self.web_app.router.add_route('GET', '/v1/config', self.get_config)
 
         self.handler = self.web_app.make_handler()
