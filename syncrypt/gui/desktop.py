@@ -6,7 +6,6 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from .ui_main import Ui_SyncryptWindow
 from .ui_vaultitem import Ui_VaultItem
-from .utils import WrappedSignal
 
 import json
 
