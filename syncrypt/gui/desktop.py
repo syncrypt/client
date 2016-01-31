@@ -103,6 +103,8 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
         self.actionDebugPushAll.triggered.connect(self.store.push)
         self.actionDebugPullAll.triggered.connect(self.store.pull)
 
+        self.action_Quit.triggered.connect(QtCore.QCoreApplication.instance().quit)
+
     def refreshStatusBar(self):
         if self.store.connected:
             self.statusbar.showMessage("Connected " + str(self.store.stats))
