@@ -124,7 +124,7 @@ class CommonTestsMixin(object):
         self.assertEqual(len(c), 1) # only one vault
         yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/stats')
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
         c = yield from r.json()
         self.assertEqual(c['downloads'], 0)
         self.assertEqual(c['uploads'], 8)
@@ -133,14 +133,14 @@ class CommonTestsMixin(object):
 
         yield from app.push()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/stats')
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
         c = yield from r.json()
         self.assertEqual(c['downloads'], 0)
         self.assertEqual(c['uploads'], 8)
         self.assertEqual(c['stats'], 16)
         yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/config')
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/config')
         c = yield from r.json()
         self.assertIn('remote', c.keys())
         self.assertIn('api', c.keys())

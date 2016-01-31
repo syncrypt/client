@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from syncrypt.gui.desktop import SyncryptDesktop
+from syncrypt.gui import SyncryptDesktop
 
 if __name__ == "__main__":
     import sys
