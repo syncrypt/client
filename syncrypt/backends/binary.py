@@ -82,6 +82,8 @@ class BinaryStorageConnection(object):
         try:
             self.writer.write(b'DISCONNECT\r\n')
             yield from self.writer.drain()
+        except ConnectionResetError:
+            pass
         finally:
             self.writer.close()
             self.connected = False
