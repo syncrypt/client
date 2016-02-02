@@ -20,6 +20,12 @@ class VaultItemWidget(Ui_VaultItem, QtWidgets.QWidget):
     def setName(self, s):
         self.name.setText(s)
 
+    def setStatus(self, s):
+        self.status.setText(s)
+
+    def setUserCount(self, s):
+        self.user_count.setText(str(s))
+
 class SyncryptStore(QtCore.QObject):
     vaultsChanged = QtCore.pyqtSignal()
     connectedChanged = QtCore.pyqtSignal()
@@ -117,6 +123,8 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
             widget = VaultItemWidget()
             widget.setFolder(vault.get('folder'))
             widget.setName(vault.get('id'))
+            widget.setUserCount(vault.get('user_count'))
+            widget.setStatus(vault.get('status'))
             this_item.setSizeHint(QtCore.QSize(0, 64))
             self.vaultList.addItem(this_item)
             self.vaultList.setItemWidget(this_item, widget)
