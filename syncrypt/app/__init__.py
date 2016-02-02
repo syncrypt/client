@@ -61,7 +61,7 @@ class SyncryptApp(AIOEventHandler):
         except StorageBackendInvalidAuth:
             # retry after logging in & getting auth token
             yield from vault.backend.init()
-            yield from open_or_init(vault)
+            yield from self.open_or_init(vault)
 
     @asyncio.coroutine
     def start(self):
