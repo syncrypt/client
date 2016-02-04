@@ -49,8 +49,8 @@
     <property name="title">
      <string>Syncrypt</string>
     </property>
-    <addaction name="actionAdd_a_Vault"/>
-    <addaction name="action_Quit"/>
+    <addaction name="actionAddVault"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHilfe_2">
     <property name="title">
@@ -81,12 +81,12 @@
     <string>Über</string>
    </property>
   </action>
-  <action name="actionAdd_a_Vault">
+  <action name="actionAddVault">
    <property name="text">
     <string>Add a Vault...</string>
    </property>
   </action>
-  <action name="action_Quit">
+  <action name="actionQuit">
    <property name="text">
     <string>&amp;Quit</string>
    </property>

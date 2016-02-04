@@ -43,10 +43,14 @@ class SyncryptStore(QtCore.QObject):
         self.connected = False
         self.qnam = QNetworkAccessManager()
 
-    def get(self, url, cb=None):
+    def get(self, url, cb=None, method='get', payload=None):
         logger.debug("Querying %s", self.api_url + url)
         url = QUrl(self.api_url + url)
-        reply = self.qnam.get(QNetworkRequest(url))
+        if payload:
+            assert type(payload) == bytes
+            reply = getattr(self.qnam, method)(QNetworkRequest(url), payload)
+        else:
+            reply = getattr(self.qnam, method)(QNetworkRequest(url))
         self.replies.append(reply)
         def finished():
             if reply.error() != 0:
@@ -54,6 +58,9 @@ class SyncryptStore(QtCore.QObject):
             if cb: cb(reply)
             self.replies.remove(reply)
         reply.finished.connect(finished)
+
+    def put(self, url, payload, cb=None):
+        return self.get(url, method='put', payload=payload, cb=cb)
 
     def setConnected(self, connected=True):
         if not self.connected is connected:
@@ -87,6 +94,9 @@ class SyncryptStore(QtCore.QObject):
     def updateVaults(self):
         self.get('vault/', self.updateVaults_finished)
 
+    def addVault(self, fname):
+        self.put('vault/', bytes(fname.encode('utf-8')))
+
     def updateStats(self):
         self.get('stats', self.updateStats_finished)
 
@@ -116,7 +126,13 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
         self.actionDebugPushAll.triggered.connect(self.store.push)
         self.actionDebugPullAll.triggered.connect(self.store.pull)
 
-        self.action_Quit.triggered.connect(QtCore.QCoreApplication.instance().quit)
+        self.actionQuit.triggered.connect(QtCore.QCoreApplication.instance().quit)
+        self.actionAddVault.triggered.connect(self.addVault)
+
+    def addVault(self):
+        fname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory')
+        logger.info('Trying to add new folder %s', fname)
+        self.store.addVault(fname)
 
     def refreshStatusBar(self):
         if self.store.connected:
