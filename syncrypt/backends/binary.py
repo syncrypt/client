@@ -85,9 +85,10 @@ class BinaryStorageConnection(object):
 
                 login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
                 if len(login_response) >= 2:
-                    self.storage.auth = login_response[1]
+                    self.storage.auth = login_response[2]
+                    logger.info('Created vault %s', login_response[1])
                     vault.config.update('remote', {'auth': self.storage.auth})
-                    vault.config.update('vault', {'id': login_response[0]})
+                    vault.config.update('vault', {'id': login_response[1]})
                     vault.write_config()
                 else:
                     yield from self.disconnect()
