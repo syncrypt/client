@@ -1,9 +1,13 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from syncrypt.gui import SyncryptDesktop
+import sys
 
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    SyncryptWindow = SyncryptDesktop()
-    SyncryptWindow.show()
-    sys.exit(app.exec_())
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+from syncrypt.gui import SyncryptDesktop
+from syncrypt.utils.logging import setup_logging
+
+setup_logging('DEBUG')
+
+app = QtWidgets.QApplication(sys.argv)
+SyncryptWindow = SyncryptDesktop()
+SyncryptWindow.show()
+sys.exit(app.exec_())

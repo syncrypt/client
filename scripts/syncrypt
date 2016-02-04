@@ -9,6 +9,7 @@ import asyncio
 from syncrypt import Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.config import VaultConfig
+from syncrypt.utils.logging import setup_logging
 
 COMMANDS = ['init', 'pull', 'push', 'watch']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
@@ -27,29 +28,7 @@ app = SyncryptApp(VaultConfig())
 for directory in (['.'] if config.directory is None else config.directory):
     app.add_vault(Vault(directory))
 
-logging.config.dictConfig({
-    'version': 1,
-    'formatters': {
-        'colored': {
-            '()': 'colorlog.ColoredFormatter',
-            'format':
-                '%(log_color)s%(levelname)s:%(name)s:%(message)s',
-        }
-    },
-    'handlers': {
-        'stream': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'colored',
-            'level': config.loglevel
-        },
-    },
-    'loggers': {
-        'syncrypt': {
-            'handlers': ['stream'],
-            'level': config.loglevel
-        },
-    },
-})
+setup_logging(config.loglevel)
 
 loop = asyncio.get_event_loop()
 if config.command == 'init':

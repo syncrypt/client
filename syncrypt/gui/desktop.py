@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
+import logging
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QDir, QFile, QFileInfo, QIODevice, QUrl
@@ -7,7 +9,7 @@ from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from .ui_main import Ui_SyncryptWindow
 from .ui_vaultitem import Ui_VaultItem
 
-import json
+logger = logging.getLogger(__name__)
 
 class VaultItemWidget(Ui_VaultItem, QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -42,24 +44,30 @@ class SyncryptStore(QtCore.QObject):
         self.qnam = QNetworkAccessManager()
 
     def get(self, url, cb=None):
-        print("Querying " + (self.api_url + url))
+        logger.debug("Querying %s", self.api_url + url)
         url = QUrl(self.api_url + url)
         reply = self.qnam.get(QNetworkRequest(url))
         self.replies.append(reply)
         def finished():
-            print ("Network reply _finished", reply.error())
+            if reply.error() != 0:
+                logger.warn("Network request threw error code %s", reply.error())
             if cb: cb(reply)
             self.replies.remove(reply)
         reply.finished.connect(finished)
 
     def setConnected(self, connected=True):
+        if not self.connected is connected:
+            if connected:
+                logger.info('Connected to syncrypt daemon')
+            else:
+                logger.warn('Disconnected from syncrypt deamon')
         self.connected = connected
         self.connectedChanged.emit()
 
     def updateVaults_finished(self, reply):
         if reply.error() == 0:
             content = reply.readAll()
-            print (bytes(content))
+            logger.debug("Received: %s", bytes(content)[:100])
             self.vaults = json.loads(bytes(content).decode())
             self.vaultsChanged.emit()
             self.setConnected(True)
@@ -69,7 +77,7 @@ class SyncryptStore(QtCore.QObject):
     def updateStats_finished(self, reply):
         if reply.error() == 0:
             content = reply.readAll()
-            print (bytes(content))
+            logger.debug("Received: %s", bytes(content)[:100])
             self.stats = json.loads(bytes(content).decode())
             self.statsChanged.emit()
             self.setConnected(True)
