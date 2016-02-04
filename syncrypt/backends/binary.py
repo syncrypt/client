@@ -57,20 +57,57 @@ class BinaryStorageConnection(object):
                 raise StorageBackendInvalidAuth(line)
         else:
             # we don't have auth token yet
-            logger.debug('Log into server...')
-            self.writer.write('VAULT_LOGIN:{0}:{1}:{2}\r\n'
-                    .format(self.storage.username, self.storage.password, 'vault-id')
-                    .encode(self.storage.vault.config.encoding))
-            yield from self.writer.drain()
+            vault = self.storage.vault
+            logger.debug('Log into %s...', vault)
 
-            line = yield from self.reader.readline()
+            if vault.config.id is None:
+                self.writer.write('LOGIN:{0}:{1}\r\n'
+                        .format(self.storage.username, self.storage.password)
+                        .encode(self.storage.vault.config.encoding))
+                yield from self.writer.drain()
 
-            login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
-            if login_response[0] == 'SUCCESS' and login_response[1] != '':
-                self.storage.auth = login_response[1]
+                line = yield from self.reader.readline()
+
+                login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
+                if login_response[0] != 'SUCCESS':
+                    yield from self.disconnect()
+                    raise StorageBackendInvalidAuth(line)
+
+                key = vault.public_key.exportKey()
+
+                self.writer.write('CREATE_VAULT:{0}\r\n'
+                        .format(len(key))
+                        .encode(self.storage.vault.config.encoding))
+                self.writer.write(key)
+                yield from self.writer.drain()
+
+                line = yield from self.reader.readline()
+
+                login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
+                if len(login_response) >= 2:
+                    self.storage.auth = login_response[2]
+                    logger.info('Created vault %s', login_response[1])
+                    vault.config.update('remote', {'auth': self.storage.auth})
+                    vault.config.update('vault', {'id': login_response[1]})
+                    vault.write_config()
+                else:
+                    yield from self.disconnect()
+                    raise StorageBackendInvalidAuth(line)
+
             else:
-                yield from self.disconnect()
-                raise StorageBackendInvalidAuth(line)
+                self.writer.write('VAULT_LOGIN:{0}:{1}:{2}\r\n'
+                        .format(self.storage.username, self.storage.password, vault.config.id)
+                        .encode(self.storage.vault.config.encoding))
+                yield from self.writer.drain()
+
+                line = yield from self.reader.readline()
+
+                login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
+                if login_response[0] == 'SUCCESS' and login_response[1] != '':
+                    self.storage.auth = login_response[1]
+                else:
+                    yield from self.disconnect()
+                    raise StorageBackendInvalidAuth(line)
 
         self.connected = True
         self.connecting = False
@@ -252,6 +289,7 @@ class BinaryStorageBackend(StorageBackend):
         self.host = host
         self.port = port
         self.ssl = ssl
+        self.vault = vault
         self.username = username
         self.password = password
         self.auth = auth
@@ -263,6 +301,7 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def init(self):
         self.username = None
+        self.auth = None
         while not self.username:
             print('Email for {}: '.format(self.host), end='', flush=True)
             self.username = yield from readline_from_stdin()

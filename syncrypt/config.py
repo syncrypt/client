@@ -44,6 +44,10 @@ class VaultConfig(object):
             self._config.write(f)
 
     @property
+    def id(self):
+        return self._config['vault'].get('id', None)
+
+    @property
     def backend_cls(self):
         if self._config['remote']['type'] == 'local':
             from .backends import LocalStorageBackend
