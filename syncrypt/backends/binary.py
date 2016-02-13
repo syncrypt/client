@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 class UnsuccessfulResponse(Exception):
     pass
 
+class ConnectionResetException(Exception):
+    pass
+
 class BinaryStorageConnection(object):
     def __init__(self, storage):
         self.storage = storage
@@ -31,10 +34,15 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
-        pl_tuple = struct.unpack('!I', (yield from self.reader.read(4)))
+        pl_read = (yield from self.reader.read(4))
+        if len(pl_read) != 4:
+            raise ConnectionResetException()
+        pl_tuple = struct.unpack('!I', pl_read)
         packet_length = pl_tuple[0]
         assert packet_length > 0
         packet = yield from self.reader.read(packet_length)
+        if len(packet) != packet_length:
+            raise ConnectionResetException()
         decoded = bert.decode(packet)
         if assert_ok and decoded[0] != Atom('ok'):
             raise UnsuccessfulResponse(packet)
@@ -100,10 +108,14 @@ class BinaryStorageConnection(object):
                 response = yield from self.read_term(assert_ok=False)
 
                 if response[0] == Atom('ok'):
-                    self.storage.auth = response[2]
+                    self.storage.auth = response[2].decode(self.storage.vault.config.encoding)
                     logger.info('Created vault %s', response[1])
-                    vault.config.update('remote', {'auth': self.storage.auth})
-                    vault.config.update('vault', {'id': response[1]})
+                    vault.config.update('remote', {
+                        'auth': self.storage.auth
+                    })
+                    vault.config.update('vault', {
+                        'id': response[1].decode(self.storage.vault.config.encoding)
+                    })
                     vault.write_config()
                 else:
                     yield from self.disconnect()
