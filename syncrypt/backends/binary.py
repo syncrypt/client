@@ -83,7 +83,7 @@ class BinaryStorageConnection(object):
             yield from self.write_term('auth',
                 self.storage.auth)
             response = yield from self.read_term(assert_ok=False)
-            if response[0] == Atom('ok'):
+            if response[0] != Atom('ok'):
                 yield from self.disconnect()
                 raise StorageBackendInvalidAuth(response)
         else:
