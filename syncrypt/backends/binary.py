@@ -73,7 +73,7 @@ class BinaryStorageConnection(object):
 
         if self.storage.auth:
             yield from self.write_term('auth',
-                self.storage.auth, self.storage.vault.config.encoding)
+                self.storage.auth)
             response = yield from self.read_term(assert_ok=False)
             if response[0] == 'ok':
                 yield from self.disconnect()
