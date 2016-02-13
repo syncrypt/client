@@ -36,7 +36,7 @@ class BinaryStorageConnection(object):
         assert packet_length > 0
         packet = yield from self.reader.read(packet_length)
         decoded = bert.decode(packet)
-        if assert_ok and decoded[0] != 'ok':
+        if assert_ok and decoded[0] != Atom('ok'):
             raise UnsuccessfulResponse(packet)
         return decoded
 
@@ -75,7 +75,7 @@ class BinaryStorageConnection(object):
             yield from self.write_term('auth',
                 self.storage.auth)
             response = yield from self.read_term(assert_ok=False)
-            if response[0] == 'ok':
+            if response[0] == Atom('ok'):
                 yield from self.disconnect()
                 raise StorageBackendInvalidAuth(response)
         else:
@@ -89,7 +89,7 @@ class BinaryStorageConnection(object):
 
                 response = yield from self.read_term(assert_ok=False)
 
-                if response[0] != 'ok':
+                if response[0] != Atom('ok'):
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(response)
 
@@ -99,7 +99,7 @@ class BinaryStorageConnection(object):
 
                 response = yield from self.read_term(assert_ok=False)
 
-                if response[0] != 'ok':
+                if response[0] == Atom('ok'):
                     self.storage.auth = response[2]
                     logger.info('Created vault %s', response[1])
                     vault.config.update('remote', {'auth': self.storage.auth})
@@ -107,7 +107,7 @@ class BinaryStorageConnection(object):
                     vault.write_config()
                 else:
                     yield from self.disconnect()
-                    raise StorageBackendInvalidAuth(line)
+                    raise StorageBackendInvalidAuth(response)
 
             else:
                 yield from self.write_term('vault_login', self.storage.username,
@@ -115,7 +115,7 @@ class BinaryStorageConnection(object):
 
                 response = yield from self.read_term(assert_ok=False)
 
-                if login_response[0] == 'ok' and login_response[1] != '':
+                if login_response[0] == Atom('ok') and login_response[1] != '':
                     self.storage.auth = login_response[1]
                 else:
                     yield from self.disconnect()
