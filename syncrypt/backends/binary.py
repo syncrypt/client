@@ -8,6 +8,7 @@ import asyncio
 import bert
 from syncrypt.pipes import Limit, StreamReader
 from syncrypt.utils.stdin import readline_from_stdin
+from erlastic import Atom
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -42,7 +43,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def write_term(self, *term):
         '''write a BERT tuple'''
-        packet = bert.encode(term)
+        packet = bert.encode((Atom(term[0]),) + term[1:])
         packet_length = len(packet)
         assert packet_length > 0
         self.writer.write(struct.pack('!I', packet_length))
