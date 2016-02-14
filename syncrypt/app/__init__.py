@@ -103,10 +103,15 @@ class SyncryptApp(AIOEventHandler):
         yield from self.wait()
 
     @asyncio.coroutine
+    def retrieve_bundle_list(self, vault):
+        yield from vault.backend.list_files()
+
+    @asyncio.coroutine
     def pull(self):
         for vault in self.vaults:
             yield from self.open_or_init(vault)
-            for bundle in vault.walk():
+            yield from self.retrieve_bundle_list(vault)
+            for bundle in vault.walk2():
                 yield from self.pull_bundle(bundle)
         yield from self.wait()
 
@@ -129,7 +134,7 @@ class SyncryptApp(AIOEventHandler):
     def _pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
         yield from bundle.update()
-        yield from bundle.vault.backend.backend.stat(bundle)
+        yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
         if bundle.remote_hash_differs:
             yield from bundle.vault.backend.download(bundle)

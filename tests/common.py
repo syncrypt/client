@@ -196,3 +196,30 @@ class CommonTestsMixin(object):
                 current_content = x.read()
 
             self.assertEqual(original_contents[bundle.path], current_content)
+
+    def test_two_local_one_remote(self):
+        app = SyncryptApp(VaultConfig())
+        app.add_vault(self.vault)
+
+        #yield from app.init() # init all vaults
+        yield from app.push() # init all vaults
+
+        other_vault_path = 'tests/othervault'
+
+        # now we will clone the initialized vault by copying the vault config
+        if os.path.exists(other_vault_path):
+            shutil.rmtree(other_vault_path)
+        shutil.copytree(os.path.join(self.vault.folder, '.vault'),
+                        os.path.join(other_vault_path, '.vault'))
+        self.other_vault = Vault(other_vault_path)
+
+        app.add_vault(self.other_vault)
+
+        yield from app.pull()
+
+        from glob import glob
+        print (glob(os.path.join(other_vault_path, '*')))
+
+
+
+

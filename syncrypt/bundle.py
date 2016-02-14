@@ -25,16 +25,22 @@ class Bundle(object):
             'key_size_crypt', 'store_hash', 'crypt_hash',
             'remote_crypt_hash', 'uptodate', 'update_handle', 'key')
 
-    def __init__(self, abspath, vault):
+    def __init__(self, abspath, vault, store_hash=None):
         self.vault = vault
         self.path = abspath
         self.uptodate = False
         self.remote_crypt_hash = None
         self.update_handle = None
 
-        h = hashlib.new(self.vault.config.hash_algo)
-        h.update(self.relpath.encode(self.vault.config.encoding))
-        self.store_hash = h.hexdigest()
+        if self.path is not None:
+            h = hashlib.new(self.vault.config.hash_algo)
+            h.update(self.relpath.encode(self.vault.config.encoding))
+            self.store_hash = h.hexdigest()
+        if store_hash is not None:
+            self.store_hash = store_hash
+
+    def populate_from_fileinfo(self):
+        pass
 
     @property
     def bundle_size(self):
@@ -123,6 +129,7 @@ class Bundle(object):
                 >> FileWriter(self.path_fileinfo)
 
         yield from sink.consume()
+        assert os.path.exists(self.path_fileinfo)
 
     @asyncio.coroutine
     def update(self):
@@ -130,6 +137,10 @@ class Bundle(object):
 
         yield from self.encrypt_semaphore.acquire()
         logger.info('Updating %s', self)
+
+        if self.path is None:
+            yield from self.bundle.populate_from_fileinfo()
+            assert self.path is not None
 
         try:
             yield from self.load_key()
