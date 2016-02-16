@@ -20,6 +20,12 @@ class UnsuccessfulResponse(Exception):
 class ConnectionResetException(Exception):
     pass
 
+def rewrite_atoms_dict(bert_dict):
+    # Convert a dict with Atom keys to a list of str keys
+    # In the future, generalize this to a complete BERT Atom->str
+    # rewriter
+    return {str(k): v for (k, v) in bert_dict.items()}
+
 class BinaryStorageConnection(object):
     def __init__(self, storage):
         self.storage = storage
@@ -163,7 +169,8 @@ class BinaryStorageConnection(object):
         yield from self.write_term('stat', bundle.store_hash)
 
         response = yield from self.read_term()
-        return response[1]
+
+        return rewrite_atoms_dict(response[1])
 
     @asyncio.coroutine
     def upload(self, bundle):
@@ -210,13 +217,13 @@ class BinaryStorageConnection(object):
 
         response = yield from self.read_term()
 
-        server_info = response[1]
+        server_info = rewrite_atoms_dict(response[1])
 
         content_hash = server_info['content_hash']
         fileinfo = server_info['key']
-        file_size = server_info['file_size']
+        file_size = server_info['size']
 
-        logger.info('Downloading content ({2} bytes)'.format(file_size))
+        logger.info('Downloading content ({0} bytes)'.format(file_size))
 
         # read content hash
         logger.debug('content hash: %s', content_hash)
@@ -317,11 +324,12 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def stat(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
-            stat_info = yield from conn.stat(bundle)
-            if not stat_info is None:
-                if b'content_hash' in stat_info:
-                    bundle.remote_crypt_hash = \
-                            stat_info[b'content_hash'].decode()
+            try:
+                stat_info = yield from conn.stat(bundle)
+                if 'content_hash' in stat_info:
+                    bundle.remote_crypt_hash = stat_info['content_hash'].decode()
+            except UnsuccessfulResponse:
+                pass
 
     @asyncio.coroutine
     def upload(self, bundle):
