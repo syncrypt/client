@@ -39,9 +39,6 @@ class Bundle(object):
         if store_hash is not None:
             self.store_hash = store_hash
 
-    def populate_from_fileinfo(self):
-        pass
-
     @property
     def bundle_size(self):
         return len(self.serialized_bundle)
@@ -75,6 +72,10 @@ class Bundle(object):
             encrypted_key = yield from key_file.read()
             fileinfo = umsgpack.loads(encrypted_key)
             self.key = fileinfo[b'key']
+            if self.path is None:
+                self.path = os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
+            else:
+                assert self.path == os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
             self.key_size_crypt = len(encrypted_key)
             assert len(self.key) == self.key_size
         finally:
@@ -111,7 +112,7 @@ class Bundle(object):
                 >> hash_pipe \
                 >> Decrypt(self) \
                 >> SnappyDecompress() \
-                >> FileWriter(self.path)
+                >> FileWriter(self.path, create_dirs=True)
 
         yield from sink.consume()
 
@@ -138,21 +139,24 @@ class Bundle(object):
         yield from self.encrypt_semaphore.acquire()
         logger.info('Updating %s', self)
 
-        if self.path is None:
-            yield from self.bundle.populate_from_fileinfo()
-            assert self.path is not None
-
         try:
             yield from self.load_key()
         except FileNotFoundError:
             yield from self.generate_key()
 
-        hashing_reader = self.read_encrypted_stream() >> Hash(self)
-        yield from hashing_reader.consume()
+        assert self.path is not None
 
-        self.crypt_hash = hashing_reader.hash
-        self.file_size_crypt = hashing_reader.size
-        self.uptodate = True
+        if os.path.exists(self.path):
+            hashing_reader = self.read_encrypted_stream() >> Hash(self)
+            yield from hashing_reader.consume()
+
+            self.crypt_hash = hashing_reader.hash
+            self.file_size_crypt = hashing_reader.size
+            self.uptodate = True
+        else:
+            self.crypt_hash = None
+            self.file_size_crypt = None
+            self.uptodate = True
         self.encrypt_semaphore.release()
 
     def update_and_upload(self):

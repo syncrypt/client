@@ -4,6 +4,7 @@ import os.path
 import shutil
 import time
 import unittest
+from glob import glob
 
 import aiohttp
 import asyncio
@@ -217,9 +218,7 @@ class CommonTestsMixin(object):
 
         yield from app.pull()
 
-        from glob import glob
-        print (glob(os.path.join(other_vault_path, '*')))
 
-
-
+        files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
+        self.assertEqual(files_in_new_vault, 8)
 

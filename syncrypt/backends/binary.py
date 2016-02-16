@@ -208,6 +208,21 @@ class BinaryStorageConnection(object):
         yield from self.read_term() # make sure server returns 'ok'
 
     @asyncio.coroutine
+    def list_files(self):
+
+        logger.info('Getting a list of files for vault %s', self.storage.vault)
+
+        # upload key and file
+        yield from self.write_term('list_files')
+
+        response = yield from self.read_term()
+
+        for server_info in map(rewrite_atoms_dict, response[1]):
+            store_hash = server_info['hash'].decode()
+            file_info = server_info['key']
+            yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
+
+    @asyncio.coroutine
     def download(self, bundle):
 
         logger.info('Downloading %s', bundle)
@@ -332,6 +347,11 @@ class BinaryStorageBackend(StorageBackend):
                     bundle.remote_crypt_hash = stat_info['content_hash'].decode()
             except UnsuccessfulResponse:
                 pass
+
+    @asyncio.coroutine
+    def list_files(self):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.list_files()
 
     @asyncio.coroutine
     def upload(self, bundle):
