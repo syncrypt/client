@@ -6,7 +6,7 @@ from getpass import getpass
 
 import asyncio
 import bert
-from syncrypt.pipes import Limit, StreamReader
+from syncrypt.pipes import Limit, StreamReader, Once
 from syncrypt.utils.stdin import readline_from_stdin
 from erlastic import Atom
 
@@ -219,11 +219,13 @@ class BinaryStorageConnection(object):
 
         server_info = rewrite_atoms_dict(response[1])
 
-        content_hash = server_info['content_hash']
+        content_hash = server_info['content_hash'].decode()
         fileinfo = server_info['key']
         file_size = server_info['size']
 
-        logger.info('Downloading content ({0} bytes)'.format(file_size))
+        assert type(file_size) == int
+
+        logger.info('Downloading content ({} bytes)'.format(file_size))
 
         # read content hash
         logger.debug('content hash: %s', content_hash)

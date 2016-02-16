@@ -111,7 +111,7 @@ class Bundle(object):
 
         if assert_hash and hash_pipe.hash != assert_hash:
             # TODO: restore original file and alert server
-            raise Exception('hash mismatch!')
+            raise Exception('hash mismatch: {} != {}'.format(assert_hash, hash_pipe.hash))
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):
