@@ -1,16 +1,30 @@
 import logging
 import ssl
+import struct
 import time
 from getpass import getpass
 
 import asyncio
-import umsgpack
-from syncrypt.pipes import Limit, StreamReader
+import bert
+from syncrypt.pipes import Limit, StreamReader, Once
 from syncrypt.utils.stdin import readline_from_stdin
+from erlastic import Atom
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
 logger = logging.getLogger(__name__)
+
+class UnsuccessfulResponse(Exception):
+    pass
+
+class ConnectionResetException(Exception):
+    pass
+
+def rewrite_atoms_dict(bert_dict):
+    # Convert a dict with Atom keys to a list of str keys
+    # In the future, generalize this to a complete BERT Atom->str
+    # rewriter
+    return {str(k): v for (k, v) in bert_dict.items()}
 
 class BinaryStorageConnection(object):
     def __init__(self, storage):
@@ -22,6 +36,33 @@ class BinaryStorageConnection(object):
 
     def __repr__(self):
         return "<Slot %d %d %d>" % (self.connecting, self.connected, self.available.is_set())
+
+    @asyncio.coroutine
+    def read_term(self, assert_ok=True):
+        '''reads a BERT tuple, asserts that first item is "ok"'''
+        pl_read = (yield from self.reader.read(4))
+        if len(pl_read) != 4:
+            raise ConnectionResetException()
+        pl_tuple = struct.unpack('!I', pl_read)
+        packet_length = pl_tuple[0]
+        assert packet_length > 0
+        packet = yield from self.reader.read(packet_length)
+        if len(packet) != packet_length:
+            raise ConnectionResetException()
+        decoded = bert.decode(packet)
+        if assert_ok and decoded[0] != Atom('ok'):
+            raise UnsuccessfulResponse(packet)
+        return decoded
+
+    @asyncio.coroutine
+    def write_term(self, *term):
+        '''write a BERT tuple'''
+        packet = bert.encode((Atom(term[0]),) + term[1:])
+        packet_length = len(packet)
+        assert packet_length > 0
+        self.writer.write(struct.pack('!I', packet_length))
+        self.writer.write(packet)
+        yield from self.writer.drain()
 
     @asyncio.coroutine
     def connect(self):
@@ -41,69 +82,58 @@ class BinaryStorageConnection(object):
                 yield from asyncio.open_connection(self.storage.host,
                                                    int(self.storage.port), ssl=sc)
 
-        # version string format: "Syncrypt x.y.z\r\n"
-        version_info = yield from self.reader.readline()
-        self.server_version = version_info.decode().strip().split(" ")[1]
+        version_info = yield from self.read_term()
+        self.server_version = version_info[1]
 
         if self.storage.auth:
-            self.writer.write('AUTH:{0}\r\n'
-                    .format(self.storage.auth)
-                    .encode(self.storage.vault.config.encoding))
-            yield from self.writer.drain()
-
-            line = yield from self.reader.readline()
-            if line != b'SUCCESS\r\n':
+            yield from self.write_term('auth',
+                self.storage.auth)
+            response = yield from self.read_term(assert_ok=False)
+            if response[0] != Atom('ok'):
                 yield from self.disconnect()
-                raise StorageBackendInvalidAuth(line)
+                raise StorageBackendInvalidAuth(response)
         else:
             # we don't have auth token yet
             vault = self.storage.vault
             logger.debug('Log into %s...', vault)
 
             if vault.config.id is None:
-                self.writer.write('LOGIN:{0}:{1}\r\n'
-                        .format(self.storage.username, self.storage.password)
-                        .encode(self.storage.vault.config.encoding))
-                yield from self.writer.drain()
+                yield from self.write_term('login', self.storage.username,
+                        self.storage.password)
 
-                line = yield from self.reader.readline()
+                response = yield from self.read_term(assert_ok=False)
 
-                login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
-                if login_response[0] != 'SUCCESS':
+                if response[0] != Atom('ok'):
                     yield from self.disconnect()
-                    raise StorageBackendInvalidAuth(line)
+                    raise StorageBackendInvalidAuth(response)
 
                 key = vault.public_key.exportKey()
 
-                self.writer.write('CREATE_VAULT:{0}\r\n'
-                        .format(len(key))
-                        .encode(self.storage.vault.config.encoding))
-                self.writer.write(key)
-                yield from self.writer.drain()
+                yield from self.write_term('create_vault', str(len(key)))
 
-                line = yield from self.reader.readline()
+                response = yield from self.read_term(assert_ok=False)
 
-                login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
-                if len(login_response) >= 2:
-                    self.storage.auth = login_response[2]
-                    logger.info('Created vault %s', login_response[1])
-                    vault.config.update('remote', {'auth': self.storage.auth})
-                    vault.config.update('vault', {'id': login_response[1]})
+                if response[0] == Atom('ok'):
+                    self.storage.auth = response[2].decode(self.storage.vault.config.encoding)
+                    logger.info('Created vault %s', response[1])
+                    vault.config.update('remote', {
+                        'auth': self.storage.auth
+                    })
+                    vault.config.update('vault', {
+                        'id': response[1].decode(self.storage.vault.config.encoding)
+                    })
                     vault.write_config()
                 else:
                     yield from self.disconnect()
-                    raise StorageBackendInvalidAuth(line)
+                    raise StorageBackendInvalidAuth(response)
 
             else:
-                self.writer.write('VAULT_LOGIN:{0}:{1}:{2}\r\n'
-                        .format(self.storage.username, self.storage.password, vault.config.id)
-                        .encode(self.storage.vault.config.encoding))
-                yield from self.writer.drain()
+                yield from self.write_term('vault_login', self.storage.username,
+                        self.storage.password, vault.config.id)
 
-                line = yield from self.reader.readline()
+                response = yield from self.read_term(assert_ok=False)
 
-                login_response = line.decode(self.storage.vault.config.encoding).strip('\r\n').split(':')
-                if login_response[0] == 'SUCCESS' and login_response[1] != '':
+                if login_response[0] == Atom('ok') and login_response[1] != '':
                     self.storage.auth = login_response[1]
                 else:
                     yield from self.disconnect()
@@ -117,8 +147,7 @@ class BinaryStorageConnection(object):
     def disconnect(self):
         logger.debug('Disconnecting from server...')
         try:
-            self.writer.write(b'DISCONNECT\r\n')
-            yield from self.writer.drain()
+            yield from self.write_term('disconnect')
         except ConnectionResetError:
             pass
         finally:
@@ -137,19 +166,11 @@ class BinaryStorageConnection(object):
     def stat(self, bundle):
         logger.info('Stat %s', bundle)
 
-        self.writer.write('STAT:{0.store_hash}\r\n'
-                .format(bundle)
-                .encode(self.storage.vault.config.encoding))
-        yield from self.writer.drain()
+        yield from self.write_term('stat', bundle.store_hash)
 
-        line = yield from self.reader.readline()
-        try:
-            byte_count = int(line)
-        except ValueError as e:
-            return None
+        response = yield from self.read_term()
 
-        msg = yield from self.reader.read(byte_count)
-        return umsgpack.loads(msg)
+        return rewrite_atoms_dict(response[1])
 
     @asyncio.coroutine
     def upload(self, bundle):
@@ -162,22 +183,13 @@ class BinaryStorageConnection(object):
         fileinfo_size = len(fileinfo)
 
         # upload key and file
-        self.writer.write('UPLOAD:{0.store_hash}:{fileinfo_size}:{0.file_size_crypt}:{0.crypt_hash}\r\n'
-                .format(bundle, fileinfo_size=fileinfo_size)
-                .encode(self.storage.vault.config.encoding))
-        yield from self.writer.drain()
+        yield from self.write_term('upload', bundle.store_hash,
+                bundle.crypt_hash, fileinfo, bundle.file_size_crypt)
 
-        line = yield from self.reader.readline()
-        if line != b'WAITING\r\n':
-            raise Exception(line)
+        yield from self.read_term() # make sure server returns 'ok'
 
         logger.info('Uploading bundle (fileinfo: {0} bytes, content: {1} bytes)'\
                 .format(fileinfo_size, bundle.file_size_crypt))
-
-        bytes_written = 0
-        self.writer.write(fileinfo)
-        bytes_written += len(fileinfo)
-        assert bytes_written == fileinfo_size
 
         bytes_written = 0
         reader = bundle.read_encrypted_stream()
@@ -193,9 +205,7 @@ class BinaryStorageConnection(object):
             yield from reader.close()
         assert bytes_written == bundle.file_size_crypt
 
-        line = yield from self.reader.readline()
-        if line != b'SUCCESS\r\n':
-            raise Exception(line)
+        yield from self.read_term() # make sure server returns 'ok'
 
     @asyncio.coroutine
     def download(self, bundle):
@@ -203,26 +213,24 @@ class BinaryStorageConnection(object):
         logger.info('Downloading %s', bundle)
 
         # download key and file
-        self.writer.write('DOWNLOAD:{0.store_hash}\r\n'
-                .format(bundle)
-                .encode(self.storage.vault.config.encoding))
-        yield from self.writer.drain()
+        yield from self.write_term('download', bundle.store_hash)
 
-        content_hash_size = int((yield from self.reader.readline()).strip(b'\r\n'))
-        key_size = int((yield from self.reader.readline()).strip(b'\r\n'))
-        file_size = int((yield from self.reader.readline()).strip(b'\r\n'))
+        response = yield from self.read_term()
 
-        logger.info('Downloading content hash ({0} bytes), fileinfo ({1} bytes) and content ({2} bytes)'\
-                .format(content_hash_size, key_size, file_size))
+        server_info = rewrite_atoms_dict(response[1])
+
+        content_hash = server_info['content_hash'].decode()
+        fileinfo = server_info['key']
+        file_size = server_info['size']
+
+        assert type(file_size) == int
+
+        logger.info('Downloading content ({} bytes)'.format(file_size))
 
         # read content hash
-        content_hash = (yield from self.reader.read(content_hash_size)).decode()
-        assert len(content_hash) == content_hash_size
         logger.debug('content hash: %s', content_hash)
 
-        yield from bundle.write_encrypted_fileinfo(
-                StreamReader(self.reader) >> Limit(key_size)
-                )
+        yield from bundle.write_encrypted_fileinfo(Once(fileinfo))
 
         yield from bundle.load_key()
 
@@ -236,14 +244,8 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def wipe(self):
-        self.writer.write('WIPE-VAULT\r\n'
-                .encode(self.storage.vault.config.encoding))
-        yield from self.writer.drain()
-
-        line = yield from self.reader.readline()
-        if line != b'SUCCESS\r\n':
-            raise Exception(line)
-
+        yield from self.write_term('wipe_vault')
+        yield from self.read_term()
 
 class BinaryStorageManager(object):
 
@@ -324,11 +326,12 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def stat(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
-            stat_info = yield from conn.stat(bundle)
-            if not stat_info is None:
-                if b'content_hash' in stat_info:
-                    bundle.remote_crypt_hash = \
-                            stat_info[b'content_hash'].decode()
+            try:
+                stat_info = yield from conn.stat(bundle)
+                if 'content_hash' in stat_info:
+                    bundle.remote_crypt_hash = stat_info['content_hash'].decode()
+            except UnsuccessfulResponse:
+                pass
 
     @asyncio.coroutine
     def upload(self, bundle):

@@ -67,7 +67,9 @@ setup(
         'umsgpack',
         'colorlog',
         'hachiko',
-        'python-snappy'
+        'python-snappy',
+        'erlastic',
+        'bert==2.1.0'
     ],
 
     # List additional groups of dependencies here (e.g. development
@@ -78,4 +80,9 @@ setup(
         'dev': ['pyinstaller'],
         'test': ['asynctest'],
     },
+
+    # Download bert from github (https://github.com/samuel/python-bert/issues/7)
+    dependency_links = [
+        'http://github.com/samuel/python-bert/tarball/master#egg=bert-2.1.0'
+    ]
 )
