@@ -127,7 +127,7 @@ class Bundle(object):
                 >> Buffered(self.vault.config.rsa_dec_block_size) \
                 >> DecryptRSA(self) \
                 >> SnappyDecompress() \
-                >> FileWriter(self.path_fileinfo)
+                >> FileWriter(self.path_fileinfo, create_dirs=True)
 
         yield from sink.consume()
         assert os.path.exists(self.path_fileinfo)
@@ -137,7 +137,7 @@ class Bundle(object):
         'update encrypted hash (store in .vault)'
 
         yield from self.encrypt_semaphore.acquire()
-        logger.info('Updating %s', self)
+        #logger.info('Updating %s', self)
 
         try:
             yield from self.load_key()

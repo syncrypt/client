@@ -7,6 +7,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.utils.limiter import JoinableSemaphore
+
 from .api import SyncryptAPI
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,32 @@ class SyncryptApp(AIOEventHandler):
         yield from vault.backend.list_files()
 
     @asyncio.coroutine
+    def clone(self, clone_target):
+        import shutil
+        import os
+
+        vault = self.vaults[0]
+
+        yield from self.push()
+
+        if not os.path.exists(clone_target):
+            os.makedirs(clone_target)
+
+        vault_cfg = os.path.join(clone_target, '.vault')
+        if not os.path.exists(vault_cfg):
+            os.makedirs(vault_cfg)
+
+        for f in ('config', 'id_rsa', 'id_rsa.pub'):
+            shutil.copyfile(os.path.join(vault.folder, '.vault', f), os.path.join(vault_cfg, f))
+
+        logger.info("Cloned %s to %s" % (vault.folder, os.path.abspath(clone_target)))
+
+        self.add_vault(Vault(clone_target))
+
+        yield from self.pull()
+
+
+    @asyncio.coroutine
     def pull(self):
         for vault in self.vaults:
             yield from self.open_or_init(vault)
@@ -140,4 +167,3 @@ class SyncryptApp(AIOEventHandler):
             yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
         yield from self.bundle_action_semaphore.release()
-
