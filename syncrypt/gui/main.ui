@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>315</width>
-    <height>284</height>
+    <width>360</width>
+    <height>303</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -41,7 +41,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>315</width>
+     <width>360</width>
      <height>22</height>
     </rect>
    </property>
@@ -65,6 +65,7 @@
     </property>
     <addaction name="actionDebugPullAll"/>
     <addaction name="actionDebugPushAll"/>
+    <addaction name="actionDebugRefresh"/>
    </widget>
    <addaction name="menuHilfe"/>
    <addaction name="menuDEBUG"/>
@@ -99,6 +100,11 @@
   <action name="actionDebugPushAll">
    <property name="text">
     <string>Push all</string>
+   </property>
+  </action>
+  <action name="actionDebugRefresh">
+   <property name="text">
+    <string>Refresh data</string>
    </property>
   </action>
  </widget>

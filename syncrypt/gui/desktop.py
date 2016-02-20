@@ -94,8 +94,11 @@ class SyncryptStore(QtCore.QObject):
     def updateVaults(self):
         self.get('vault/', self.updateVaults_finished)
 
+    def addVault_finished(self, reply):
+        self.updateVaults()
+
     def addVault(self, fname):
-        self.put('vault/', bytes(fname.encode('utf-8')))
+        self.put('vault/', bytes(fname.encode('utf-8')), self.addVault_finished)
 
     def updateStats(self):
         self.get('stats', self.updateStats_finished)
@@ -125,9 +128,14 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
 
         self.actionDebugPushAll.triggered.connect(self.store.push)
         self.actionDebugPullAll.triggered.connect(self.store.pull)
+        self.actionDebugRefresh.triggered.connect(self.refreshAll)
 
         self.actionQuit.triggered.connect(QtCore.QCoreApplication.instance().quit)
         self.actionAddVault.triggered.connect(self.addVault)
+
+    def refreshAll(self):
+        self.store.updateVaults()
+        self.store.updateStats()
 
     def addVault(self):
         fname = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select directory')
@@ -141,6 +149,7 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
             self.statusbar.showMessage("Connecting to daemon...")
 
     def refreshVaults(self):
+        self.vaultList.clear()
         for vault in self.store.vaults:
             name = ""
             this_item = QtWidgets.QListWidgetItem()
