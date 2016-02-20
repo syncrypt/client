@@ -78,4 +78,4 @@ class Ui_VaultItem(object):
         self.user_count.setText(_translate("VaultItem", "2"))
         self.status.setText(_translate("VaultItem", "/folder/"))
 
-from . import resources_rc
+from . import syncrypt_rc
