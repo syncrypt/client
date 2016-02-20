@@ -17,8 +17,13 @@ class Ui_VaultItem(object):
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+        self.label = QtWidgets.QLabel(VaultItem)
+        self.label.setMaximumSize(QtCore.QSize(64, 64))
+        self.label.setBaseSize(QtCore.QSize(64, 64))
+        self.label.setText("")
+        self.label.setPixmap(QtGui.QPixmap(":/syncrypt/vault.png"))
+        self.label.setObjectName("label")
+        self.horizontalLayout.addWidget(self.label)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
         self.name = QtWidgets.QLabel(VaultItem)
@@ -60,7 +65,7 @@ class Ui_VaultItem(object):
         self.status.setSizePolicy(sizePolicy)
         self.status.setObjectName("status")
         self.horizontalLayout.addWidget(self.status)
-        self.gridLayout_2.addLayout(self.horizontalLayout, 1, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.horizontalLayout, 1, 1, 1, 1)
 
         self.retranslateUi(VaultItem)
         QtCore.QMetaObject.connectSlotsByName(VaultItem)
@@ -73,3 +78,4 @@ class Ui_VaultItem(object):
         self.user_count.setText(_translate("VaultItem", "2"))
         self.status.setText(_translate("VaultItem", "/folder/"))
 
+from . import resources_rc
