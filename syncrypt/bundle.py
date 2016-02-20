@@ -25,16 +25,19 @@ class Bundle(object):
             'key_size_crypt', 'store_hash', 'crypt_hash',
             'remote_crypt_hash', 'uptodate', 'update_handle', 'key')
 
-    def __init__(self, abspath, vault):
+    def __init__(self, abspath, vault, store_hash=None):
         self.vault = vault
         self.path = abspath
         self.uptodate = False
         self.remote_crypt_hash = None
         self.update_handle = None
 
-        h = hashlib.new(self.vault.config.hash_algo)
-        h.update(self.relpath.encode(self.vault.config.encoding))
-        self.store_hash = h.hexdigest()
+        if self.path is not None:
+            h = hashlib.new(self.vault.config.hash_algo)
+            h.update(self.relpath.encode(self.vault.config.encoding))
+            self.store_hash = h.hexdigest()
+        if store_hash is not None:
+            self.store_hash = store_hash
 
     @property
     def bundle_size(self):
@@ -69,6 +72,10 @@ class Bundle(object):
             encrypted_key = yield from key_file.read()
             fileinfo = umsgpack.loads(encrypted_key)
             self.key = fileinfo[b'key']
+            if self.path is None:
+                self.path = os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
+            else:
+                assert self.path == os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
             self.key_size_crypt = len(encrypted_key)
             assert len(self.key) == self.key_size
         finally:
@@ -105,13 +112,13 @@ class Bundle(object):
                 >> hash_pipe \
                 >> Decrypt(self) \
                 >> SnappyDecompress() \
-                >> FileWriter(self.path)
+                >> FileWriter(self.path, create_dirs=True)
 
         yield from sink.consume()
 
         if assert_hash and hash_pipe.hash != assert_hash:
             # TODO: restore original file and alert server
-            raise Exception('hash mismatch!')
+            raise Exception('hash mismatch: {} != {}'.format(assert_hash, hash_pipe.hash))
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):
@@ -120,28 +127,36 @@ class Bundle(object):
                 >> Buffered(self.vault.config.rsa_dec_block_size) \
                 >> DecryptRSA(self) \
                 >> SnappyDecompress() \
-                >> FileWriter(self.path_fileinfo)
+                >> FileWriter(self.path_fileinfo, create_dirs=True)
 
         yield from sink.consume()
+        assert os.path.exists(self.path_fileinfo)
 
     @asyncio.coroutine
     def update(self):
         'update encrypted hash (store in .vault)'
 
         yield from self.encrypt_semaphore.acquire()
-        logger.info('Updating %s', self)
+        #logger.info('Updating %s', self)
 
         try:
             yield from self.load_key()
         except FileNotFoundError:
             yield from self.generate_key()
 
-        hashing_reader = self.read_encrypted_stream() >> Hash(self)
-        yield from hashing_reader.consume()
+        assert self.path is not None
 
-        self.crypt_hash = hashing_reader.hash
-        self.file_size_crypt = hashing_reader.size
-        self.uptodate = True
+        if os.path.exists(self.path):
+            hashing_reader = self.read_encrypted_stream() >> Hash(self)
+            yield from hashing_reader.consume()
+
+            self.crypt_hash = hashing_reader.hash
+            self.file_size_crypt = hashing_reader.size
+            self.uptodate = True
+        else:
+            self.crypt_hash = None
+            self.file_size_crypt = None
+            self.uptodate = True
         self.encrypt_semaphore.release()
 
     def update_and_upload(self):

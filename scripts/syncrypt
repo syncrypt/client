@@ -11,14 +11,16 @@ from syncrypt.app import SyncryptApp
 from syncrypt.config import VaultConfig
 from syncrypt.utils.logging import setup_logging
 
-COMMANDS = ['init', 'pull', 'push', 'watch']
+COMMANDS = ['init', 'pull', 'push', 'watch', 'clone']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
 parser.add_argument('command', metavar='cmd', type=str,
         choices=COMMANDS, help='Command to run: ' + ', '.join(COMMANDS))
 parser.add_argument('-d', metavar='DIRECTORY', type=str,
-        action='append',dest='directory', help='directory (default: .)')
+        action='append', dest='directory', help='directory (default: .)')
+parser.add_argument('-t', metavar='CLONE_TARGET', type=str,
+        dest='clone_target', help='Directory to clone to (clone command only)')
 parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
         dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
 
@@ -40,6 +42,11 @@ elif config.command == 'pull':
     loop.run_until_complete(app.pull())
 elif config.command == 'push':
     loop.run_until_complete(app.push())
+elif config.command == 'clone':
+    if config.clone_target:
+        loop.run_until_complete(app.clone(config.clone_target))
+    else:
+        print("Clone target must be set (-t)")
 
 loop.close()
 

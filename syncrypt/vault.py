@@ -1,14 +1,16 @@
 import logging
-from fnmatch import fnmatch
 import os
 import os.path
 import sys
+from fnmatch import fnmatch
+from glob import glob
 from pprint import pprint
 
 from Crypto.PublicKey import RSA
 
 from .bundle import Bundle
 from .config import VaultConfig
+from .pipes import Once
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +77,17 @@ class Vault(object):
         self.private_key = keys
         self.public_key = keys.publickey()
 
-    def walk(self, subfolder=None):
+    def walk2(self):
         'a generator of all bundles in this vault'
+        # TODO: how to unify with "walk"? should there be a walker
+        # that yield both registered and unregistered bundles?
+        for f in glob(os.path.join(self.fileinfo_path, '*/*')):
+            store_hash = os.path.relpath(f, self.fileinfo_path).replace('/', '')
+            if len(store_hash) == 64:
+                yield Bundle(None, vault=self, store_hash=store_hash)
+
+    def walk(self, subfolder=None):
+        'a generator of all bundles currently present on disk'
         folder = self.folder
         if subfolder:
             folder = os.path.join(folder, subfolder)
@@ -92,6 +103,10 @@ class Vault(object):
 
     def clear_bundle_cache(self):
         self._bundle_cache = {}
+
+    def add_bundle_by_fileinfo(self, store_hash, fileinfo):
+        bundle = Bundle(None, vault=self, store_hash=store_hash)
+        yield from bundle.write_encrypted_fileinfo(Once(fileinfo))
 
     def bundle_for(self, relpath):
         # check if path should be ignored

@@ -4,6 +4,7 @@ import os.path
 import shutil
 import time
 import unittest
+from glob import glob
 
 import aiohttp
 import asyncio
@@ -196,3 +197,30 @@ class CommonTestsMixin(object):
                 current_content = x.read()
 
             self.assertEqual(original_contents[bundle.path], current_content)
+
+    def test_two_local_one_remote(self):
+        other_vault_path = 'tests/othervault'
+
+        # remove "other vault" folder first
+        if os.path.exists(other_vault_path):
+            shutil.rmtree(other_vault_path)
+
+        app = SyncryptApp(VaultConfig())
+        app.add_vault(self.vault)
+
+        #yield from app.init() # init all vaults
+        yield from app.push() # init all vaults
+
+        # now we will clone the initialized vault by copying the vault config
+        shutil.copytree(os.path.join(self.vault.folder, '.vault'),
+                        os.path.join(other_vault_path, '.vault'))
+        self.other_vault = Vault(other_vault_path)
+
+        app.add_vault(self.other_vault)
+
+        yield from app.pull()
+
+
+        files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
+        self.assertEqual(files_in_new_vault, 8)
+
