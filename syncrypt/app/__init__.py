@@ -96,14 +96,6 @@ class SyncryptApp(AIOEventHandler):
         asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
 
     @asyncio.coroutine
-    def push(self):
-        for vault in self.vaults:
-            yield from self.open_or_init(vault)
-            for bundle in vault.walk():
-                yield from self.push_bundle(bundle)
-        yield from self.wait()
-
-    @asyncio.coroutine
     def retrieve_bundle_list(self, vault):
         yield from vault.backend.list_files()
 
@@ -132,6 +124,17 @@ class SyncryptApp(AIOEventHandler):
 
         yield from self.pull()
 
+    def get_vault_states(self):
+        return {v.folder: ('syncing' if v.active else 'synced')
+                    for v in self.vaults}
+
+    @asyncio.coroutine
+    def push(self):
+        for vault in self.vaults:
+            yield from self.open_or_init(vault)
+            for bundle in vault.walk():
+                yield from self.push_bundle(bundle)
+        yield from self.wait()
 
     @asyncio.coroutine
     def pull(self):
@@ -150,20 +153,29 @@ class SyncryptApp(AIOEventHandler):
     def _push_bundle(self, bundle):
         'update bundle and maybe upload'
         yield from bundle.update()
+
+        yield from bundle.vault.semaphores['stat'].acquire()
         yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
+        yield from bundle.vault.semaphores['stat'].release()
         if bundle.remote_hash_differs:
+            yield from bundle.vault.semaphores['upload'].acquire()
             yield from bundle.vault.backend.upload(bundle)
             self.stats['uploads'] += 1
+            yield from bundle.vault.semaphores['upload'].release()
         yield from self.bundle_action_semaphore.release()
 
     @asyncio.coroutine
     def _pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
         yield from bundle.update()
+        yield from bundle.vault.semaphores['stat'].acquire()
         yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
+        yield from bundle.vault.semaphores['stat'].release()
         if bundle.remote_hash_differs:
+            yield from bundle.vault.semaphores['download'].acquire()
             yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
+            yield from bundle.vault.semaphores['download'].release()
         yield from self.bundle_action_semaphore.release()

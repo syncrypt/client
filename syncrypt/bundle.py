@@ -136,6 +136,7 @@ class Bundle(object):
     def update(self):
         'update encrypted hash (store in .vault)'
 
+        yield from self.vault.semaphores['update'].acquire()
         yield from self.encrypt_semaphore.acquire()
         #logger.info('Updating %s', self)
 
@@ -157,7 +158,9 @@ class Bundle(object):
             self.crypt_hash = None
             self.file_size_crypt = None
             self.uptodate = True
+
         self.encrypt_semaphore.release()
+        yield from self.vault.semaphores['update'].release()
 
     def update_and_upload(self):
         backend = self.vault.backend

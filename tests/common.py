@@ -220,6 +220,8 @@ class CommonTestsMixin(object):
 
         yield from app.pull()
 
+        assert not self.vault.active
+        assert not self.other_vault.active
 
         files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
         self.assertEqual(files_in_new_vault, 8)

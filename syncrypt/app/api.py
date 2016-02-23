@@ -14,7 +14,10 @@ class SyncryptAPI(object):
 
     @asyncio.coroutine
     def get_stats(self, request):
-        return JSONResponse(self.app.stats)
+        return JSONResponse({
+            'stats': self.app.stats,
+            'states': self.app.get_vault_states()
+        })
 
     @asyncio.coroutine
     def get_push(self, request):

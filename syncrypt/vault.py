@@ -8,6 +8,8 @@ from pprint import pprint
 
 from Crypto.PublicKey import RSA
 
+from syncrypt.utils.limiter import JoinableSemaphore
+
 from .bundle import Bundle
 from .config import VaultConfig
 from .pipes import Once
@@ -41,6 +43,18 @@ class Vault(object):
         kwargs = self.config.backend_kwargs
         # TODO make property?
         self.backend = Backend(self, **kwargs)
+
+        self.semaphores = {
+            'update': JoinableSemaphore(32),
+            'stat': JoinableSemaphore(32),
+            'upload': JoinableSemaphore(32),
+            'download': JoinableSemaphore(32)
+        }
+
+    @property
+    def active(self):
+        #print ({k: v.count for (k, v) in self.semaphores.items()})
+        return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
         return '<Vault: {0}>'.format(self.folder)

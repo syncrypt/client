@@ -3,11 +3,14 @@ import json
 import logging
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QDir, QFile, QFileInfo, QIODevice, QUrl
+from PyQt5.QtCore import QDir, QFile, QFileInfo, QIODevice, QSettings, QUrl
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from .ui_main import Ui_SyncryptWindow
 from .ui_vaultitem import Ui_VaultItem
+
+SC_COMPANY_NAME = 'Syncrypt UG'
+SC_NAME = 'Syncrypt'
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +19,11 @@ class VaultItemWidget(Ui_VaultItem, QtWidgets.QWidget):
         super(VaultItemWidget, self).__init__(parent)
         self.setupUi(self)
 
+    def isFolder(self, s):
+        return self._folder == s
+
     def setFolder(self, s):
+        self._folder = s
         self.folder.setText(s)
 
     def setName(self, s):
@@ -133,6 +140,11 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
         self.actionQuit.triggered.connect(QtCore.QCoreApplication.instance().quit)
         self.actionAddVault.triggered.connect(self.addVault)
 
+        settings = QSettings(SC_COMPANY_NAME, SC_NAME)
+        for vault_dir in settings.value('list_vaults', type=str):
+            self.store.addVault(vault_dir)
+
+
     def refreshAll(self):
         self.store.updateVaults()
         self.store.updateStats()
@@ -143,10 +155,20 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
         self.store.addVault(fname)
 
     def refreshStatusBar(self):
-        if self.store.connected:
-            self.statusbar.showMessage("Connected " + str(self.store.stats))
-        else:
-            self.statusbar.showMessage("Connecting to daemon...")
+        if 'stats' in self.store.stats:
+            stats = self.store.stats['stats']
+            if self.store.connected:
+                self.statusbar.showMessage("Connected " + str(stats))
+            else:
+                self.statusbar.showMessage("Connecting to daemon...")
+        if 'states' in self.store.stats:
+            states = self.store.stats['states']
+            for (folder, state) in states.items():
+                for i in range(self.vaultList.count()):
+                    item = self.vaultList.item(i)
+                    widget = self.vaultList.itemWidget(item)
+                    if widget.isFolder(folder):
+                        widget.setStatus(state)
 
     def refreshVaults(self):
         self.vaultList.clear()
@@ -157,10 +179,14 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
             widget.setFolder(vault.get('folder'))
             widget.setName(vault.get('id'))
             widget.setUserCount(vault.get('user_count'))
-            widget.setStatus(vault.get('status'))
+            widget.setStatus(vault.get('state'))
             this_item.setSizeHint(QtCore.QSize(0, 64))
             self.vaultList.addItem(this_item)
             self.vaultList.setItemWidget(this_item, widget)
+        vault_dirs = [vault.get('folder') for vault in self.store.vaults]
+        settings = QSettings(SC_COMPANY_NAME, SC_NAME)
+        settings.setValue('list_vaults', vault_dirs)
+        del settings # trigger store
 
 if __name__ == "__main__":
     import sys

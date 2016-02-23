@@ -86,7 +86,8 @@ class VaultResource(Resource):
 
     def dehydrate(self, v):
         dct = super(VaultResource, self).dehydrate(v)
-        dct.update(folder=v.folder, status='ready', user_count=1)
+        state = 'syncing' if v.active else 'synced'
+        dct.update(folder=v.folder, status='ready', user_count=1, state=state)
         return dct
 
     @asyncio.coroutine
