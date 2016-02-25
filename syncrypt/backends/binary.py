@@ -55,6 +55,11 @@ class BinaryStorageConnection(object):
         return decoded
 
     @asyncio.coroutine
+    def read_response(self, assert_ok=True):
+        decoded = yield from self.read_term(assert_ok=True)
+        return decoded[1]
+
+    @asyncio.coroutine
     def write_term(self, *term):
         '''write a BERT tuple'''
         packet = bert.encode((Atom(term[0]),) + term[1:])
@@ -215,12 +220,17 @@ class BinaryStorageConnection(object):
         # upload key and file
         yield from self.write_term('list_files')
 
-        response = yield from self.read_term()
+        response = yield from self.read_response()
 
-        for server_info in map(rewrite_atoms_dict, response[1]):
-            store_hash = server_info['hash'].decode()
-            file_info = server_info['key']
-            yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
+        assert type(response) == tuple
+
+        if response[0] == Atom('stream_response'):
+            assert isinstance(response[1], int)
+            for n in range(response[1]):
+                server_info = yield from self.read_term(assert_ok=False)
+                store_hash = server_info['hash'].decode()
+                file_info = server_info['key']
+                yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
 
     @asyncio.coroutine
     def download(self, bundle):
