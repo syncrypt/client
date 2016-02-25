@@ -127,18 +127,18 @@ class CommonTestsMixin(object):
 
         r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
         c = yield from r.json()
-        self.assertEqual(c['downloads'], 0)
-        self.assertEqual(c['uploads'], 8)
-        self.assertEqual(c['stats'], 8)
+        self.assertEqual(c['stats']['downloads'], 0)
+        self.assertEqual(c['stats']['uploads'], 8)
+        self.assertEqual(c['stats']['stats'], 8)
         yield from r.release()
 
         yield from app.push()
 
         r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
         c = yield from r.json()
-        self.assertEqual(c['downloads'], 0)
-        self.assertEqual(c['uploads'], 8)
-        self.assertEqual(c['stats'], 16)
+        self.assertEqual(c['stats']['downloads'], 0)
+        self.assertEqual(c['stats']['uploads'], 8)
+        self.assertEqual(c['stats']['stats'], 16)
         yield from r.release()
 
         r = yield from aiohttp.get('http://127.0.0.1:28080/v1/config')
