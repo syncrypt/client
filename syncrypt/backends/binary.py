@@ -351,6 +351,7 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def stat(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
+            bundle.remote_crypt_hash = None
             try:
                 stat_info = yield from conn.stat(bundle)
                 if 'content_hash' in stat_info:
@@ -371,7 +372,10 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def download(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.download(bundle)
+            try:
+                yield from conn.download(bundle)
+            except UnsuccessfulResponse:
+                logger.error('Could not download bundle: %s', str(bundle))
 
     @asyncio.coroutine
     def wipe(self):

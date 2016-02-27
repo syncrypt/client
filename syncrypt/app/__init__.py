@@ -173,6 +173,9 @@ class SyncryptApp(AIOEventHandler):
         yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
         yield from bundle.vault.semaphores['stat'].release()
+        if bundle.remote_crypt_hash is None:
+            logger.warn('File not found: %s', bundle)
+            return
         if bundle.remote_hash_differs:
             yield from bundle.vault.semaphores['download'].acquire()
             yield from bundle.vault.backend.download(bundle)
