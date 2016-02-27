@@ -80,7 +80,10 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': ['pyinstaller'],
-        'test': ['asynctest'],
+        'test': [
+            'asynctest',
+            'hypothesis'
+        ],
     },
 
     # Download bert from github (https://github.com/samuel/python-bert/issues/7)
