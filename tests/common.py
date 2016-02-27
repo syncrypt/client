@@ -10,7 +10,7 @@ import aiohttp
 import asyncio
 import asynctest
 import hypothesis.strategies as st
-from hypothesis import example, given
+
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
@@ -229,45 +229,3 @@ class CommonTestsMixin(object):
         files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
         self.assertEqual(files_in_new_vault, 8)
 
-    timeout = 5
-
-    def execute_example(self, f):
-        coro = asyncio.coroutine(f)
-        future = asyncio.wait_for(coro(),
-                                  timeout=self.timeout)
-        return self.loop.run_until_complete(future)
-
-    @asyncio.coroutine
-    @given(vault())
-    def test_two_local_one_remote_hypo(self, vault_info):
-        print (vault_info)
-        """
-        import ipdb; ipdb.set_trace()
-
-        other_vault_path = 'tests/othervault'
-
-        # remove "other vault" folder first
-        if os.path.exists(other_vault_path):
-            shutil.rmtree(other_vault_path)
-
-        app = SyncryptApp(VaultConfig())
-        app.add_vault(self.vault)
-
-        #yield from app.init() # init all vaults
-        yield from app.push() # init all vaults
-
-        # now we will clone the initialized vault by copying the vault config
-        shutil.copytree(os.path.join(self.vault.folder, '.vault'),
-                        os.path.join(other_vault_path, '.vault'))
-        self.other_vault = Vault(other_vault_path)
-
-        app.add_vault(self.other_vault)
-
-        yield from app.pull()
-
-        assert not self.vault.active
-        assert not self.other_vault.active
-
-        files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
-        self.assertEqual(files_in_new_vault, 8)
-        """
