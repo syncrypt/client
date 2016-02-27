@@ -50,6 +50,7 @@ setup(
     scripts=[
         'scripts/syncrypt',
         'scripts/syncrypt_daemon',
+        'scripts/syncrypt_gui',
     ],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
