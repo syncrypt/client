@@ -28,7 +28,3 @@ class StorageBackend(object):
     @asyncio.coroutine
     def stat(self, bundle):
         raise NotImplementedError()
-
-    @asyncio.coroutine
-    def wipe(self):
-        raise NotImplementedError()

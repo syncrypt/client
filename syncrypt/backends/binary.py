@@ -266,11 +266,6 @@ class BinaryStorageConnection(object):
     def version(self):
         return self.server_version
 
-    @asyncio.coroutine
-    def wipe(self):
-        yield from self.write_term('wipe_vault')
-        yield from self.read_term()
-
 class BinaryStorageManager(object):
 
     def __init__(self, backend, concurrency):
@@ -385,11 +380,6 @@ class BinaryStorageBackend(StorageBackend):
                 yield from conn.download(bundle)
             except UnsuccessfulResponse:
                 logger.error('Could not download bundle: %s', str(bundle))
-
-    @asyncio.coroutine
-    def wipe(self):
-        with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.wipe()
 
     @asyncio.coroutine
     def close(self):

@@ -77,8 +77,3 @@ class LocalStorageBackend(StorageBackend):
     @asyncio.coroutine
     def close(self):
         pass
-
-    @asyncio.coroutine
-    def wipe(self):
-        if os.path.exists(self.path):
-            shutil.rmtree(self.path)
