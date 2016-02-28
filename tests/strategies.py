@@ -2,21 +2,22 @@ import hypothesis.strategies as st
 
 __all__ = ('vault',)
 
-#vault_files = \
-#        st.recursive(st.floats() | st.booleans() | st.text() | st.none(),
-#        lambda children: st.lists(children) | st.dictionaries(st.text(), children))
+MAX_FILES = 500
 
 @st.composite
-def file(draw, filename=st.text(min_size=1), size=st.integers(0,10000),
-        content=st.binary()):
-    return {'filename': draw(filename),
-            'size': draw(size),
+def file(draw, filename=st.lists(
+        st.characters(blacklist_categories=('Cs', 'Cc'),
+            blacklist_characters=('\0\n\r/\\')),
+            min_size=1, average_size=20),
+            content=st.binary(max_size=10000, average_size=100)):
+    return {'filename': ''.join(draw(filename)),
             'content': draw(content)}
 
 @st.composite
-def vault(draw, files=st.integers(0,1000)):
+def vault(draw):
     # TODO: use st.recursive to generate files in folders
-    return draw(st.lists(file(), min_size=1))
+    # TODO: filter duplicate filenames
+    return draw(st.lists(file(), average_size=5, max_size=MAX_FILES))
 
 if __name__ == '__main__':
     print (vault().example())

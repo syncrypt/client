@@ -15,16 +15,20 @@ from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.config import VaultConfig
+import logging
 
 
-class HypoBinaryTestCase(VaultTestCase):
+class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 
     @given(vault())
     def test_two_local_one_remote_hypo(self, vault_info):
         app = SyncryptApp(VaultConfig())
 
-        self.setUp()
+        if os.path.exists('tests/testvault'):
+            shutil.rmtree('tests/testvault')
+        shutil.copytree(self.folder, 'tests/testvault')
+        self.vault = Vault('tests/testvault')
 
         @asyncio.coroutine
         def go():
@@ -59,16 +63,19 @@ class HypoBinaryTestCase(VaultTestCase):
             assert not self.other_vault.active
 
             files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
-            print ("ppp", glob(os.path.join(other_vault_path, '*')))
             self.assertEqual(files_in_new_vault, len(vault_info))
 
         @asyncio.coroutine
-        def wait():
-            yield from app.wait()
+        def close():
+            yield from app.close()
 
-        self.loop.run_until_complete(go())
-        self.loop.run_until_complete(wait())
+        try:
+            self.loop.run_until_complete(go())
+        finally:
+            self.loop.run_until_complete(close())
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO)
     unittest.main()
