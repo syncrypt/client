@@ -9,7 +9,7 @@ from glob import glob
 import asynctest
 from base import VaultTestCase
 from common import CommonTestsMixin
-from hypothesis import example, given
+from hypothesis import example, given, settings
 from tests.strategies import vault
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
@@ -21,6 +21,7 @@ import logging
 class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 
+    @settings(timeout=30)
     @given(vault())
     def test_two_local_one_remote_hypo(self, vault_info):
         app = SyncryptApp(VaultConfig())
