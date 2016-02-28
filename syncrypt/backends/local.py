@@ -75,6 +75,10 @@ class LocalStorageBackend(StorageBackend):
             yield from self.vault.add_bundle_by_fileinfo(base, file_info)
 
     @asyncio.coroutine
+    def close(self):
+        pass
+
+    @asyncio.coroutine
     def wipe(self):
         if os.path.exists(self.path):
             shutil.rmtree(self.path)

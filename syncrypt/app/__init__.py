@@ -150,6 +150,12 @@ class SyncryptApp(AIOEventHandler):
         yield from self.bundle_action_semaphore.join()
 
     @asyncio.coroutine
+    def close(self):
+        yield from self.wait()
+        for vault in self.vaults:
+            yield from vault.close()
+
+    @asyncio.coroutine
     def _push_bundle(self, bundle):
         'update bundle and maybe upload'
         yield from bundle.update()

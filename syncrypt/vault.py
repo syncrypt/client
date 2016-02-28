@@ -91,6 +91,9 @@ class Vault(object):
         self.private_key = keys
         self.public_key = keys.publickey()
 
+    def close(self):
+        yield from self.backend.close()
+
     def walk2(self):
         'a generator of all bundles in this vault'
         # TODO: how to unify with "walk"? should there be a walker

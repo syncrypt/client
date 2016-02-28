@@ -150,7 +150,6 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def disconnect(self):
-        logger.debug('Disconnecting from server...')
         try:
             yield from self.write_term('disconnect')
         except ConnectionResetError:
@@ -280,6 +279,16 @@ class BinaryStorageManager(object):
         self.slots = [BinaryStorageConnection(backend) for i in range(concurrency)]
 
     @asyncio.coroutine
+    def close(self):
+        logged = False
+        for conn in self.slots:
+            if conn.connected or conn.connecting:
+                if not logged:
+                    logger.info('Disconnecting from server')
+                    logged = True
+                yield from conn.disconnect()
+
+    @asyncio.coroutine
     def acquire_connection(self):
         'return an available connection or block until one is free'
         # trigger at most one connection
@@ -381,4 +390,8 @@ class BinaryStorageBackend(StorageBackend):
     def wipe(self):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.wipe()
+
+    @asyncio.coroutine
+    def close(self):
+        yield from self.manager.close()
 
