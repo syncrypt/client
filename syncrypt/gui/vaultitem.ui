@@ -40,7 +40,7 @@
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="assets/syncrypt.qrc">:/syncrypt/vault.png</pixmap>
+        <pixmap resource="assets/syncrypt.qrc">:/syncrypt/icon_sync_64px.png</pixmap>
        </property>
       </widget>
      </item>

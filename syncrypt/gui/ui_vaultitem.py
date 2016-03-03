@@ -21,7 +21,7 @@ class Ui_VaultItem(object):
         self.label.setMaximumSize(QtCore.QSize(64, 64))
         self.label.setBaseSize(QtCore.QSize(64, 64))
         self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap(":/syncrypt/vault.png"))
+        self.label.setPixmap(QtGui.QPixmap(":/syncrypt/icon_sync_64px.png"))
         self.label.setObjectName("label")
         self.horizontalLayout.addWidget(self.label)
         self.verticalLayout = QtWidgets.QVBoxLayout()

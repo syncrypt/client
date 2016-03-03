@@ -180,7 +180,7 @@ class SyncryptDesktop(QtWidgets.QMainWindow, Ui_SyncryptWindow):
             widget.setName(vault.get('id'))
             widget.setUserCount(vault.get('user_count'))
             widget.setStatus(vault.get('state'))
-            this_item.setSizeHint(QtCore.QSize(0, 64))
+            this_item.setSizeHint(QtCore.QSize(0, 64+24))
             self.vaultList.addItem(this_item)
             self.vaultList.setItemWidget(this_item, widget)
         vault_dirs = [vault.get('folder') for vault in self.store.vaults]
