@@ -10,6 +10,7 @@ from syncrypt import Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.config import VaultConfig
 from syncrypt.utils.logging import setup_logging
+from syncrypt.app.cli import CLIAuthenticationProvider
 
 COMMANDS = ['init', 'pull', 'push', 'watch', 'clone']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
@@ -26,7 +27,7 @@ parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
 
 config = parser.parse_args()
 
-app = SyncryptApp(VaultConfig())
+app = SyncryptApp(VaultConfig(), auth_provider=CLIAuthenticationProvider())
 for directory in (['.'] if config.directory is None else config.directory):
     app.add_vault(Vault(directory))
 

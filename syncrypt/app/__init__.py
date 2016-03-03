@@ -19,7 +19,8 @@ class SyncryptApp(AIOEventHandler):
     core of syncrypt-desktop.
     '''
 
-    def __init__(self, config):
+    def __init__(self, config, auth_provider=None):
+        self.auth_provider = auth_provider
         self.vaults = []
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
@@ -45,14 +46,17 @@ class SyncryptApp(AIOEventHandler):
         self.vaults.remove(vault)
 
     @asyncio.coroutine
-    def init(self):
-        for vault in self.vaults:
+    def init(self, vault=None):
+        for vault in (self.vaults if vault is None else [vault]):
             try:
                 yield from vault.backend.open()
                 logger.warn('Vault %s already initialized', vault.folder)
                 continue
             except StorageBackendInvalidAuth:
                 pass
+            logger.info("Initializing %s", vault)
+            username, password = yield from self.auth_provider.get_auth(vault)
+            vault.set_authentication(username, password)
             yield from vault.backend.init()
 
     @asyncio.coroutine
@@ -61,8 +65,8 @@ class SyncryptApp(AIOEventHandler):
             yield from vault.backend.open()
         except StorageBackendInvalidAuth:
             # retry after logging in & getting auth token
-            yield from vault.backend.init()
-            yield from self.open_or_init(vault)
+            yield from self.init(vault)
+            yield from vault.backend.open()
 
     @asyncio.coroutine
     def start(self):
@@ -125,8 +129,7 @@ class SyncryptApp(AIOEventHandler):
         yield from self.pull()
 
     def get_vault_states(self):
-        return {v.folder: ('syncing' if v.active else 'synced')
-                    for v in self.vaults}
+        return {v.folder: v.state for v in self.vaults}
 
     @asyncio.coroutine
     def push(self):

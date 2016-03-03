@@ -7,7 +7,6 @@ from getpass import getpass
 import asyncio
 import bert
 from syncrypt.pipes import Limit, StreamReader, Once
-from syncrypt.utils.stdin import readline_from_stdin
 from erlastic import Atom
 
 from .base import StorageBackend, StorageBackendInvalidAuth
@@ -331,24 +330,22 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def init(self):
-        self.username = None
         self.auth = None
-        while not self.username:
-            print('Email for {}: '.format(self.host), end='', flush=True)
-            self.username = yield from readline_from_stdin()
-        self.password = getpass()
         try:
             with (yield from self.manager.acquire_connection()) as conn:
                 # after successful login, write back config
                 self.vault.config.update('remote', {'auth': self.auth})
                 self.vault.write_config()
+                self.valid = True
                 print('OK')
-        except StorageBackendInvalidAuth:
+        except StorageBackendInvalidAuth as e:
             logger.error('Invalid auth')
+            self.valid = False
 
     @asyncio.coroutine
     def open(self):
         with (yield from self.manager.acquire_connection()) as conn:
+            self.valid = True
             version = yield from conn.version()
             logger.info('Logged in to server (version %s)', version)
 

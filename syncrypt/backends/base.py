@@ -9,6 +9,7 @@ class StorageBackendInvalidAuth(StorageBackendException):
 class StorageBackend(object):
     def __init__(self, vault):
         self.vault = vault
+        self.valid = False
 
     def version(self):
         raise NotImplementedError()

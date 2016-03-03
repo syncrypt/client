@@ -57,7 +57,7 @@ class Vault(object):
         return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
-        return '<Vault: {0}>'.format(self.folder)
+        return '<Vault: {0} [{1}]>'.format(self.folder, self.state)
 
     @property
     def crypt_path(self):
@@ -70,6 +70,13 @@ class Vault(object):
     @property
     def config_path(self):
         return os.path.join(self.folder, '.vault', 'config')
+
+    @property
+    def state(self):
+        if self.backend.valid:
+            return 'syncing' if self.active else 'synced'
+        else:
+            return 'auth-needed'
 
     def write_config(self, config_path=None):
         if config_path is None:
