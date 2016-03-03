@@ -125,6 +125,10 @@ class Vault(object):
             else:
                 yield self.bundle_for(relpath)
 
+    def set_auth(self, username, password):
+        self.backend.username = username
+        self.backend.password = password
+
     def clear_bundle_cache(self):
         self._bundle_cache = {}
 

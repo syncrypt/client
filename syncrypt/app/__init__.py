@@ -56,7 +56,7 @@ class SyncryptApp(AIOEventHandler):
                 pass
             logger.info("Initializing %s", vault)
             username, password = yield from self.auth_provider.get_auth(vault)
-            vault.set_authentication(username, password)
+            vault.set_auth(username, password)
             yield from vault.backend.init()
 
     @asyncio.coroutine

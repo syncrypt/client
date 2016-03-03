@@ -10,8 +10,9 @@ from syncrypt.app import SyncryptApp
 from syncrypt.config import VaultConfig
 from syncrypt.gui import SyncryptDesktop
 from syncrypt.utils.logging import setup_logging
+from syncrypt.app.auth import DummyAuthenticationProvider
 
-setup_logging('INFO')
+setup_logging('DEBUG')
 
 def run_gui():
     app = QtWidgets.QApplication(sys.argv)
@@ -20,7 +21,9 @@ def run_gui():
     return app.exec_()
 
 def run_daemon():
-    app = SyncryptApp(VaultConfig())
+    app = SyncryptApp(VaultConfig(),
+            auth_provider=DummyAuthenticationProvider(
+                'test@syncrypt.space', 'test!password'))
     loop = asyncio.get_event_loop()
     loop.run_until_complete(app.start())
     loop.run_forever()
