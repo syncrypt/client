@@ -18,6 +18,10 @@ class LocalStorageBackend(StorageBackend):
         self.folder = folder
         super(LocalStorageBackend, self).__init__(vault)
 
+        # local storage is always authed
+        self.invalid_auth = False
+        self.connected = True
+
     @property
     def path(self):
         # folder is relative to vault

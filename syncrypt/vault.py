@@ -73,10 +73,12 @@ class Vault(object):
 
     @property
     def state(self):
-        if self.backend.valid:
+        if self.backend.connected:
             return 'syncing' if self.active else 'synced'
-        else:
+        elif self.backend.invalid_auth:
             return 'auth-needed'
+        else:
+            return 'connecting'
 
     def write_config(self, config_path=None):
         if config_path is None:

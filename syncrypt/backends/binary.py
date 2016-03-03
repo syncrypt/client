@@ -336,16 +336,17 @@ class BinaryStorageBackend(StorageBackend):
                 # after successful login, write back config
                 self.vault.config.update('remote', {'auth': self.auth})
                 self.vault.write_config()
-                self.valid = True
-                print('OK')
+                self.invalid_auth = False
+                logger.info('Successfully logged in and stored auth token')
         except StorageBackendInvalidAuth as e:
             logger.error('Invalid auth')
-            self.valid = False
+            self.invalid_auth = True
 
     @asyncio.coroutine
     def open(self):
         with (yield from self.manager.acquire_connection()) as conn:
-            self.valid = True
+            self.invalid_auth = False
+            self.connected = True
             version = yield from conn.version()
             logger.info('Logged in to server (version %s)', version)
 
