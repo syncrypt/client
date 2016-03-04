@@ -65,5 +65,8 @@ pip-selfcheck.json
 # vim
 *.sw?
 
+# hypothesis
+.hypothesis
+
 # syncrypt
 .vault
