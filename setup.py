@@ -68,7 +68,8 @@ setup(
         'umsgpack',
         'colorlog',
         'hachiko',
-        'pyqt5',
+        # PyQt is not available on PyPI
+        #'pyqt5',
         'python-snappy',
         'erlastic',
         'bert==2.1.0'
