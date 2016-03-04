@@ -6,6 +6,15 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
+cmdclass = {}
+
+# import build_ui
+try:
+    from pyqt_distutils.build_ui import build_ui
+    cmdclass['build_ui'] = build_ui
+except ImportError:
+    build_ui = None  # user won't have pyqt_distutils when deploying
+
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -80,7 +89,10 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        'dev': ['pyinstaller'],
+        'dev': [
+            'pyinstaller',
+            'pyqt-distutils'
+        ],
         'test': [
             'asynctest',
             'hypothesis'
@@ -88,7 +100,9 @@ setup(
     },
 
     # Download bert from github (https://github.com/samuel/python-bert/issues/7)
-    dependency_links = [
+    dependency_links=[
         'http://github.com/samuel/python-bert/tarball/master#egg=bert-2.1.0'
-    ]
+    ],
+
+    cmdclass=cmdclass
 )

@@ -1,0 +1,16 @@
+{
+    "files": [
+        [
+            "syncrypt/gui/*.ui",
+            "syncrypt/gui/"
+        ],
+        [
+            "syncrypt/gui/assets/syncrypt.qrc",
+            "syncrypt/gui/"
+        ]
+    ],
+    "pyrcc": "pyrcc5",
+    "pyrcc_options": "",
+    "pyuic": "pyuic5",
+    "pyuic_options": "--from-imports"
+}

@@ -72,3 +72,10 @@ Run tests:
 
     bin/pip install -e '.[test]'
     bin/python tests/test_all.py
+
+## Develop
+
+In order to rebuild the UI files, you can use the ``build_ui`` command:
+
+    bin/pip install -e '.[dev]'
+    bin/python setup.py build_ui
