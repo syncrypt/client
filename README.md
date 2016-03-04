@@ -71,7 +71,7 @@ Debug logging can be activated via ``-l DEBUG``.
 Run tests:
 
     bin/pip install -e '.[test]'
-    bin/python tests/test_all.py
+    bin/python setup.py test
 
 ## Develop
 

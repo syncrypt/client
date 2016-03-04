@@ -10,8 +10,8 @@ from syncrypt.app import SyncryptApp
 
 from syncrypt.pipes import Once, Buffered, DecryptRSA, EncryptRSA
 
-from base import VaultTestCase
-from common import CommonTestsMixin
+from tests.base import VaultTestCase
+from tests.common import CommonTestsMixin
 
 __all__ = ('LocalStorageTests',)
 

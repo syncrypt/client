@@ -94,6 +94,8 @@ setup(
             'pyqt-distutils'
         ],
         'test': [
+            'pytest-runner',
+            'pytest',
             'asynctest',
             'hypothesis'
         ],

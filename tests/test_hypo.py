@@ -1,21 +1,21 @@
 
+import logging
 import os
 import os.path
 import shutil
 import unittest
+from glob import glob
 
 import asyncio
-from glob import glob
 import asynctest
-from base import VaultTestCase
-from common import CommonTestsMixin
 from hypothesis import example, given, settings
-from tests.strategies import vault
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.config import VaultConfig
-import logging
+from tests.base import VaultTestCase
+from tests.common import CommonTestsMixin
+from tests.strategies import vault
 
 
 class HypoBinaryTestCase(asynctest.TestCase):
