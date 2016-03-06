@@ -19,6 +19,23 @@ except ImportError:
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+from distutils.core import setup, Command
+import os, sys
+
+class DistCommand(Command):
+    description = "packages syncrypt and syncrypt gui for the current platform"
+
+    def run(self):
+        assert os.getcwd() == self.cwd, 'Must be in package root: %s' % self.cwd
+        os.system('rm -rf ./dist/syncrypt*.zip')
+        os.system('rm -rf ./dist/syncrypt')
+        os.system('rm -rf ./dist/syncrypt_gui')
+        os.system('PYTHONPATH=lib/python3.5/site-packages/ pyinstaller syncrypt.spec')
+        os.system('cp ./dist/syncrypt_gui/* ./dist/syncrypt')
+        os.system('cd dist; zip syncrypt-0.0.1-linux-amd64.zip -r ./syncrypt')
+
+cmdclass['dist'] = DistCommand
+
 setup(
     name='syncrypt_desktop',
 
@@ -90,8 +107,10 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': [
-            'pyinstaller',
             'pyqt-distutils'
+        ],
+        'dist': [
+            'pyinstaller'
         ],
         'test': [
             'pytest-runner',

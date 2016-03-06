@@ -79,3 +79,10 @@ In order to rebuild the UI files, you can use the ``build_ui`` command:
 
     bin/pip install -e '.[dev]'
     bin/python setup.py build_ui
+
+## Deploy
+
+Make Syncrypt distribution package for the current platform:
+
+    bin/pip install -e '.[dist]'
+    bin/python setup.py dist
