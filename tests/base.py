@@ -11,11 +11,13 @@ from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
+    working_dir = '/dev/shm' if os.access('/dev/shm', os.W_OK) else 'tests/'
 
     def setUp(self):
-        if os.path.exists('tests/testvault'):
-            shutil.rmtree('tests/testvault')
-        shutil.copytree(self.folder, 'tests/testvault')
-        self.vault = Vault('tests/testvault')
+        vault_folder = os.path.join(self.working_dir, 'testvault')
+        if os.path.exists(vault_folder):
+            shutil.rmtree(vault_folder)
+        shutil.copytree(self.folder, vault_folder)
+        self.vault = Vault(vault_folder)
 
 

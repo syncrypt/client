@@ -201,7 +201,7 @@ class CommonTestsMixin(object):
             self.assertEqual(original_contents[bundle.path], current_content)
 
     def test_two_local_one_remote(self):
-        other_vault_path = 'tests/othervault'
+        other_vault_path = os.path.join(VaultTestCase.working_dir, 'othervault')
 
         # remove "other vault" folder first
         if os.path.exists(other_vault_path):

@@ -28,10 +28,11 @@ class HypoBinaryTestCase(asynctest.TestCase):
     def test_initial_and_added(self, initial_files, added_files):
         app = SyncryptApp(VaultConfig())
 
-        if os.path.exists('tests/testvault'):
-            shutil.rmtree('tests/testvault')
-        shutil.copytree(self.folder, 'tests/testvault')
-        self.vault = Vault('tests/testvault')
+        vault_folder = os.path.join(VaultTestCase.working_dir, 'testvault')
+        if os.path.exists(vault_folder):
+            shutil.rmtree(vault_folder)
+        shutil.copytree(self.folder, vault_folder)
+        self.vault = Vault(vault_folder)
 
         @asyncio.coroutine
         def go():
@@ -42,10 +43,10 @@ class HypoBinaryTestCase(asynctest.TestCase):
                 with open(p, 'wb') as f:
                     f.write(file_info['content'])
 
-            other_vault_path = 'tests/othervault'
             files_in_old_vault = count_files(vault.folder)
             self.assertEqual(files_in_old_vault, len(initial_files))
 
+            other_vault_path = os.path.join(VaultTestCase.working_dir, 'othervault')
 
             # remove "other vault" folder first
             if os.path.exists(other_vault_path):
