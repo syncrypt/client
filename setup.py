@@ -4,6 +4,10 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
+from syncrypt import __version__
+
+__name__ = 'syncrypt_desktop'
+
 here = path.abspath(path.dirname(__file__))
 
 cmdclass = {}
@@ -37,12 +41,12 @@ class DistCommand(Command):
 cmdclass['dist'] = DistCommand
 
 setup(
-    name='syncrypt_desktop',
+    name=__name__,
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.0.1',
+    version=__version__,
 
     description='A Syncrypt client',
     long_description=long_description,
