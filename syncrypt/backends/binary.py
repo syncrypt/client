@@ -32,6 +32,8 @@ class BinaryStorageConnection(object):
         self.available.clear()
         self.connected = False
         self.connecting = False
+        self.writer = None
+        self.reader = None
 
     def __repr__(self):
         return "<Slot %d %d %d>" % (self.connecting, self.connected, self.available.is_set())
@@ -150,11 +152,14 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def disconnect(self):
         try:
-            yield from self.write_term('disconnect')
+            if self.writer:
+                yield from self.write_term('disconnect')
         except ConnectionResetError:
             pass
         finally:
-            self.writer.close()
+            if self.writer:
+                self.writer.close()
+                self.writer = None
             self.connected = False
             self.connecting = False
             self.available.set()

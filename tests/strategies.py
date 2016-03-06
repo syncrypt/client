@@ -1,6 +1,6 @@
 import hypothesis.strategies as st
 
-__all__ = ('vault',)
+__all__ = ('files', 'file')
 
 MAX_FILES = 500
 
@@ -13,21 +13,22 @@ def file(draw, filename=st.lists(
     return {'filename': ''.join(draw(filename)),
             'content': draw(content)}
 
-valid_file = file().filter(lambda f: not f['filename'] in ('.', '..'))
+valid_file = file()\
+        .filter(lambda f: not f['filename'] in ('.', '..'))\
+        .filter(lambda f: not f['filename'].startswith('.')) # exclude dotfiles for now
 
 def has_no_duplicate(v):
     return len(v) == len({f['filename'] for f in v})
 
 @st.composite
-def vault(draw):
+def files(draw):
     # TODO: use st.recursive to generate files in folders
-    # TODO: filter duplicate filenames
     return draw(st.lists(valid_file, average_size=5, max_size=MAX_FILES)\
             .filter(has_no_duplicate))
 
 #valid_vault = vault().filter(has_no_duplicate)
 
 if __name__ == '__main__':
-    print (vault().example())
-    print (vault().example())
-    print (vault().example())
+    print (files().example())
+    print (files().example())
+    print (files().example())

@@ -15,15 +15,17 @@ from syncrypt.backends import BinaryStorageBackend
 from syncrypt.config import VaultConfig
 from tests.base import VaultTestCase
 from tests.common import CommonTestsMixin
-from tests.strategies import vault
+from tests.strategies import files
 
+def count_files(folder):
+    return len([name for name in os.listdir(folder) if name != '.vault'])
 
 class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 
     @settings(timeout=30)
-    @given(vault())
-    def test_two_local_one_remote_hypo(self, vault_info):
+    @given(files(), files())
+    def test_initial_and_added(self, initial_files, added_files):
         app = SyncryptApp(VaultConfig())
 
         if os.path.exists('tests/testvault'):
@@ -35,12 +37,15 @@ class HypoBinaryTestCase(asynctest.TestCase):
         def go():
             vault = self.vault
 
-            for file_info in vault_info:
+            for file_info in initial_files:
                 p = os.path.join(vault.folder, file_info['filename'])
                 with open(p, 'wb') as f:
                     f.write(file_info['content'])
 
             other_vault_path = 'tests/othervault'
+            files_in_old_vault = count_files(vault.folder)
+            self.assertEqual(files_in_old_vault, len(initial_files))
+
 
             # remove "other vault" folder first
             if os.path.exists(other_vault_path):
@@ -63,8 +68,24 @@ class HypoBinaryTestCase(asynctest.TestCase):
             assert not self.vault.active
             assert not self.other_vault.active
 
-            files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
-            self.assertEqual(files_in_new_vault, len(vault_info))
+            files_in_new_vault = count_files(other_vault_path)
+            self.assertEqual(files_in_new_vault, files_in_old_vault)
+
+            for file_info in added_files:
+                p = os.path.join(vault.folder, file_info['filename'])
+                with open(p, 'wb') as f:
+                    f.write(file_info['content'])
+
+            yield from app.push() # push all vaults
+
+            yield from app.pull() # pull all vaults
+
+            assert not self.vault.active
+            assert not self.other_vault.active
+
+            files_in_new_vault = count_files(other_vault_path)
+            final_files = set([f['filename'] for f in initial_files] + [f['filename'] for f in added_files])
+            self.assertEqual(files_in_new_vault, len(final_files))
 
         @asyncio.coroutine
         def close():
