@@ -1,8 +1,11 @@
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
-# To use a consistent encoding
+import os
+import sys
 from codecs import open
+from distutils.core import Command, setup
 from os import path
+
+from setuptools import find_packages, setup
 
 from syncrypt import __version__
 
@@ -23,20 +26,32 @@ except ImportError:
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-from distutils.core import setup, Command
-import os, sys
-
 class DistCommand(Command):
     description = "packages syncrypt and syncrypt gui for the current platform"
+    user_options = []
+
+    def initialize_options(self): pass
+
+    def finalize_options(self):
+        self.cwd = os.getcwd()
 
     def run(self):
+        import platform
+
         assert os.getcwd() == self.cwd, 'Must be in package root: %s' % self.cwd
         os.system('rm -rf ./dist/syncrypt*.zip')
         os.system('rm -rf ./dist/syncrypt')
         os.system('rm -rf ./dist/syncrypt_gui')
         os.system('PYTHONPATH=lib/python3.5/site-packages/ pyinstaller syncrypt.spec')
         os.system('cp ./dist/syncrypt_gui/* ./dist/syncrypt')
-        os.system('cd dist; zip syncrypt-0.0.1-linux-amd64.zip -r ./syncrypt')
+        zipname = '{name}-{version}.{platform}-{machine}.zip'.format(
+                name=__name__,
+                version=__version__,
+                platform=platform.system().lower(),
+                machine=platform.machine()
+        )
+        os.system('cd dist; zip {0} -r ./syncrypt'.format(zipname))
+        print("Generated {0}".format(os.path.join('dist', zipname)))
 
 cmdclass['dist'] = DistCommand
 
