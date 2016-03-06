@@ -18,7 +18,7 @@ Run the Qt GUI:
      syncrypt_gui
 
 If there is no Syncrypt daemon (or CLI with ``watch``) running, this will also
-start a Syncrypt daemon in a thread.
+start a Syncrypt daemon in a subprocess.
 
 ## Syncrypt Daemon
 
