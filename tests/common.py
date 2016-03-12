@@ -15,6 +15,7 @@ from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.config import VaultConfig
+from tests.base import VaultTestCase
 
 
 class CommonTestsMixin(object):
