@@ -1,0 +1,9 @@
+[vault]
+    name = My Vault
+
+[remote]
+    type = binary
+    username = test@syncrypt.space
+    password = test!password
+    host = 127.0.0.1
+    port = 1337
