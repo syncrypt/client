@@ -1,6 +1,7 @@
 from syncrypt.app.auth import AuthenticationProvider
 import asyncio
 import sys
+from getpass import getpass
 
 @asyncio.coroutine
 def stdio(loop):
