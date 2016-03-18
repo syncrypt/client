@@ -75,7 +75,7 @@ class BinaryStorageConnection(object):
 
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            if self.storage.host == '127.0.0.1':
+            if self.storage.host == '127.0.0.1' or self.storage.host == 'prod1.syncrypt.space':
                 sc.check_hostname = False
                 sc.verify_mode = ssl.CERT_NONE
         else:
