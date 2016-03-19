@@ -137,13 +137,13 @@ class BinaryStorageConnection(object):
                 yield from self.write_term('vault_login', self.storage.username,
                         self.storage.password, vault.config.id)
 
-                response = yield from self.read_term(assert_ok=False)
+                login_response = yield from self.read_term(assert_ok=False)
 
                 if login_response[0] == Atom('ok') and login_response[1] != '':
-                    self.storage.auth = login_response[1]
+                    self.storage.auth = login_response[1].decode(self.storage.vault.config.encoding)
                 else:
                     yield from self.disconnect()
-                    raise StorageBackendInvalidAuth(line)
+                    raise StorageBackendInvalidAuth(login_response[1])
 
         self.connected = True
         self.connecting = False
