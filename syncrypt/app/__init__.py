@@ -25,6 +25,8 @@ class VaultEventHandler(AIOEventHandler):
         if not bundle is None:
             logger.info('File modification detected (%s)', bundle)
             bundle.schedule_update()
+        else:
+            logger.debug('Ignoring file modification: %s', event.src_path)
 
 class SyncryptApp(object):
     '''
@@ -94,7 +96,6 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def stop(self):
-        print("stop")
         for watchdog in self.watchdogs.values():
             watchdog.stop()
         yield from self.api.stop()
