@@ -20,8 +20,8 @@ class VaultEventHandler(AIOEventHandler):
         super(VaultEventHandler, self).__init__()
 
     @asyncio.coroutine
-    def on_created(self, event):
-        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
+    def on_file_changed(self, path):
+        bundle = self.vault.bundle_for(os.path.relpath(path, self.vault.folder))
         if not bundle is None:
             logger.info('File creation detected (%s)', bundle)
             bundle.schedule_update()
@@ -29,21 +29,29 @@ class VaultEventHandler(AIOEventHandler):
             logger.debug('Ignoring file creation: %s', event.src_path)
 
     @asyncio.coroutine
-    def on_modified(self, event):
-        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
-        if not bundle is None:
-            logger.info('File modification detected (%s)', bundle)
-            bundle.schedule_update()
-        else:
-            logger.debug('Ignoring file modification: %s', event.src_path)
-
-    @asyncio.coroutine
-    def on_deleted(self, event):
-        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
+    def on_file_removed(self, path):
+        bundle = self.vault.bundle_for(os.path.relpath(path, self.vault.folder))
         if not bundle is None:
             logger.info('File delete detected (%s)', bundle)
         else:
             logger.debug('Ignoring file delete: %s', event.src_path)
+
+    @asyncio.coroutine
+    def on_deleted(self, event):
+        yield from self.on_file_removed(event.dest_path)
+
+    @asyncio.coroutine
+    def on_moved(self, event):
+        yield from self.on_file_changed(event.dest_path)
+        yield from self.on_file_removed(event.src_path)
+
+    @asyncio.coroutine
+    def on_created(self, event):
+        yield from self.on_file_changed(event.src_path)
+
+    @asyncio.coroutine
+    def on_modified(self, event):
+        yield from self.on_file_changed(event.src_path)
 
 class SyncryptApp(object):
     '''
