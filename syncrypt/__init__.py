@@ -1,4 +1,3 @@
 from .vault import Vault
 from .bundle import Bundle
-
-__version__ = '0.0.2'
+from .version import __version__

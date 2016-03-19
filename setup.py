@@ -7,7 +7,7 @@ from os import path
 
 from setuptools import find_packages, setup
 
-from syncrypt import __version__
+from syncrypt.version import __version__
 
 __name__ = 'syncrypt_desktop'
 
