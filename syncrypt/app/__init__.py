@@ -20,6 +20,15 @@ class VaultEventHandler(AIOEventHandler):
         super(VaultEventHandler, self).__init__()
 
     @asyncio.coroutine
+    def on_created(self, event):
+        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
+        if not bundle is None:
+            logger.info('File creation detected (%s)', bundle)
+            bundle.schedule_update()
+        else:
+            logger.debug('Ignoring file creation: %s', event.src_path)
+
+    @asyncio.coroutine
     def on_modified(self, event):
         bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
         if not bundle is None:
@@ -27,6 +36,14 @@ class VaultEventHandler(AIOEventHandler):
             bundle.schedule_update()
         else:
             logger.debug('Ignoring file modification: %s', event.src_path)
+
+    @asyncio.coroutine
+    def on_deleted(self, event):
+        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
+        if not bundle is None:
+            logger.info('File delete detected (%s)', bundle)
+        else:
+            logger.debug('Ignoring file delete: %s', event.src_path)
 
 class SyncryptApp(object):
     '''
