@@ -1,3 +1,13 @@
-from .vault import Vault
-from .bundle import Bundle
-from .version import __version__
+from pkg_resources import get_distribution, DistributionNotFound
+
+__project__ = 'syncrypt_desktop'
+__version__ = None  # required for initial installation
+
+try:
+    __version__ = get_distribution(__project__).version
+except DistributionNotFound:
+    VERSION = __project__ + '-' + '(local)'
+else:
+    VERSION = __project__ + '-' + __version__
+    from .vault import Vault
+    from .bundle import Bundle
