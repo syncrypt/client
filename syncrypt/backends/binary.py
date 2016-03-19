@@ -5,7 +5,7 @@ import time
 from getpass import getpass
 
 import asyncio
-import bert
+from syncrypt.vendor import bert
 from syncrypt.pipes import Limit, StreamReader, Once
 from erlastic import Atom
 
