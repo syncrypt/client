@@ -172,7 +172,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def stat(self, bundle):
-        logger.info('Stat %s', bundle)
+        logger.debug('Stat %s', bundle)
 
         yield from self.write_term('stat', bundle.store_hash)
 

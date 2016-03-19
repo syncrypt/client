@@ -122,7 +122,7 @@ class Bundle(object):
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):
-        logger.info("Updating fileinfo on disk")
+        logger.debug("Updating fileinfo on disk")
         sink = stream \
                 >> Buffered(self.vault.config.rsa_dec_block_size) \
                 >> DecryptRSA(self) \
@@ -164,12 +164,13 @@ class Bundle(object):
 
     def update_and_upload(self):
         backend = self.vault.backend
-        def x(bundle):
+        def _update(bundle):
+            logger.debug('Scheduled update is executing for %s', bundle)
             yield from bundle.update()
             yield from backend.stat(bundle)
             if bundle.remote_hash_differs:
                 yield from backend.upload(bundle)
-        asyncio.ensure_future(x(self))
+        asyncio.ensure_future(_update(self))
 
     def schedule_update(self):
         if self.update_handle:

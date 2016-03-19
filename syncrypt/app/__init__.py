@@ -12,7 +12,21 @@ from .api import SyncryptAPI
 
 logger = logging.getLogger(__name__)
 
-class SyncryptApp(AIOEventHandler):
+class VaultEventHandler(AIOEventHandler):
+
+    def __init__(self, app, vault):
+        self.app = app
+        self.vault = vault
+        super(VaultEventHandler, self).__init__()
+
+    @asyncio.coroutine
+    def on_modified(self, event):
+        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
+        if not bundle is None:
+            logger.info('File modification detected (%s)', bundle)
+            bundle.schedule_update()
+
+class SyncryptApp(object):
     '''
     The Syncrypt daemon app that can orchestrate multiple vaults and report
     status via a HTTP interface. It is designed to be the cross-platform
@@ -74,20 +88,16 @@ class SyncryptApp(AIOEventHandler):
         yield from self.push()
         for vault in self.vaults:
             logger.info('Watching %s', os.path.abspath(vault.folder))
-            self.watchdogs[vault.folder] = AIOWatchdog(vault.folder, event_handler=self)
+            self.watchdogs[vault.folder] = \
+                    AIOWatchdog(vault.folder, event_handler=VaultEventHandler(self, vault))
             self.watchdogs[vault.folder].start()
 
     @asyncio.coroutine
     def stop(self):
+        print("stop")
         for watchdog in self.watchdogs.values():
             watchdog.stop()
         yield from self.api.stop()
-
-    @asyncio.coroutine
-    def on_modified(self, event):
-        bundle = self.vault.bundle_for(os.path.relpath(event.src_path, self.vault.folder))
-        if not bundle is None:
-            bundle.schedule_update()
 
     @asyncio.coroutine
     def push_bundle(self, bundle):

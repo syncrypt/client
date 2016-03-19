@@ -61,7 +61,7 @@ class LocalStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def stat(self, bundle):
-        logger.info('Stat %s', bundle)
+        logger.debug('Stat %s', bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)
         if os.path.exists(dest_path + '.file_info'):
             file_info = open(dest_path + '.hash', 'r')
