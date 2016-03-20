@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class LocalStorageBackend(StorageBackend):
 
-    def __init__(self, vault, folder):
+    def __init__(self, vault, folder, **kwargs):
         self.folder = folder
         super(LocalStorageBackend, self).__init__(vault)
 

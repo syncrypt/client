@@ -1,4 +1,5 @@
 import configparser
+from copy import deepcopy
 
 class VaultConfig(object):
     rsa_key_len = 1024
@@ -11,23 +12,31 @@ class VaultConfig(object):
     rsa_enc_block_size = 117
     enc_buf_size = block_size * 10 * 1024
 
+    default_config = {
+        'vault': {
+            'ignore': '.*,*.encrypted,*.key,.vault',
+        },
+        'remote': {
+            'type': 'binary',
+            'ssl': True,
+            'host': 'prod1.syncrypt.space',
+            'port': 1337,
+            'concurrency': 4
+        },
+        'app': {
+            'concurrency': 8,
+        },
+        'api': {
+            'host': '127.0.0.1',
+            'port': '28080'
+        }
+    }
+
     def __init__(self):
         self._config = configparser.ConfigParser()
         # set defaults
-        self._config['vault'] = {
-                'ignore': '.*,*.encrypted,*.key,.vault',
-            }
-        self._config['remote'] = {
-                'type': 'binary',
-                'ssl': True
-            }
-        self._config['app'] = {
-                'concurrency': 8,
-            }
-        self._config['api'] = {
-                'host': '127.0.0.1',
-                'port': '28080'
-            }
+        for k in self.default_config.keys():
+            self._config[k] = deepcopy(self.default_config[k])
 
     def as_dict(self):
         return {s:dict(self._config.items(s)) for s in self._config.sections()}

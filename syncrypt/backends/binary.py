@@ -319,8 +319,8 @@ class BinaryStorageManager(object):
 
 class BinaryStorageBackend(StorageBackend):
 
-    def __init__(self, vault, auth=None, host='prod1.syncrypt.space',
-            port=1337, concurrency=4, username=None, password=None, ssl=False):
+    def __init__(self, vault, auth=None, host=None, port=None,
+            concurrency=None, username=None, password=None, ssl=False):
         self.host = host
         self.port = port
         self.ssl = ssl
