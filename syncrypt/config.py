@@ -6,7 +6,10 @@ class VaultConfig(object):
     encoding = 'utf-8'
     aes_key_len = 256
     hash_algo = 'sha256'
+
+    # TODO: This should be generated whenever a file is encrypted.
     iv = 'This is an IV456'
+
     block_size = 16
     rsa_dec_block_size = 128
     rsa_enc_block_size = 117
@@ -14,13 +17,20 @@ class VaultConfig(object):
 
     default_config = {
         'vault': {
+            # File patterns to ignore (comma separated list)
             'ignore': '.*,*.encrypted,*.key,.vault',
         },
         'remote': {
+            # Protocol to use
             'type': 'binary',
-            'ssl': True,
+
+            # Syncrypt server host
             'host': 'prod1.syncrypt.space',
             'port': 1337,
+            'ssl': True,
+
+            # How many concurent uploads/downloads we want to
+            # support
             'concurrency': 4
         },
         'app': {
