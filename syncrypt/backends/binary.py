@@ -228,12 +228,19 @@ class BinaryStorageConnection(object):
         assert type(response) == tuple
 
         if response[0] == Atom('stream_response'):
-            assert isinstance(response[1], int)
-            for n in range(response[1]):
+            (_, file_count, revision_id) = response
+            assert isinstance(file_count, int)
+            for n in range(file_count):
                 server_info = yield from self.read_term(assert_ok=False)
                 store_hash = server_info['hash'].decode()
                 file_info = server_info['key']
                 yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
+            if revision_id:
+                revision_id = revision_id.decode(self.storage.vault.config.encoding)
+                logger.info('Remote vault revision is "%s"', revision_id)
+                # if all went well, store revision_id in vault
+                self.storage.vault.config.update('vault', {'revision': revision_id})
+                self.storage.vault.write_config()
 
     @asyncio.coroutine
     def download(self, bundle):
