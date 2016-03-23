@@ -64,6 +64,10 @@ Alternate directories can be specified with ``-d``:
 
     syncrypt -d ~/myfolder watch
 
+Print out vault information:
+
+    syncrypt info
+
 Debug logging can be activated via ``-l DEBUG``.
 
 ## Tests

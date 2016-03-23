@@ -164,6 +164,22 @@ class SyncryptApp(object):
 
         yield from self.pull()
 
+    @asyncio.coroutine
+    def info(self):
+        for (index, vault) in enumerate(self.vaults):
+            print("="*78, end='\n\n')
+            print("Vault {0}".format(index + 1))
+            print()
+            print("Vault ID:         \t{0}".format(vault.config.id))
+            print("Vault revision:   \t{0}".format(vault.config.vault['revision']))
+            print("Vault fingerprint:\t{0}".format('00:00:22:00:TO:DO'))
+            print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
+            print("Local size:       \t0.0 mb (includes metadata)")
+            print("Remote size:      \t0.0 mb (includes backups)")
+            print("Your fingerprint: \t{0}".format('00:00:22:00:TO:DO'))
+            print()
+        print("="*78)
+
     def get_vault_states(self):
         return {v.folder: v.state for v in self.vaults}
 
