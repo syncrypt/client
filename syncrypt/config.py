@@ -6,10 +6,6 @@ class VaultConfig(object):
     encoding = 'utf-8'
     aes_key_len = 256
     hash_algo = 'sha256'
-
-    # TODO: This should be generated whenever a file is encrypted.
-    iv = 'This is an IV456'
-
     block_size = 16
     rsa_dec_block_size = 128
     rsa_enc_block_size = 117

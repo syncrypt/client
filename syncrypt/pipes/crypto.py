@@ -43,16 +43,20 @@ class Encrypt(Pipe):
     def __init__(self, bundle):
         super(Encrypt, self).__init__()
         self.bundle = bundle
-        self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
-                self.bundle.vault.config.iv)
+        self.aes = AES.new(self.bundle.key, AES.MODE_CBC, self.bundle.iv)
         self.block_size = self.bundle.vault.config.block_size
+        self.iv = None
 
     @asyncio.coroutine
     def read(self, count=-1):
         data = yield from self.input.read(count)
         if len(data) == 0:
             return b''
-        enc_data = self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
+        enc_data = b''
+        if self.iv is None:
+            self.iv = os.urandom(self.block_size * 8)
+            enc_data += self.iv
+        enc_data += self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
         logger.debug('Encrypted %d bytes -> %d bytes', len(data), len(enc_data))
         return enc_data
 
@@ -60,13 +64,14 @@ class Decrypt(Pipe):
     def __init__(self, bundle):
         self.bundle = bundle
         self.aes = None
+        self.block_size = self.bundle.vault.config.block_size
         super(Decrypt, self).__init__()
 
     @asyncio.coroutine
     def read(self, count=-1):
         if self.aes is None:
-            self.aes = AES.new(self.bundle.key, AES.MODE_CBC,
-                    self.bundle.vault.config.iv)
+            iv = yield from self.input.read(self.block_size)
+            self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
             if self.bundle.key is None:
                 yield from self.bundle.load_key()
         data = yield from self.input.read(count)

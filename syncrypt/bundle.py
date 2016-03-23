@@ -31,6 +31,7 @@ class Bundle(object):
         self.uptodate = False
         self.remote_crypt_hash = None
         self.update_handle = None
+        self.key = None
 
         if self.path is not None:
             h = hashlib.new(self.vault.config.hash_algo)
