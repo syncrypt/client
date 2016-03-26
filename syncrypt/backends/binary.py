@@ -52,7 +52,7 @@ class BinaryStorageConnection(object):
             raise ConnectionResetException()
         decoded = bert.decode(packet)
         if assert_ok and decoded[0] != Atom('ok'):
-            raise UnsuccessfulResponse(packet)
+            raise UnsuccessfulResponse(decoded)
         return decoded
 
     @asyncio.coroutine
