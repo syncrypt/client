@@ -83,14 +83,32 @@ class Repeat(Pipe):
         return self.buf
 
 class Buffered(Pipe):
-    def __init__(self, buf_size):
+    '''
+    This pipe will chop the input stream in parts like this:
+
+    +-------------+------------+------------+------------+----
+    | {head_size} | {buf_size} | {buf_size} | {buf_size} | ...
+    +-------------+------------+------------+------------+----
+
+    '''
+    def __init__(self, buf_size, head_size=0):
         self.buf_size = buf_size
         self.buf = b''
+        self.head = False
+        self.head_size = head_size
         super(Buffered, self).__init__()
 
     @asyncio.coroutine
     def read(self, count=-1):
-        assert count == -1 or count == self.buf_size
+        assert count == -1 or count == self.buf_size or \
+                (not self.head and count == self.head_size)
+
+        if not self.head and self.head_size > 0:
+            assert count == self.head_size
+            self.buf += yield from self.input.read(count)
+            self.head = True
+            return self.pop(self.head_size)
+
         while len(self.buf) < self.buf_size:
             # fill up buffer
             add_buf = yield from self.input.read(max(self.buf_size, count))
@@ -98,8 +116,11 @@ class Buffered(Pipe):
                 self._eof = True
                 break
             self.buf += add_buf
-        retbuf = self.buf[:self.buf_size]
-        self.buf = self.buf[self.buf_size:]
+        return self.pop(self.buf_size)
+
+    def pop(self, length):
+        retbuf = self.buf[:length]
+        self.buf = self.buf[length:]
         return retbuf
 
 class Limit(Pipe):

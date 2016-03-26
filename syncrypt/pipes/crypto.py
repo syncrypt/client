@@ -91,9 +91,11 @@ class Decrypt(Pipe):
     def read(self, count=-1):
         if self.aes is None:
             iv = yield from self.input.read(self.block_size)
-            self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
+            logger.debug('Initializing symmetric decryption: block_size=%d iv=%d',
+                    self.block_size, len(iv))
             if self.bundle.key is None:
                 yield from self.bundle.load_key()
+            self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
         data = yield from self.input.read(count)
         logger.debug('Decrypting %d bytes', len(data))
         original_content = self.aes.decrypt(data)

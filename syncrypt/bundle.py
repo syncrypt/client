@@ -115,7 +115,7 @@ class Bundle(object):
         hash_pipe = Hash(self)
 
         sink = stream \
-                >> Buffered(self.vault.config.enc_buf_size) \
+                >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
                 >> hash_pipe \
                 >> Decrypt(self) \
                 >> SnappyDecompress() \
