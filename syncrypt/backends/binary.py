@@ -52,7 +52,7 @@ class BinaryStorageConnection(object):
             raise ConnectionResetException()
         decoded = bert.decode(packet)
         if assert_ok and decoded[0] != Atom('ok'):
-            raise UnsuccessfulResponse(packet)
+            raise UnsuccessfulResponse(decoded)
         return decoded
 
     @asyncio.coroutine
@@ -270,8 +270,8 @@ class BinaryStorageConnection(object):
         yield from bundle.load_key()
 
         yield from bundle.write_encrypted_stream(
-                StreamReader(self.reader) >> Limit(file_size),
-                assert_hash=content_hash)
+                StreamReader(self.reader) >> Limit(file_size)
+            )
 
     @asyncio.coroutine
     def version(self):
