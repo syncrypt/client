@@ -12,7 +12,7 @@ from syncrypt.config import VaultConfig
 from syncrypt.utils.logging import setup_logging
 from syncrypt.app.cli import CLIAuthenticationProvider
 
-COMMANDS = ['init', 'pull', 'push', 'watch', 'clone']
+COMMANDS = ['init', 'pull', 'push', 'watch', 'clone', 'info']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
@@ -48,6 +48,8 @@ elif config.command == 'clone':
         loop.run_until_complete(app.clone(config.clone_target))
     else:
         print("Clone target must be set (-t)")
+elif config.command == 'info':
+    loop.run_until_complete(app.info())
 
 loop.close()
 
