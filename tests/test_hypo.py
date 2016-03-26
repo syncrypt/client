@@ -23,7 +23,7 @@ def count_files(folder):
 class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 
-    @settings(timeout=30)
+    @settings(timeout=30, perform_health_check=False)
     @given(files(), files())
     def test_initial_and_added(self, initial_files, added_files):
         app = SyncryptApp(VaultConfig())
