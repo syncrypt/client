@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 
 from Crypto.Cipher import AES
 from Crypto.Cipher import PKCS1_v1_5
@@ -31,6 +32,10 @@ class Hash(Pipe):
     def hash(self):
         return self._hash.hexdigest()
 
+    @property
+    def hash_obj(self):
+        return self._hash
+
     @asyncio.coroutine
     def read(self, count=-1):
         data = yield from self.input.read(count)
@@ -39,11 +44,24 @@ class Hash(Pipe):
             self._size += len(data)
         return data
 
+class Pad(Pipe):
+    '''This pipe will just add PKCS5Padding to the stream'''
+    def __init__(self, bundle):
+        super(Pad, self).__init__()
+        self.block_size = bundle.vault.config.block_size
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        data = yield from self.input.read(count)
+        if len(data) == 0:
+            return b''
+        return PKCS5Padding.pad(data, self.block_size)
+
 class Encrypt(Pipe):
     def __init__(self, bundle):
         super(Encrypt, self).__init__()
         self.bundle = bundle
-        self.aes = AES.new(self.bundle.key, AES.MODE_CBC, self.bundle.iv)
+        self.aes = None
         self.block_size = self.bundle.vault.config.block_size
         self.iv = None
 
@@ -53,11 +71,13 @@ class Encrypt(Pipe):
         if len(data) == 0:
             return b''
         enc_data = b''
-        if self.iv is None:
-            self.iv = os.urandom(self.block_size * 8)
+        if self.aes is None:
+            self.iv = os.urandom(self.block_size)
+            self.aes = AES.new(self.bundle.key, AES.MODE_CBC, self.iv)
+            logger.debug('Writing IV of %d bytes', len(self.iv))
             enc_data += self.iv
+        logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
         enc_data += self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
-        logger.debug('Encrypted %d bytes -> %d bytes', len(data), len(enc_data))
         return enc_data
 
 class Decrypt(Pipe):

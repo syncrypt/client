@@ -9,7 +9,7 @@ import aiofiles
 import asyncio
 import umsgpack
 
-from .pipes import (Buffered, Decrypt, DecryptRSA, Encrypt, EncryptRSA,
+from .pipes import (Buffered, Decrypt, DecryptRSA, Encrypt, EncryptRSA, Pad,
                     FileReader, FileWriter, Hash, Once, SnappyCompress,
                     SnappyDecompress)
 
@@ -104,6 +104,12 @@ class Bundle(object):
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> Encrypt(self)
 
+    def read_stream_for_hash(self):
+        return FileReader(self.path) \
+                >> SnappyCompress() \
+                >> Buffered(self.vault.config.enc_buf_size) \
+                >> Pad(self)
+
     @asyncio.coroutine
     def write_encrypted_stream(self, stream, assert_hash=None):
         hash_pipe = Hash(self)
@@ -149,11 +155,21 @@ class Bundle(object):
         assert self.path is not None
 
         if os.path.exists(self.path):
-            hashing_reader = self.read_encrypted_stream() >> Hash(self)
+            hashing_reader = self.read_stream_for_hash() >> Hash(self)
             yield from hashing_reader.consume()
 
-            self.crypt_hash = hashing_reader.hash
-            self.file_size_crypt = hashing_reader.size
+            # We add the AES key to the hash so that the hash stays constant
+            # when the files is not changed, but the original hash is also not
+            # revealed to the server
+            assert len(self.key) == self.key_size
+            hash_obj = hashing_reader.hash_obj
+            hash_obj.update(self.key)
+
+            self.crypt_hash = hash_obj.hexdigest()
+
+            # Add one time the symmetric block_size to the encrypted file size.
+            # This is the length of the IV.
+            self.file_size_crypt = hashing_reader.size + self.vault.config.block_size
             self.uptodate = True
         else:
             self.crypt_hash = None
