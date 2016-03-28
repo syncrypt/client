@@ -14,7 +14,7 @@ import hypothesis.strategies as st
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
-from syncrypt.config import VaultConfig
+from syncrypt.config import AppConfig
 from tests.base import VaultTestCase
 
 
@@ -70,12 +70,12 @@ class CommonTestsMixin(object):
             self.assertEqual(bundle.remote_hash_differs, False)
 
     def test_app_push(self):
-        app = SyncryptApp(VaultConfig())
+        app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
         yield from app.push()
 
     def test_app_push1(self):
-        app = SyncryptApp(VaultConfig())
+        app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
         yield from app.open_or_init(self.vault)
         bundle = list(self.vault.walk())[0]
@@ -83,7 +83,7 @@ class CommonTestsMixin(object):
         yield from app.wait()
 
     def test_app_start_without_vaults(self):
-        app = SyncryptApp(VaultConfig())
+        app = SyncryptApp(AppConfig())
         yield from app.start()
 
         yield from asyncio.sleep(0.1)
@@ -119,7 +119,7 @@ class CommonTestsMixin(object):
         yield from app.stop()
 
     def test_app_watchdog(self):
-        app = SyncryptApp(VaultConfig())
+        app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
         yield from app.start()
 
@@ -146,7 +146,6 @@ class CommonTestsMixin(object):
 
         r = yield from aiohttp.get('http://127.0.0.1:28080/v1/config')
         c = yield from r.json()
-        self.assertIn('remote', c.keys())
         self.assertIn('api', c.keys())
         yield from r.release()
 
@@ -208,7 +207,7 @@ class CommonTestsMixin(object):
         if os.path.exists(other_vault_path):
             shutil.rmtree(other_vault_path)
 
-        app = SyncryptApp(VaultConfig())
+        app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
 
         #yield from app.init() # init all vaults

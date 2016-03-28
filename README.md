@@ -27,7 +27,7 @@ a HTTP API through which it can be queried and commanded to take action.
 
 Run the daemon:
 
-     syncrypt_daemon start/stop/restart
+     syncrypt_daemon
 
 Query statistics:
 

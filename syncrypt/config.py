@@ -1,7 +1,38 @@
-import configparser
+import logging
+import os.path
 from copy import deepcopy
 
-class VaultConfig(object):
+import configparser
+
+logger = logging.getLogger(__name__)
+
+class Config(object):
+    default_config = {}
+
+    def __init__(self):
+        self._config = configparser.ConfigParser()
+        # set defaults
+        for k in self.default_config.keys():
+            self._config[k] = deepcopy(self.default_config[k])
+
+    def as_dict(self):
+        return {s:dict(self._config.items(s)) for s in self._config.sections()}
+
+    def __getattr__(self, item):
+        if item in self._config:
+            return self._config[item]
+
+    def read(self, config_file):
+        self._config.read(config_file)
+
+    def write(self, config_file):
+        with open(config_file, 'w') as f:
+            self._config.write(f)
+
+    def update(self, section, dct):
+        self._config[section].update(dct)
+
+class VaultConfig(Config):
     rsa_key_len = 1024
     encoding = 'utf-8'
     aes_key_len = 256
@@ -28,35 +59,8 @@ class VaultConfig(object):
             # How many concurent uploads/downloads we want to
             # support
             'concurrency': 4
-        },
-        'app': {
-            'concurrency': 8,
-        },
-        'api': {
-            'host': '127.0.0.1',
-            'port': '28080'
         }
     }
-
-    def __init__(self):
-        self._config = configparser.ConfigParser()
-        # set defaults
-        for k in self.default_config.keys():
-            self._config[k] = deepcopy(self.default_config[k])
-
-    def as_dict(self):
-        return {s:dict(self._config.items(s)) for s in self._config.sections()}
-
-    def __getattr__(self, item):
-        if item in self._config:
-            return self._config[item]
-
-    def read(self, config_file):
-        self._config.read(config_file)
-
-    def write(self, config_file):
-        with open(config_file, 'w') as f:
-            self._config.write(f)
 
     @property
     def id(self):
@@ -73,9 +77,6 @@ class VaultConfig(object):
         else:
             raise Exception(self._config['remote']['type'])
 
-    def update(self, section, dct):
-        self._config[section].update(dct)
-
     @property
     def backend_kwargs(self):
         kwargs = dict(self._config['remote']) # copy dict
@@ -90,3 +91,27 @@ class VaultConfig(object):
     def ignore_patterns(self):
         return self._config['vault']['ignore'].split(',')
 
+class AppConfig(Config):
+    default_config = {
+        'app': {
+            'concurrency': 8,
+            'vaults': ''
+        },
+        'api': {
+            'host': '127.0.0.1',
+            'port': '28080'
+        }
+    }
+
+class MaterializedAppConfig(AppConfig):
+    def __init__(self, syncrypt_config_dir=None):
+        super(MaterializedAppConfig, self).__init__()
+
+        if syncrypt_config_dir is None:
+            syncrypt_config_dir = os.path.expanduser('~/.syncrypt')
+
+        self.config_file = os.path.join(syncrypt_config_dir, 'config')
+
+        logger.debug('Reading application config from %s', self.config_file)
+
+        self.read(self.config_file)

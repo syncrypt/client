@@ -8,30 +8,36 @@ import sys
 import asyncio
 from syncrypt import Vault
 from syncrypt.app import SyncryptApp
-from syncrypt.config import VaultConfig
+from syncrypt.config import MaterializedAppConfig
 from syncrypt.utils.daemon import Daemon
+from syncrypt.utils.logging import setup_logging
 
 COMMANDS = ['start', 'stop', 'restart']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
-parser.add_argument('command', metavar='cmd', type=str,
-        choices=COMMANDS, help='Command to run: ' + ', '.join(COMMANDS))
-parser.add_argument('-d', metavar='DIRECTORY', type=str,
-        action='append',dest='directory', help='directory (default: .)')
+parser.add_argument('-d,--detach', action='store_true',
+        dest='detach', help='Detach from console')
+parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
+        dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
 
 config = parser.parse_args()
 
-app = SyncryptApp(VaultConfig())
-for directory in (['.'] if config.directory is None else config.directory):
-    app.add_vault(Vault(directory))
+setup_logging(config.loglevel)
 
-class SyncryptDaemon(Daemon):
-    def run(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(app.start())
-        loop.run_forever()
+app_config = MaterializedAppConfig()
+app = SyncryptApp(app_config)
 
-syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
-getattr(syncryptd, config.command)()
+def run_syncrypt():
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(app.start())
+    loop.run_forever()
 
+if config.detach:
+    class SyncryptDaemon(Daemon):
+        def run(self):
+            run_syncrypt()
+    syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
+    getattr(syncryptd, config.command)()
+else:
+    run_syncrypt()

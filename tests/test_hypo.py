@@ -12,7 +12,7 @@ from hypothesis import example, given, settings
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
-from syncrypt.config import VaultConfig
+from syncrypt.config import AppConfig
 from tests.base import VaultTestCase
 from tests.common import CommonTestsMixin
 from tests.strategies import files
@@ -26,7 +26,7 @@ class HypoBinaryTestCase(asynctest.TestCase):
     @settings(timeout=30, perform_health_check=False)
     @given(files(), files())
     def test_initial_and_added(self, initial_files, added_files):
-        app = SyncryptApp(VaultConfig())
+        app = SyncryptApp(AppConfig())
 
         vault_folder = os.path.join(VaultTestCase.working_dir, 'testvault')
         if os.path.exists(vault_folder):
