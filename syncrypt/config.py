@@ -26,6 +26,9 @@ class Config(object):
         self._config.read(config_file)
 
     def write(self, config_file):
+        cfg_dir = os.path.dirname(config_file)
+        if not os.path.exists(cfg_dir):
+            os.makedirs(cfg_dir)
         with open(config_file, 'w') as f:
             self._config.write(f)
 
@@ -103,15 +106,48 @@ class AppConfig(Config):
         }
     }
 
+    @property
+    def vault_dirs(self):
+        value = self._config.get('app', 'vaults')
+        return list(filter(None, (x.strip() for x in value.splitlines())))
+
+    @vault_dirs.setter
+    def vault_dirs(self, dirs):
+        self._config.set('app', 'vaults', '\n' + '\n'.join(dirs))
+
+    def add_vault_dir(self, folder):
+        self.vault_dirs = list(set(self.vault_dirs + [folder]))
+
+    def remove_vault_dir(self, folder):
+        a = self.vault_dirs
+        a.remove(folder)
+        self.vault_dirs = a
+
 class MaterializedAppConfig(AppConfig):
+    '''
+    An AppConfig that will read and sync the settings from disk.
+    '''
+
     def __init__(self, syncrypt_config_dir=None):
         super(MaterializedAppConfig, self).__init__()
 
         if syncrypt_config_dir is None:
-            syncrypt_config_dir = os.path.expanduser('~/.syncrypt')
+            self.config_dir = os.path.expanduser('~/.syncrypt')
+        else:
+            self.config_dir = syncrypt_config_dir
 
-        self.config_file = os.path.join(syncrypt_config_dir, 'config')
+        self.config_file = os.path.join(self.config_dir, 'config')
 
         logger.debug('Reading application config from %s', self.config_file)
 
         self.read(self.config_file)
+
+        logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
+
+    def add_vault_dir(self, folder):
+        super(MaterializedAppConfig, self).add_vault_dir(folder)
+        self.write(self.config_file)
+
+    def remove_vault_dir(self, folder):
+        super(MaterializedAppConfig, self).remove_vault_dir(folder)
+        self.write(self.config_file)

@@ -31,15 +31,15 @@ Run the daemon:
 
 Query statistics:
 
-     curl http://127.0.0.1:28080/stats
+     curl http://127.0.0.1:28080/v1/stats
 
 Query all vaults:
 
-     curl http://127.0.0.1:28080/vaults
+     curl http://127.0.0.1:28080/v1/vault/
 
-Add a vault:
+Add a vault (current directory in this example):
 
-     curl http://127.0.0.1:28080/vaults/add?path=/path/to/the/folder
+    curl -X PUT -d $PWD 'http://127.0.0.1:28080/v1/vault/'
 
 ## Syncrypt CLI
 

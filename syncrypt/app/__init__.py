@@ -80,10 +80,12 @@ class SyncryptApp(object):
 
     def add_vault(self, vault):
         self.vaults.append(vault)
+        self.config.add_vault_dir(os.path.abspath(vault.folder))
         return vault
 
     def remove_vault(self, vault):
         # TODO: close open connections etc
+        self.config.remove_vault_dir(os.path.abspath(vault.folder))
         self.vaults.remove(vault)
 
     @asyncio.coroutine
