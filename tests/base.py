@@ -11,6 +11,9 @@ from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
+
+    # If available, use filesystem mounted shared memory in order to save
+    # disk IO operations during testing
     working_dir = '/dev/shm' if os.access('/dev/shm', os.W_OK) else 'tests/'
 
     def setUp(self):
