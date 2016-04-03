@@ -73,6 +73,8 @@ class SyncryptApp(object):
             'downloads': 0,
             'stats': 0
             }
+        for vault_dir in self.config.vault_dirs:
+            self.vaults.append(Vault(vault_dir))
         super(SyncryptApp, self).__init__()
 
     def add_vault_by_path(self, path):

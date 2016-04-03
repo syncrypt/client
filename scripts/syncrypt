@@ -32,12 +32,10 @@ setup_logging(config.loglevel)
 # For now, each command will work on a default AppConfig object. When
 # you want app-level configuration, use ``syncrypt_daemon``.
 app_config = AppConfig()
+for directory in (['.'] if config.directory is None else config.directory):
+    app_config.add_vault_dir(directory)
 
 app = SyncryptApp(app_config, auth_provider=CLIAuthenticationProvider())
-
-for directory in (['.'] if config.directory is None else config.directory):
-    app.add_vault(Vault(directory))
-
 
 loop = asyncio.get_event_loop()
 if config.command == 'init':
