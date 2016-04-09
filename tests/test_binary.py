@@ -1,14 +1,14 @@
-import unittest
+import logging
+import os
 import os.path
 import shutil
-import os
+import unittest
 
 import asyncio
 import asynctest
 from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
-
 from tests.base import VaultTestCase
 from tests.common import CommonTestsMixin
 
@@ -22,4 +22,7 @@ class BinaryServerTests(VaultTestCase, CommonTestsMixin):
         self.assertEqual(type(self.vault.backend), BinaryStorageBackend)
 
 if __name__ == '__main__':
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()
+

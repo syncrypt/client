@@ -14,6 +14,8 @@ from .bundle import Bundle
 from .config import VaultConfig
 from .pipes import Once
 
+from .exceptions import SecurityError
+
 logger = logging.getLogger(__name__)
 
 class Vault(object):
@@ -38,6 +40,15 @@ class Vault(object):
                 self.public_key = RSA.importKey(id_rsa_pub.read())
             with open(id_rsa_path, 'rb') as id_rsa:
                 self.private_key = RSA.importKey(id_rsa.read())
+
+            # Do NOT enforce a specific key length yet
+            # if Crypto.Util.number.size(self.public_key.n) != self.config.rsa_key_len or \
+            #        Crypto.Util.number.size(self.private_key.n) != self.config.rsa_key_len - 1:
+            #    self.public_key = None
+            #    self.private_key = None
+            #    raise SecurityError(
+            #            'Vault key is not of required length of %d bit.' \
+            #                    % self.config.rsa_key_len)
 
         Backend = self.config.backend_cls
         kwargs = self.config.backend_kwargs
@@ -91,7 +102,7 @@ class Vault(object):
     def init_keys(self, id_rsa_path, id_rsa_pub_path):
         if not os.path.exists(os.path.dirname(id_rsa_path)):
             os.makedirs(os.path.dirname(id_rsa_path))
-        logger.info('Generating RSA key pair...')
+        logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
         keys = RSA.generate(self.config.rsa_key_len)
         with open(id_rsa_pub_path, 'wb') as id_rsa_pub:
             id_rsa_pub.write(keys.publickey().exportKey())

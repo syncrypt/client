@@ -3,12 +3,13 @@ import logging
 import os
 
 from Crypto.Cipher import AES
-from Crypto.Cipher import PKCS1_v1_5
+from Crypto.Cipher import PKCS1_v1_5, PKCS1_OAEP
+import Crypto.Util
 
 import aiofiles
 import asyncio
 
-from .base import Pipe
+from .base import Pipe, Buffered
 from syncrypt.utils.padding import PKCS5Padding
 
 logger = logging.getLogger(__name__)
@@ -101,33 +102,79 @@ class Decrypt(Pipe):
         original_content = self.aes.decrypt(data)
         return PKCS5Padding.unpad(original_content)
 
-class EncryptRSA(Pipe):
-    def __init__(self, bundle):
-        super(EncryptRSA, self).__init__()
-        self.bundle = bundle
+class EncryptRSA(Buffered):
+    '''
+    Asymmetric encryption pipe that divides the incoming stream into blocks
+    which will then be encrypted using RSA and PKCS1_v1_5.
+    '''
+    protocol = PKCS1_v1_5
+
+    def __init__(self, public_key):
+        self.public_key = public_key
+        self.block_size = self.get_block_size()
+        logger.debug('Decrypting block size: %d bytes', self.block_size)
+        super(EncryptRSA, self).__init__(self.block_size)
+
+    def get_block_size(self):
+        return Crypto.Util.number.size(self.public_key.n) // 8 - 2 * 20 - 2
 
     @asyncio.coroutine
     def read(self, count=-1):
-        data = yield from self.input.read(count)
+        data = yield from super(EncryptRSA, self).read(-1)
         if len(data) > 0:
-            enc_data = PKCS1_v1_5.new(self.bundle.vault.public_key).encrypt(data)
+            enc_data = self.protocol.new(self.public_key).encrypt(data)
             logger.debug('RSA Encrypted %d -> %d bytes', len(data), len(enc_data))
             return enc_data
         else:
             return data
 
-class DecryptRSA(Pipe):
-    def __init__(self, bundle):
-        self.bundle = bundle
-        super(DecryptRSA, self).__init__()
+class DecryptRSA(Buffered):
+    '''
+    Asymmetric decryption pipe that decrypts blocks using RSA and will put the
+    results together into a stream.
+    '''
+    protocol = PKCS1_v1_5
+
+    def __init__(self, private_key):
+        self.private_key = private_key
+        self.block_size = self.get_block_size()
+        logger.debug('Decrypting block size: %d bytes', self.block_size)
+        super(DecryptRSA, self).__init__(self.block_size)
+
+    def get_block_size(self):
+        return Crypto.Util.number.size(self.private_key.n) // 8
 
     @asyncio.coroutine
     def read(self, count=-1):
-        data = yield from self.input.read(count)
+        data = yield from super(DecryptRSA, self).read(-1)
         if len(data) > 0:
-            dec_data = PKCS1_v1_5.new(self.bundle.vault.private_key).decrypt(data, 0)
+            sentinel = 0
+            dec_data = self.protocol.new(self.private_key).decrypt(data, sentinel)
             logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
             return dec_data
         else:
             return data
 
+class EncryptRSA_PKCS1_OAEP(EncryptRSA):
+    '''
+    Asymmetric encryption pipe that divides the incoming stream into blocks
+    which will then be encrypted using RSA (PKCS1-OAEP protocol).
+    '''
+    protocol = PKCS1_OAEP
+
+class DecryptRSA_PKCS1_OAEP(DecryptRSA):
+    '''
+    Asymmetric decryption pipe that decrypts blocks using RSA (PKCS1-OAEP
+    protocol) and will put the results together into a stream.
+    '''
+    protocol = PKCS1_OAEP
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        data = yield from super(DecryptRSA, self).read(-1)
+        if len(data) > 0:
+            dec_data = self.protocol.new(self.private_key).decrypt(data)
+            logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
+            return dec_data
+        else:
+            return data

@@ -36,13 +36,11 @@ class Config(object):
         self._config[section].update(dct)
 
 class VaultConfig(Config):
-    rsa_key_len = 1024
+    rsa_key_len = 4096
     encoding = 'utf-8'
     aes_key_len = 256
     hash_algo = 'sha256'
     block_size = 16
-    rsa_dec_block_size = 128
-    rsa_enc_block_size = 117
     enc_buf_size = block_size * 10 * 1024
 
     default_config = {

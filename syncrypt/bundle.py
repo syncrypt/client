@@ -9,8 +9,8 @@ import aiofiles
 import asyncio
 import umsgpack
 
-from .pipes import (Buffered, Decrypt, DecryptRSA, Encrypt, EncryptRSA, Pad,
-                    FileReader, FileWriter, Hash, Once, SnappyCompress,
+from .pipes import (Buffered, Decrypt, DecryptRSA, Encrypt, EncryptRSA,
+                    FileReader, FileWriter, Hash, Once, Pad, SnappyCompress,
                     SnappyDecompress)
 
 logger = logging.getLogger(__name__)
@@ -93,10 +93,11 @@ class Bundle(object):
         yield from sink.consume()
 
     def encrypted_fileinfo_reader(self):
+        block_size = Crypto.Util.number.size(self.vault.public_key.n) // 8
+        logger.debug('Encrypting block size: %d bytes', block_size)
         return Once(self.serialized_bundle) \
                 >> SnappyCompress() \
-                >> Buffered(self.vault.config.rsa_enc_block_size) \
-                >> EncryptRSA(self)
+                >> EncryptRSA(self.vault.public_key)
 
     def read_encrypted_stream(self):
         return FileReader(self.path) \
@@ -131,8 +132,7 @@ class Bundle(object):
     def write_encrypted_fileinfo(self, stream):
         logger.debug("Updating fileinfo on disk")
         sink = stream \
-                >> Buffered(self.vault.config.rsa_dec_block_size) \
-                >> DecryptRSA(self) \
+                >> DecryptRSA(self.vault.private_key) \
                 >> SnappyDecompress() \
                 >> FileWriter(self.path_fileinfo, create_dirs=True)
 
