@@ -120,7 +120,7 @@ class Bundle(object):
                 >> hash_pipe \
                 >> Decrypt(self) \
                 >> SnappyDecompress() \
-                >> FileWriter(self.path, create_dirs=True)
+                >> FileWriter(self.path, create_dirs=True, create_backup=True)
 
         yield from sink.consume()
 

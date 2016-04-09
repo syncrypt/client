@@ -36,21 +36,28 @@ class FileReader(Source):
 
 class FileWriter(Sink):
     # simple wrapper for aiofiles
-    def __init__(self, filename, create_dirs=False):
+    def __init__(self, filename, create_dirs=False, create_backup=False):
         self.filename = filename
         self.handle = None
         self.create_dirs = create_dirs
+        self.create_backup = create_backup
         super(FileWriter, self).__init__()
 
     @asyncio.coroutine
     def read(self, count=-1):
         if self.handle is None and not self._eof:
-            if self.create_dirs and not os.path.exists(os.path.dirname(self.filename)):
-                os.makedirs(os.path.dirname(self.filename))
-            self.handle = yield from aiofiles.open(self.filename, 'wb')
+            fn = self.filename
+            if self.create_dirs and not os.path.exists(os.path.dirname(fn)):
+                os.makedirs(os.path.dirname(fn))
+            if self.create_backup and os.path.exists(fn):
+                shutil.move(fn, self.get_backup_filename(fn))
+            self.handle = yield from aiofiles.open(fn, 'wb')
         contents = yield from self.input.read(count)
         yield from self.handle.write(contents)
         return contents
+
+    def get_backup_filename(self, filename):
+        return filename + '.scbackup'
 
     @asyncio.coroutine
     def close(self):
