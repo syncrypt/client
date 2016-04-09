@@ -9,9 +9,9 @@ import aiofiles
 import asyncio
 import umsgpack
 
-from .pipes import (Buffered, DecryptAES, DecryptRSA, EncryptAES, EncryptRSA,
-                    FileReader, FileWriter, Hash, Once, PadAES, SnappyCompress,
-                    SnappyDecompress)
+from .pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
+                    EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
+                    PadAES, SnappyCompress, SnappyDecompress)
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class Bundle(object):
     def encrypted_fileinfo_reader(self):
         return Once(self.serialized_bundle) \
                 >> SnappyCompress() \
-                >> EncryptRSA(self.vault.public_key)
+                >> EncryptRSA_PKCS1_OAEP(self.vault.public_key)
 
     def read_encrypted_stream(self):
         assert not self.key is None
@@ -128,7 +128,7 @@ class Bundle(object):
     def write_encrypted_fileinfo(self, stream):
         logger.debug("Updating fileinfo on disk")
         sink = stream \
-                >> DecryptRSA(self.vault.private_key) \
+                >> DecryptRSA_PKCS1_OAEP(self.vault.private_key) \
                 >> SnappyDecompress() \
                 >> FileWriter(self.path_fileinfo, create_dirs=True)
 
@@ -177,7 +177,8 @@ class Bundle(object):
 
             # Add one time the symmetric block_size to the encrypted file size.
             # This is the length of the IV.
-            self.file_size_crypt = hashing_reader.size + self.vault.config.block_size
+            self.file_size_crypt = hashing_reader.size + \
+                    self.vault.config.block_size
             self.uptodate = True
         else:
             self.crypt_hash = None
