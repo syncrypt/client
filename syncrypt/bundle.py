@@ -104,12 +104,6 @@ class Bundle(object):
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> EncryptAES(self.key)
 
-    def read_stream_for_hash(self):
-        return FileReader(self.path) \
-                >> SnappyCompress() \
-                >> Buffered(self.vault.config.enc_buf_size) \
-                >> PadAES()
-
     @asyncio.coroutine
     def write_encrypted_stream(self, stream, assert_hash=None):
         hash_pipe = Hash(self.vault.config.hash_algo)
@@ -157,12 +151,24 @@ class Bundle(object):
         assert self.path is not None
 
         if os.path.exists(self.path):
-            hashing_reader = self.read_stream_for_hash() >> Hash(self.vault.config.hash_algo)
+
+            # This will calculate the hash of the file contents
+            # As such it will never be sent to the server (see below)
+            # TODO: check impact of SnappyCompress and PadAES pipes on
+            #       performance. Both are only needed for knowing the
+            #       file size in upload. If they have a huge impact on
+            #       performance, try to change the protocol so that the
+            #       stream size does not need to be known inb4 by the
+            #       client source.
+            hashing_reader = FileReader(self.path) \
+                        >> SnappyCompress() \
+                        >> PadAES() \
+                        >> Hash(self.vault.config.hash_algo)
             yield from hashing_reader.consume()
 
-            # We add the AES key to the hash so that the hash stays constant
-            # when the files is not changed, but the original hash is also not
-            # revealed to the server
+            # We add the AES key to the hash so that the hash stays
+            # constant when the files is not changed, but the original
+            # hash is also not revealed to the server
             assert len(self.key) == self.key_size
             hash_obj = hashing_reader.hash_obj
             hash_obj.update(self.key)
