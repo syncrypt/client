@@ -32,3 +32,8 @@ To see these Pipes in action, you can take a look at the ``Bundle`` class.
 A Bundle basically describes a file with meta information.
 
 ...
+
+Vaults
+------
+
+...
