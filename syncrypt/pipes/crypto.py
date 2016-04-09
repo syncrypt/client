@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 class Hash(Pipe):
     'Hash (and count) everything that comes through this pipe'
 
-    def __init__(self, bundle):
+    def __init__(self, hash_algo):
         super(Hash, self).__init__()
-        self._hash = hashlib.new(bundle.vault.config.hash_algo)
+        self._hash = hashlib.new(hash_algo)
         self._size = 0
 
     def __str__(self):
@@ -45,11 +45,12 @@ class Hash(Pipe):
             self._size += len(data)
         return data
 
-class Pad(Pipe):
-    '''This pipe will just add PKCS5Padding to the stream'''
-    def __init__(self, bundle):
-        super(Pad, self).__init__()
-        self.block_size = bundle.vault.config.block_size
+class AESPipe(Pipe):
+    # AES has a fixed data block size of 16 bytes
+    block_size = 16
+
+class PadAES(AESPipe):
+    '''This pipe will add PKCS5Padding to the stream'''
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -58,12 +59,11 @@ class Pad(Pipe):
             return b''
         return PKCS5Padding.pad(data, self.block_size)
 
-class Encrypt(Pipe):
-    def __init__(self, bundle):
-        super(Encrypt, self).__init__()
-        self.bundle = bundle
+class EncryptAES(AESPipe):
+    def __init__(self, key):
+        super(EncryptAES, self).__init__()
         self.aes = None
-        self.block_size = self.bundle.vault.config.block_size
+        self.key = key
         self.iv = None
 
     @asyncio.coroutine
@@ -74,29 +74,26 @@ class Encrypt(Pipe):
         enc_data = b''
         if self.aes is None:
             self.iv = os.urandom(self.block_size)
-            self.aes = AES.new(self.bundle.key, AES.MODE_CBC, self.iv)
+            self.aes = AES.new(self.key, AES.MODE_CBC, self.iv)
             logger.debug('Writing IV of %d bytes', len(self.iv))
             enc_data += self.iv
         logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
         enc_data += self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
         return enc_data
 
-class Decrypt(Pipe):
-    def __init__(self, bundle):
-        self.bundle = bundle
+class DecryptAES(AESPipe):
+    def __init__(self, key):
         self.aes = None
-        self.block_size = self.bundle.vault.config.block_size
-        super(Decrypt, self).__init__()
+        self.key = key
+        super(DecryptAES, self).__init__()
 
     @asyncio.coroutine
     def read(self, count=-1):
         if self.aes is None:
             iv = yield from self.input.read(self.block_size)
-            logger.debug('Initializing symmetric decryption: block_size=%d iv=%d',
+            logger.debug('Initializing symmetric decryption: block=%d iv=%d',
                     self.block_size, len(iv))
-            if self.bundle.key is None:
-                yield from self.bundle.load_key()
-            self.aes = AES.new(self.bundle.key, AES.MODE_CBC, iv)
+            self.aes = AES.new(self.key, AES.MODE_CBC, iv)
         data = yield from self.input.read(count)
         logger.debug('Decrypting %d bytes', len(data))
         original_content = self.aes.decrypt(data)

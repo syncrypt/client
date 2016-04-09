@@ -9,8 +9,8 @@ import aiofiles
 import asyncio
 import umsgpack
 
-from .pipes import (Buffered, Decrypt, DecryptRSA, Encrypt, EncryptRSA,
-                    FileReader, FileWriter, Hash, Once, Pad, SnappyCompress,
+from .pipes import (Buffered, DecryptAES, DecryptRSA, EncryptAES, EncryptRSA,
+                    FileReader, FileWriter, Hash, Once, PadAES, SnappyCompress,
                     SnappyDecompress)
 
 logger = logging.getLogger(__name__)
@@ -93,32 +93,34 @@ class Bundle(object):
         yield from sink.consume()
 
     def encrypted_fileinfo_reader(self):
-        block_size = Crypto.Util.number.size(self.vault.public_key.n) // 8
-        logger.debug('Encrypting block size: %d bytes', block_size)
         return Once(self.serialized_bundle) \
                 >> SnappyCompress() \
                 >> EncryptRSA(self.vault.public_key)
 
     def read_encrypted_stream(self):
+        assert not self.key is None
         return FileReader(self.path) \
                 >> SnappyCompress() \
                 >> Buffered(self.vault.config.enc_buf_size) \
-                >> Encrypt(self)
+                >> EncryptAES(self.key)
 
     def read_stream_for_hash(self):
         return FileReader(self.path) \
                 >> SnappyCompress() \
                 >> Buffered(self.vault.config.enc_buf_size) \
-                >> Pad(self)
+                >> PadAES()
 
     @asyncio.coroutine
     def write_encrypted_stream(self, stream, assert_hash=None):
-        hash_pipe = Hash(self)
+        hash_pipe = Hash(self.vault.config.hash_algo)
+
+        if self.key is None:
+            yield from self.load_key()
 
         sink = stream \
                 >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
                 >> hash_pipe \
-                >> Decrypt(self) \
+                >> DecryptAES(self.key) \
                 >> SnappyDecompress() \
                 >> FileWriter(self.path, create_dirs=True, create_backup=True)
 
@@ -155,7 +157,7 @@ class Bundle(object):
         assert self.path is not None
 
         if os.path.exists(self.path):
-            hashing_reader = self.read_stream_for_hash() >> Hash(self)
+            hashing_reader = self.read_stream_for_hash() >> Hash(self.vault.config.hash_algo)
             yield from hashing_reader.consume()
 
             # We add the AES key to the hash so that the hash stays constant
