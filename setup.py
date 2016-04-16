@@ -8,6 +8,7 @@ from os import path
 from setuptools import find_packages, setup
 
 __name__ = 'syncrypt_desktop'
+__version__ = '0.0.4'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -59,7 +60,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.0.3',
+    version=__version__,
 
     description='A Syncrypt client',
     long_description=long_description,

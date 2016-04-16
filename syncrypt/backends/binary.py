@@ -7,6 +7,7 @@ from getpass import getpass
 import asyncio
 from syncrypt.vendor import bert
 from syncrypt.pipes import Limit, StreamReader, Once
+from syncrypt import __version__, __project__
 from erlastic import Atom
 
 from .base import StorageBackend, StorageBackendInvalidAuth
@@ -88,8 +89,16 @@ class BinaryStorageConnection(object):
                 yield from asyncio.open_connection(self.storage.host,
                                                    int(self.storage.port), ssl=sc)
 
+
+        client_version = '%s' % __version__
+        client_ident = (__project__, client_version)
+        logger.debug('Identifying to server as %s', client_ident)
+        yield from self.write_term('hello', client_ident)
+
         version_info = yield from self.read_term()
-        self.server_version = version_info[1]
+        self.server_version = version_info[1].decode()
+
+        logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
 
         if self.storage.auth:
             yield from self.write_term('auth',
