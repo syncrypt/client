@@ -245,7 +245,7 @@ class BinaryStorageConnection(object):
                 store_hash = server_info['hash'].decode()
                 file_info = server_info['key']
                 yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
-            if revision_id:
+            if revision_id and revision_id != Atom('no_revision'):
                 revision_id = revision_id.decode(self.storage.vault.config.encoding)
                 logger.info('Remote vault revision is "%s"', revision_id)
                 # if all went well, store revision_id in vault
