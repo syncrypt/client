@@ -46,7 +46,7 @@ class VaultConfig(Config):
     default_config = {
         'vault': {
             # File patterns to ignore (comma separated list)
-            'ignore': '.*,*.encrypted,*.key,.vault,*.scbackup',
+            'ignore': '.*,*.encrypted,*.key,.vault,*.scbackup,*.sctemp*',
         },
         'remote': {
             # Protocol to use

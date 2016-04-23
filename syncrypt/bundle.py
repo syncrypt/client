@@ -116,7 +116,7 @@ class Bundle(object):
                 >> DecryptAES(self.key) \
                 >> SnappyDecompress() \
                 >> hash_pipe \
-                >> FileWriter(self.path, create_dirs=True, create_backup=True)
+                >> FileWriter(self.path, create_dirs=True, create_backup=True, store_temporary=True)
 
         yield from sink.consume()
 
@@ -127,6 +127,8 @@ class Bundle(object):
         if assert_hash and received_hash != assert_hash:
             # TODO: restore original file and alert server
             raise Exception('hash mismatch: {} != {}'.format(assert_hash, received_hash))
+
+        yield from sink.finalize()
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):
