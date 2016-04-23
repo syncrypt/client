@@ -273,14 +273,15 @@ class BinaryStorageConnection(object):
         logger.info('Downloading content ({} bytes)'.format(file_size))
 
         # read content hash
-        logger.debug('content hash: %s', content_hash)
+        logger.debug('Content hash: %s', content_hash)
 
         yield from bundle.write_encrypted_fileinfo(Once(fileinfo))
 
         yield from bundle.load_key()
 
         yield from bundle.write_encrypted_stream(
-                StreamReader(self.reader) >> Limit(file_size)
+                StreamReader(self.reader) >> Limit(file_size),
+                assert_hash=content_hash
             )
 
     @asyncio.coroutine

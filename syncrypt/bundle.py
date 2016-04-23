@@ -11,7 +11,7 @@ import umsgpack
 
 from .pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
                     EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
-                    PadAES, SnappyCompress, SnappyDecompress)
+                    PadAES, SnappyCompress, SnappyDecompress, Count)
 
 logger = logging.getLogger(__name__)
 
@@ -113,16 +113,20 @@ class Bundle(object):
 
         sink = stream \
                 >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
-                >> hash_pipe \
                 >> DecryptAES(self.key) \
                 >> SnappyDecompress() \
+                >> hash_pipe \
                 >> FileWriter(self.path, create_dirs=True, create_backup=True)
 
         yield from sink.consume()
 
-        if assert_hash and hash_pipe.hash != assert_hash:
+        hash_obj = hash_pipe.hash_obj
+        hash_obj.update(self.key)
+        received_hash = hash_obj.hexdigest()
+
+        if assert_hash and received_hash != assert_hash:
             # TODO: restore original file and alert server
-            raise Exception('hash mismatch: {} != {}'.format(assert_hash, hash_pipe.hash))
+            raise Exception('hash mismatch: {} != {}'.format(assert_hash, received_hash))
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):
@@ -161,10 +165,13 @@ class Bundle(object):
             #       stream size does not need to be known inb4 by the
             #       client source.
             hashing_reader = FileReader(self.path) \
+                        >> Hash(self.vault.config.hash_algo)
+
+            counting_reader = hashing_reader \
                         >> SnappyCompress() \
                         >> PadAES() \
-                        >> Hash(self.vault.config.hash_algo)
-            yield from hashing_reader.consume()
+                        >> Count()
+            yield from counting_reader.consume()
 
             # We add the AES key to the hash so that the hash stays
             # constant when the files is not changed, but the original
@@ -177,7 +184,7 @@ class Bundle(object):
 
             # Add one time the symmetric block_size to the encrypted file size.
             # This is the length of the IV.
-            self.file_size_crypt = hashing_reader.size + \
+            self.file_size_crypt = counting_reader.count + \
                     self.vault.config.block_size
             self.uptodate = True
         else:
