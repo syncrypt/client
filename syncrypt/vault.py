@@ -10,6 +10,7 @@ from pprint import pprint
 from Crypto.PublicKey import RSA
 
 from syncrypt.utils.limiter import JoinableSemaphore
+from syncrypt.utils.filesystem import folder_size
 
 from .bundle import Bundle
 from .config import VaultConfig
@@ -116,6 +117,12 @@ class Vault(object):
         pk_hash = hashlib.new(self.config.hash_algo)
         pk_hash.update(self.public_key.exportKey('DER'))
         return pk_hash.hexdigest()[:self.config.fingerprint_length]
+
+    def get_local_size(self):
+        return folder_size(self.folder)
+
+    def get_remote_size(self):
+        return 0
 
     def close(self):
         yield from self.backend.close()
