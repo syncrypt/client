@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import os.path
@@ -12,9 +13,8 @@ from syncrypt.utils.limiter import JoinableSemaphore
 
 from .bundle import Bundle
 from .config import VaultConfig
-from .pipes import Once
-
 from .exceptions import SecurityError
+from .pipes import Once
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,12 @@ class Vault(object):
         self.private_key = keys
         self.public_key = keys.publickey()
 
+    def get_fingerprint(self):
+        assert self.public_key
+        pk_hash = hashlib.new(self.config.hash_algo)
+        pk_hash.update(self.public_key.exportKey('DER'))
+        return pk_hash.hexdigest()[:self.config.fingerprint_length]
+
     def close(self):
         yield from self.backend.close()
 
@@ -163,3 +169,4 @@ class Vault(object):
                     Bundle(os.path.join(self.folder, relpath), vault=self)
 
         return self._bundle_cache[relpath]
+

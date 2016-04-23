@@ -41,6 +41,11 @@ class VaultConfig(Config):
     aes_key_len = 256
     hash_algo = 'sha256'
     block_size = 16
+
+    # Whenever we display fingerprints of keys, this describes how many
+    # characters we show of the hexadecimal representation
+    fingerprint_length = 16
+
     enc_buf_size = block_size * 10 * 1024
 
     default_config = {

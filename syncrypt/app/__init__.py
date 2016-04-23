@@ -9,6 +9,7 @@ from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.utils.limiter import JoinableSemaphore
 
 from .api import SyncryptAPI
+from syncrypt.utils.format import format_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -176,11 +177,11 @@ class SyncryptApp(object):
             print()
             print("Vault ID:         \t{0}".format(vault.config.id))
             print("Vault revision:   \t{0}".format(vault.config.vault['revision']))
-            print("Vault fingerprint:\t{0}".format('00:00:22:00:TO:DO'))
+            print("Vault fingerprint:\t{0}".format(format_fingerprint(vault.get_fingerprint())))
             print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
             print("Local size:       \t0.0 mb (includes metadata)")
             print("Remote size:      \t0.0 mb (includes backups)")
-            print("Your fingerprint: \t{0}".format('00:00:22:00:TO:DO'))
+            print("Your fingerprint: \t{0}".format(format_fingerprint('0' * vault.config.fingerprint_length)))
             print()
         print("="*78)
 
