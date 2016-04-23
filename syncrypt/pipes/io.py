@@ -1,3 +1,4 @@
+import logging
 import os.path
 import shutil
 
@@ -5,6 +6,8 @@ import aiofiles
 import asyncio
 
 from .base import Pipe, Sink, Source
+
+logger = logging.getLogger(__name__)
 
 
 class StreamReader(Pipe):
@@ -55,6 +58,7 @@ class FileWriter(Sink):
                 shutil.move(fn, self.get_backup_filename(fn))
             if self.store_temporary:
                 fn = self.get_temporary_filename(fn)
+            logger.debug('Writing to %s', fn)
             self.handle = yield from aiofiles.open(fn, 'wb')
         contents = yield from self.input.read(count)
         yield from self.handle.write(contents)
