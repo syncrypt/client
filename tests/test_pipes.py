@@ -6,7 +6,7 @@ import unittest
 import aiofiles
 import asyncio
 import asynctest
-from syncrypt.pipes import (Buffered, FileReader, Limit, Once, Repeat,
+from syncrypt.pipes import (Buffered, FileReader, Limit, Once, Repeat, Count,
                             SnappyCompress, SnappyDecompress, StreamReader)
 
 __all__ = ('PipesTests',)
@@ -62,6 +62,19 @@ class PipesTests(asynctest.TestCase):
         contents = yield from stream.read()
         yield from stream.close()
         self.assertEqual(len(contents), 640)
+
+    @asynctest.ignore_loop
+    def test_count(self):
+        counter = FileReader('tests/testbinaryvault/README.md') >> Count()
+        yield from counter.consume()
+        self.assertEqual(counter.count, 640)
+
+    @asynctest.ignore_loop
+    def test_count_2(self):
+        stream = Once(b'abcdefgh')
+        counter = stream >> Repeat(241) >> Buffered(100) >> Count()
+        yield from counter.consume()
+        self.assertEqual(counter.count, 241*8)
 
     @asynctest.ignore_loop
     def test_compression(self):

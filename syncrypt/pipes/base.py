@@ -145,3 +145,17 @@ class Limit(Pipe):
             buf += add_buf
         return buf
 
+class Count(Pipe):
+    def __init__(self):
+        super(Count, self).__init__()
+        self._bytes_passed = 0
+
+    @property
+    def count(self):
+        return self._bytes_passed
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        buf = yield from self.input.read(count)
+        self._bytes_passed += len(buf)
+        return buf
