@@ -34,7 +34,7 @@ class Vault(object):
         id_rsa_path = os.path.join(folder, '.vault', 'id_rsa')
         id_rsa_pub_path = os.path.join(folder, '.vault', 'id_rsa.pub')
 
-        self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config.rsa_key_len)
+        self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
         self.identity.init()
 
         Backend = self.config.backend_cls

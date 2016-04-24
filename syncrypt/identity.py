@@ -1,15 +1,19 @@
+import hashlib
+import logging
 import os
 import os.path
 
 from Crypto.PublicKey import RSA
 
+logger = logging.getLogger(__name__)
+
 
 class Identity(object):
     '''represents an RSA key pair'''
-    def __init__(self, id_rsa_path, id_rsa_pub_path, rsa_key_len):
+    def __init__(self, id_rsa_path, id_rsa_pub_path, config):
         self.id_rsa_path = id_rsa_path
         self.id_rsa_pub_path = id_rsa_pub_path
-        self.rsa_key_len = rsa_key_len
+        self.config = config
         self.private_key = None
         self.public_key = None
 
@@ -36,13 +40,13 @@ class Identity(object):
         return self.public_key.exportKey('DER')
 
     def generate_keys(self):
-        if not os.path.exists(os.path.dirname(id_rsa_path)):
-            os.makedirs(os.path.dirname(id_rsa_path))
-        logger.info('Generating a %d bit RSA key pair...', self.rsa_key_len)
-        keys = RSA.generate(self.rsa_key_len)
-        with open(id_rsa_pub_path, 'wb') as id_rsa_pub:
+        if not os.path.exists(os.path.dirname(self.id_rsa_path)):
+            os.makedirs(os.path.dirname(self.id_rsa_path))
+        logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
+        keys = RSA.generate(self.config.rsa_key_len)
+        with open(self.id_rsa_pub_path, 'wb') as id_rsa_pub:
             id_rsa_pub.write(keys.publickey().exportKey())
-        with open(id_rsa_path, 'wb') as id_rsa:
+        with open(self.id_rsa_path, 'wb') as id_rsa:
             id_rsa.write(keys.exportKey())
         self.private_key = keys
         self.public_key = keys.publickey()

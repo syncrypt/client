@@ -7,6 +7,14 @@ import configparser
 logger = logging.getLogger(__name__)
 
 class Config(object):
+    rsa_key_len = 4096
+    encoding = 'utf-8'
+    hash_algo = 'sha256'
+
+    # Whenever we display fingerprints of keys, this describes how many
+    # characters we show of the hexadecimal representation
+    fingerprint_length = 16
+
     default_config = {}
 
     def __init__(self):
@@ -35,17 +43,13 @@ class Config(object):
     def update(self, section, dct):
         self._config[section].update(dct)
 
+    @property
+    def config_dir(self):
+        return os.path.join(os.path.expanduser('~/.config'), 'syncrypt')
+
 class VaultConfig(Config):
-    rsa_key_len = 4096
-    encoding = 'utf-8'
     aes_key_len = 256
-    hash_algo = 'sha256'
     block_size = 16
-
-    # Whenever we display fingerprints of keys, this describes how many
-    # characters we show of the hexadecimal representation
-    fingerprint_length = 16
-
     enc_buf_size = block_size * 10 * 1024
 
     default_config = {
@@ -135,11 +139,6 @@ class MaterializedAppConfig(AppConfig):
 
     def __init__(self, syncrypt_config_dir=None):
         super(MaterializedAppConfig, self).__init__()
-
-        if syncrypt_config_dir is None:
-            self.config_dir = os.path.expanduser('~/.syncrypt')
-        else:
-            self.config_dir = syncrypt_config_dir
 
         self.config_file = os.path.join(self.config_dir, 'config')
 

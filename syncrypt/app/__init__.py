@@ -10,6 +10,7 @@ from syncrypt.utils.limiter import JoinableSemaphore
 
 from .api import SyncryptAPI
 from syncrypt.utils.format import format_fingerprint, format_size
+from syncrypt.identity import Identity
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +77,10 @@ class SyncryptApp(object):
             }
         for vault_dir in self.config.vault_dirs:
             self.vaults.append(Vault(vault_dir))
+        id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
+        id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
+        self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
+        self.identity.init()
         super(SyncryptApp, self).__init__()
 
     def add_vault_by_path(self, path):
@@ -182,7 +187,7 @@ class SyncryptApp(object):
             print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
             print("Local size:       \t{0} (includes metadata)".format(format_size(vault.get_local_size())))
             print("Remote size:      \t{0} (includes versioned copies)".format(format_size(vault.get_remote_size())))
-            print("Your fingerprint: \t{0}".format(format_fingerprint('0' * vault.config.fingerprint_length)))
+            print("Your fingerprint: \t{0}".format(format_fingerprint(self.identity.get_fingerprint())))
             print()
         print("="*78)
 
