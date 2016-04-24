@@ -8,7 +8,7 @@ MAX_FILES = 500
 def file(draw, filename=st.lists(
         st.characters(blacklist_categories=('Cs', 'Cc'),
             blacklist_characters=('\0\n\r/\\|><')),
-            min_size=1, average_size=20),
+            min_size=1, average_size=20, max_size=80),
             content=st.binary(max_size=10000, average_size=100)):
     return {'filename': ''.join(draw(filename)),
             'content': draw(content)}

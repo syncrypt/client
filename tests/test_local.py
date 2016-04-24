@@ -44,7 +44,7 @@ class LocalStorageTests(VaultTestCase, CommonTestsMixin):
                 >> EncryptRSA_PKCS1_OAEP(bundle.vault.identity.public_key)
             intermediate = yield from pipe.readall()
             pipe = Once(intermediate) \
-                >> DecryptRSA_PKCS1_OAEP(bundle.vault.private_key)
+                >> DecryptRSA_PKCS1_OAEP(bundle.vault.identity.private_key)
             output = yield from pipe.readall()
             self.assertEqual(input, output)
 
