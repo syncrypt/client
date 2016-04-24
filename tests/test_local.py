@@ -28,10 +28,10 @@ class LocalStorageTests(VaultTestCase, CommonTestsMixin):
         for i in (2, 10, 1242):
             input = b'a' * i + b'b' * int(i / 2)
             pipe = Once(input) \
-                >> EncryptRSA(bundle.vault.public_key)
+                >> EncryptRSA(bundle.vault.identity.public_key)
             intermediate = yield from pipe.readall()
             pipe = Once(intermediate) \
-                >> DecryptRSA(bundle.vault.private_key)
+                >> DecryptRSA(bundle.vault.identity.private_key)
             output = yield from pipe.readall()
             self.assertEqual(input, output)
 
@@ -41,7 +41,7 @@ class LocalStorageTests(VaultTestCase, CommonTestsMixin):
         for i in (2, 10, 1242):
             input = b'a' * i + b'b' * int(i / 2)
             pipe = Once(input) \
-                >> EncryptRSA_PKCS1_OAEP(bundle.vault.public_key)
+                >> EncryptRSA_PKCS1_OAEP(bundle.vault.identity.public_key)
             intermediate = yield from pipe.readall()
             pipe = Once(intermediate) \
                 >> DecryptRSA_PKCS1_OAEP(bundle.vault.private_key)

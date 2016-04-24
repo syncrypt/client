@@ -95,7 +95,7 @@ class Bundle(object):
     def encrypted_fileinfo_reader(self):
         return Once(self.serialized_bundle) \
                 >> SnappyCompress() \
-                >> EncryptRSA_PKCS1_OAEP(self.vault.public_key)
+                >> EncryptRSA_PKCS1_OAEP(self.vault.identity.public_key)
 
     def read_encrypted_stream(self):
         assert not self.key is None
@@ -134,7 +134,7 @@ class Bundle(object):
     def write_encrypted_fileinfo(self, stream):
         logger.debug("Updating fileinfo on disk")
         sink = stream \
-                >> DecryptRSA_PKCS1_OAEP(self.vault.private_key) \
+                >> DecryptRSA_PKCS1_OAEP(self.vault.identity.private_key) \
                 >> SnappyDecompress() \
                 >> FileWriter(self.path_fileinfo, create_dirs=True)
 

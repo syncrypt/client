@@ -178,7 +178,7 @@ class SyncryptApp(object):
             print("Vault ID:         \t{0}".format(vault.config.id))
             print("Vault name:       \t{0}".format('Unnamed'))
             print("Vault revision:   \t{0}".format(vault.config.vault['revision']))
-            print("Vault fingerprint:\t{0}".format(format_fingerprint(vault.get_fingerprint())))
+            print("Vault fingerprint:\t{0}".format(format_fingerprint(vault.identity.get_fingerprint())))
             print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
             print("Local size:       \t{0} (includes metadata)".format(format_size(vault.get_local_size())))
             print("Remote size:      \t{0} (includes versioned copies)".format(format_size(vault.get_remote_size())))

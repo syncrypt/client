@@ -123,7 +123,7 @@ class BinaryStorageConnection(object):
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(response)
 
-                key = vault.public_key.exportKey()
+                key = vault.identity.export_public_key()
 
                 yield from self.write_term('create_vault', str(len(key)))
 
