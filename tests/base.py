@@ -17,10 +17,11 @@ class VaultTestCase(asynctest.TestCase):
     working_dir = '/dev/shm' if os.access('/dev/shm', os.W_OK) else 'tests/'
 
     def setUp(self):
-        vault_folder = os.path.join(self.working_dir, 'testvault')
-        if os.path.exists(vault_folder):
-            shutil.rmtree(vault_folder)
-        shutil.copytree(self.folder, vault_folder)
-        self.vault = Vault(vault_folder)
+        if self.folder:
+            vault_folder = os.path.join(self.working_dir, 'testvault')
+            if os.path.exists(vault_folder):
+                shutil.rmtree(vault_folder)
+            shutil.copytree(self.folder, vault_folder)
+            self.vault = Vault(vault_folder)
 
 
