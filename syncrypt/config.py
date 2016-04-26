@@ -52,12 +52,15 @@ class VaultConfig(Config):
     block_size = 16
     enc_buf_size = block_size * 10 * 1024
 
+    # This list contains file patterns that we will always ignore. If an item
+    # was removed from this list, syncrypt will not function as expected.
+    # See below for a list of user-defineable ignore patterns
+    hard_ignore = ['.vault', '*.scbackup', '*.sctemp*']
+
     default_config = {
         'vault': {
             # File patterns to ignore (comma separated list)
-            # TODO: there should be "hard" ignores like .scbackup and .sctemp
-            # and "soft" ignores that the user can redefine
-            'ignore': '.*,.vault,*.scbackup,*.sctemp*',
+            'ignore': '.*',
         },
         'remote': {
             # Protocol to use
@@ -101,7 +104,7 @@ class VaultConfig(Config):
 
     @property
     def ignore_patterns(self):
-        return self._config['vault']['ignore'].split(',')
+        return self._config['vault']['ignore'].split(',') + self.hard_ignore
 
 class AppConfig(Config):
     default_config = {
