@@ -182,7 +182,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def stat(self, bundle):
-        logger.debug('Stat %s', bundle)
+        logger.debug('Stat %s (%s)', bundle, bundle.store_hash)
 
         yield from self.write_term('stat', bundle.store_hash)
 
@@ -244,6 +244,7 @@ class BinaryStorageConnection(object):
                 server_info = yield from self.read_term(assert_ok=False)
                 store_hash = server_info['hash'].decode()
                 file_info = server_info['key']
+                logger.debug('Server sent us: %s', store_hash)
                 yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
             if revision_id and revision_id != Atom('no_revision'):
                 revision_id = revision_id.decode(self.storage.vault.config.encoding)
