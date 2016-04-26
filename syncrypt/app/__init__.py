@@ -138,12 +138,22 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def push_bundle(self, bundle):
         yield from self.bundle_action_semaphore.acquire()
-        asyncio.get_event_loop().create_task(self._push_bundle(bundle))
+        task = asyncio.get_event_loop().create_task(self._push_bundle(bundle))
+        def cb(_task):
+            if task.exception():
+                logger.warn("Got exception: %s", task.exception())
+            asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
+        task.add_done_callback(cb)
 
     @asyncio.coroutine
     def pull_bundle(self, bundle):
         yield from self.bundle_action_semaphore.acquire()
-        asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
+        task = asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
+        def cb(_task):
+            if task.exception():
+                logger.warn("Got exception: %s", task.exception())
+            asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
+        task.add_done_callback(cb)
 
     @asyncio.coroutine
     def retrieve_bundle_list(self, vault):
@@ -235,7 +245,6 @@ class SyncryptApp(object):
             yield from bundle.vault.backend.upload(bundle)
             self.stats['uploads'] += 1
             yield from bundle.vault.semaphores['upload'].release()
-        yield from self.bundle_action_semaphore.release()
 
     @asyncio.coroutine
     def _pull_bundle(self, bundle):
@@ -253,4 +262,4 @@ class SyncryptApp(object):
             yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
             yield from bundle.vault.semaphores['download'].release()
-        yield from self.bundle_action_semaphore.release()
+

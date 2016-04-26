@@ -107,5 +107,9 @@ class VaultResource(Resource):
     def put_obj(self, request):
         vault_path = (yield from request.content.read()).decode()
         vault = self.app.add_vault_by_path(vault_path)
-        asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
+        task = asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
+        def cb(_task):
+            if task.exception():
+                logger.warn("%s", task.exception())
+        task.add_done_callback(cb)
         return vault
