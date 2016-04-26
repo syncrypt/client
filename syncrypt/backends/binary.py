@@ -317,7 +317,7 @@ class BinaryStorageManager(object):
             if conn.connected and conn.available.is_set():
                 break
 
-        logger.debug("Wait for empty slot in: %s", self.slots)
+        #logger.debug("Wait for empty slot in: %s", self.slots)
 
         # wait until one slot is available
         done, running = yield from \
