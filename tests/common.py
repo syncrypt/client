@@ -21,7 +21,7 @@ from tests.base import VaultTestCase
 class CommonTestsMixin(object):
     @asynctest.ignore_loop
     def test_vault(self):
-        self.assertEqual(len(list(self.vault.walk())), 8)
+        self.assertEqual(len(list(self.vault.walk_disk())), 8)
 
     @asynctest.ignore_loop
     def test_encrypt(self):
@@ -32,7 +32,7 @@ class CommonTestsMixin(object):
 
         yield from backend.open()
 
-        for bundle in self.vault.walk():
+        for bundle in self.vault.walk_disk():
             yield from bundle.update()
             yield from backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
@@ -45,13 +45,13 @@ class CommonTestsMixin(object):
     def test_upload_2(self):
         backend = self.vault.backend
 
-        bundles = list(self.vault.walk())
+        bundles = list(self.vault.walk_disk())
         files = [b.path for b in bundles]
         keys = {}
 
         yield from backend.open()
 
-        for bundle in self.vault.walk():
+        for bundle in self.vault.walk_disk():
             yield from bundle.update()
             keys[bundle.path] = bundle.key
             yield from backend.stat(bundle)
@@ -78,7 +78,7 @@ class CommonTestsMixin(object):
         app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
         yield from app.open_or_init(self.vault)
-        bundle = list(self.vault.walk())[0]
+        bundle = list(self.vault.walk_disk())[0]
         yield from app.push_bundle(bundle)
         yield from app.wait()
 
@@ -157,7 +157,7 @@ class CommonTestsMixin(object):
 
         yield from backend.open()
 
-        bundles = list(self.vault.walk())
+        bundles = list(self.vault.walk_disk())
         files = [b.path for b in bundles]
         original_contents = {}
 

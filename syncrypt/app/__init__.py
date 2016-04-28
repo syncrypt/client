@@ -208,16 +208,21 @@ class SyncryptApp(object):
     def push(self):
         for vault in self.vaults:
             yield from self.open_or_init(vault)
-            for bundle in vault.walk():
+            for bundle in vault.walk_disk():
                 yield from self.push_bundle(bundle)
         yield from self.wait()
+
+    @asyncio.coroutine
+    def get_remote_size_for_vault(self, vault):
+        yield from vault.backend.open()
+        return (yield from vault.backend.vault_size(vault))
 
     @asyncio.coroutine
     def pull(self):
         for vault in self.vaults:
             yield from self.open_or_init(vault)
             yield from self.retrieve_bundle_list(vault)
-            for bundle in vault.walk2():
+            for bundle in vault.walk():
                 yield from self.pull_bundle(bundle)
         yield from self.wait()
 

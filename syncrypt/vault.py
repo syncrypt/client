@@ -95,17 +95,19 @@ class Vault(object):
     def close(self):
         yield from self.backend.close()
 
-    def walk2(self):
-        'a generator of all bundles in this vault'
-        # TODO: how to unify with "walk"? should there be a walker
-        # that yield both registered and unregistered bundles?
-        for f in glob(os.path.join(self.fileinfo_path, '*/*')):
+    def walk(self):
+        '''
+        A generator of all registered bundles in this vault
+        '''
+        for f in glob(os.path.join(self.fileinfo_path, '??/*')):
             store_hash = os.path.relpath(f, self.fileinfo_path).replace('/', '')
             if len(store_hash) == 64:
                 yield Bundle(None, vault=self, store_hash=store_hash)
 
-    def walk(self, subfolder=None):
-        'a generator of all bundles currently present on disk'
+    def walk_disk(self, subfolder=None):
+        '''
+        A generator of all bundles currently present on disk in this vault
+        '''
         folder = self.folder
         if subfolder:
             folder = os.path.join(folder, subfolder)
@@ -115,7 +117,7 @@ class Vault(object):
             abspath = os.path.join(folder, file)
             relpath = os.path.relpath(abspath, self.folder)
             if os.path.isdir(abspath):
-                yield from self.walk(subfolder=relpath)
+                yield from self.walk_disk(subfolder=relpath)
             else:
                 yield self.bundle_for(relpath)
 
