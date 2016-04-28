@@ -286,6 +286,16 @@ class BinaryStorageConnection(object):
             )
 
     @asyncio.coroutine
+    def vault_size(self, vault):
+        logger.debug('Querying vault size: %s', vault.config.id)
+
+        # download key and file
+        yield from self.write_term('vault_size', vault.config.id)
+
+        size = yield from self.read_response()
+        return size
+
+    @asyncio.coroutine
     def version(self):
         return self.server_version
 
@@ -373,6 +383,13 @@ class BinaryStorageBackend(StorageBackend):
             self.connected = True
             version = yield from conn.version()
             logger.info('Logged in to server (version %s)', version)
+
+    @asyncio.coroutine
+    def vault_size(self, vault):
+        with (yield from self.manager.acquire_connection()) as conn:
+            size = yield from conn.vault_size(vault)
+            logger.info('Vault size %s mb', size)
+            return size
 
     @asyncio.coroutine
     def stat(self, bundle):

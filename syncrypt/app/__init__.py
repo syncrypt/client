@@ -187,17 +187,23 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def info(self):
         for (index, vault) in enumerate(self.vaults):
+            remote_size = yield from self.get_remote_size_for_vault(vault)
+            revision = 'revision' in vault.config.vault and vault.config.vault['revision'] or '?'
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
             print()
             print("Vault ID:         \t{0}".format(vault.config.id))
             print("Vault name:       \t{0}".format('Unnamed'))
-            print("Vault revision:   \t{0}".format(vault.config.vault['revision']))
-            print("Vault fingerprint:\t{0}".format(format_fingerprint(vault.identity.get_fingerprint())))
+            print("Vault revision:   \t{0}".format(revision))
+            print("Vault fingerprint:\t{0}".format(format_fingerprint(
+                    vault.identity.get_fingerprint())))
             print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
-            print("Local size:       \t{0} (includes metadata)".format(format_size(vault.get_local_size())))
-            print("Remote size:      \t{0} (includes versioned copies)".format(format_size(vault.get_remote_size())))
-            print("Your fingerprint: \t{0}".format(format_fingerprint(self.identity.get_fingerprint())))
+            print("Local size:       \t{0} (includes metadata)".format(format_size(
+                    vault.get_local_size())))
+            print("Remote size:      \t{0} (includes versioned copies)".format(format_size(
+                    remote_size)))
+            print("Your fingerprint: \t{0}".format(format_fingerprint(
+                    self.identity.get_fingerprint())))
             print()
         print("="*78)
 
