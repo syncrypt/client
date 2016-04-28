@@ -75,6 +75,11 @@ class SyncryptApp(object):
             'downloads': 0,
             'stats': 0
             }
+
+        def handler(*args, **kwargs):
+            logger.error("%s, %s", args, kwargs)
+        asyncio.get_event_loop().set_exception_handler(handler)
+
         for vault_dir in self.config.vault_dirs:
             self.vaults.append(Vault(vault_dir))
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
@@ -141,7 +146,10 @@ class SyncryptApp(object):
         task = asyncio.get_event_loop().create_task(self._push_bundle(bundle))
         def cb(_task):
             if task.exception():
-                logger.warn("Got exception: %s", task.exception())
+                from traceback import format_tb
+                ex = task.exception()
+                logger.warn("Got exception: %s %s %s", ex, type(ex),
+                        format_tb(ex.__traceback__))
             asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
         task.add_done_callback(cb)
 
@@ -151,7 +159,10 @@ class SyncryptApp(object):
         task = asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
         def cb(_task):
             if task.exception():
-                logger.warn("Got exception: %s", task.exception())
+                from traceback import format_tb
+                ex = task.exception()
+                logger.warn("Got exception: %s %s %s", ex, type(ex),
+                        format_tb(ex.__traceback__))
             asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
         task.add_done_callback(cb)
 
