@@ -221,9 +221,14 @@ class BinaryStorageConnection(object):
                 yield from self.writer.drain()
         finally:
             yield from reader.close()
-        assert bytes_written == bundle.file_size_crypt
 
+        if bytes_written != bundle.file_size_crypt:
+            logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
+                    bundle.file_size_crypt, bytes_written,
+                    bytes_written - bundle.file_size_crypt)
+            raise Exception('Uploaded size did not match')
         yield from self.read_term() # make sure server returns 'ok'
+
 
     @asyncio.coroutine
     def list_files(self):
