@@ -77,8 +77,8 @@ class EncryptAES(AESPipe):
             self.aes = AES.new(self.key, AES.MODE_CBC, self.iv)
             logger.debug('Writing IV of %d bytes', len(self.iv))
             enc_data += self.iv
-        logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
         enc_data += self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
+        logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
         return enc_data
 
 class DecryptAES(AESPipe):
