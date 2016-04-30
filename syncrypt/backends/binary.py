@@ -251,7 +251,7 @@ class BinaryStorageConnection(object):
             for n in range(file_count):
                 server_info = yield from self.read_term(assert_ok=False)
                 store_hash = server_info['hash'].decode()
-                file_info = server_info['key']
+                file_info = server_info['metadata']
                 logger.debug('Server sent us: %s', store_hash)
                 yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
             if revision_id and revision_id != Atom('no_revision'):
@@ -274,7 +274,7 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response[1])
 
         content_hash = server_info['content_hash'].decode()
-        fileinfo = server_info['key']
+        fileinfo = server_info['metadata']
         file_size = server_info['size']
 
         assert type(file_size) == int
