@@ -110,6 +110,9 @@ class BinaryStorageConnection(object):
                 raise StorageBackendInvalidAuth(response)
         else:
             # we don't have auth token yet
+            if self.storage.username is None or self.storage.username == '':
+                raise StorageBackendInvalidAuth('no username/email given')
+
             vault = self.storage.vault
             logger.debug('Log into %s...', vault)
 
