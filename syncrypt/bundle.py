@@ -124,11 +124,14 @@ class Bundle(object):
         hash_obj.update(self.key)
         received_hash = hash_obj.hexdigest()
 
-        if assert_hash and received_hash != assert_hash:
-            # TODO: restore original file and alert server
-            raise Exception('hash mismatch: {} != {}'.format(assert_hash, received_hash))
+        passed = not assert_hash or received_hash == assert_hash
+
+        if not passed:
+            logger.error('hash mismatch: {} != {}'.format(assert_hash, received_hash))
 
         yield from sink.finalize()
+
+        return passed
 
     @asyncio.coroutine
     def write_encrypted_fileinfo(self, stream):

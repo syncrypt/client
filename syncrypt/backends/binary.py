@@ -288,10 +288,15 @@ class BinaryStorageConnection(object):
 
         yield from bundle.load_key()
 
-        yield from bundle.write_encrypted_stream(
+        hash_ok = yield from bundle.write_encrypted_stream(
                 StreamReader(self.reader) >> Limit(file_size),
                 assert_hash=content_hash
             )
+
+        if not hash_ok:
+            # alert server of hash mismatch
+            yield from self.write_term('invalid_content_hash', bundle.store_hash, self.storage.vault.revision)
+
 
     @asyncio.coroutine
     def vault_size(self, vault):

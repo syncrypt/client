@@ -66,6 +66,10 @@ class Vault(object):
         return os.path.join(self.folder, '.vault', 'fileinfo')
 
     @property
+    def revision(self):
+        return self.config.vault['revision'] if 'revision' in self.config.vault else None
+
+    @property
     def config_path(self):
         return os.path.join(self.folder, '.vault', 'config')
 
