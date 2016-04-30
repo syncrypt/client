@@ -2,6 +2,7 @@ import logging
 import ssl
 import struct
 import time
+import re
 from getpass import getpass
 
 import asyncio
@@ -73,10 +74,11 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def connect(self):
+        prod_host_regex = re.compile("^(prod\d\.)?syncrypt\.space$")
 
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            if self.storage.host == '127.0.0.1' or self.storage.host == 'prod1.syncrypt.space':
+            if self.storage.host == '127.0.0.1' or not prod_host_regex.match(self.storage.host) is None:
                 sc.check_hostname = False
                 sc.verify_mode = ssl.CERT_NONE
         else:
@@ -428,4 +430,3 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def close(self):
         yield from self.manager.close()
-
