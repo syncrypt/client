@@ -20,14 +20,9 @@ class Hash(Pipe):
     def __init__(self, hash_algo):
         super(Hash, self).__init__()
         self._hash = hashlib.new(hash_algo)
-        self._size = 0
 
     def __str__(self):
         return "<Hash: {0} ({1} bytes)>".format(self.hash, self.size)
-
-    @property
-    def size(self):
-        return self._size
 
     @property
     def hash(self):
@@ -42,7 +37,6 @@ class Hash(Pipe):
         data = yield from self.input.read(count)
         if len(data) != 0:
             self._hash.update(data)
-            self._size += len(data)
         return data
 
 class AESPipe(Pipe):

@@ -171,6 +171,7 @@ class Bundle(object):
 
             counting_reader = hashing_reader \
                         >> SnappyCompress() \
+                        >> Buffered(self.vault.config.enc_buf_size) \
                         >> PadAES() \
                         >> Count()
             yield from counting_reader.consume()
