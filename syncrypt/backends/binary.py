@@ -74,11 +74,9 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def connect(self):
-        prod_host_regex = re.compile("^(prod\d\.)?syncrypt\.space$")
-
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            if self.storage.host == '127.0.0.1' or not prod_host_regex.match(self.storage.host) is None:
+            if self.storage.host == '127.0.0.1':
                 sc.check_hostname = False
                 sc.verify_mode = ssl.CERT_NONE
         else:
