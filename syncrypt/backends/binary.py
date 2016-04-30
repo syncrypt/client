@@ -212,7 +212,7 @@ class BinaryStorageConnection(object):
         logger.info('Uploading bundle (fileinfo: {0} bytes, content: {1} bytes)'\
                 .format(fileinfo_size, bundle.file_size_crypt))
 
-        bytes_written = 0
+        bundle.bytes_written = 0
         reader = bundle.read_encrypted_stream()
         try:
             while True:
@@ -220,15 +220,15 @@ class BinaryStorageConnection(object):
                 if len(buf) == 0:
                     break
                 self.writer.write(buf)
-                bytes_written += len(buf)
+                bundle.bytes_written += len(buf)
                 yield from self.writer.drain()
         finally:
             yield from reader.close()
 
-        if bytes_written != bundle.file_size_crypt:
+        if bundle.bytes_written != bundle.file_size_crypt:
             logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
-                    bundle.file_size_crypt, bytes_written,
-                    bytes_written - bundle.file_size_crypt)
+                    bundle.file_size_crypt, bundle.bytes_written,
+                    bundle.bytes_written - bundle.file_size_crypt)
             raise Exception('Uploaded size did not match')
         yield from self.read_term() # make sure server returns 'ok'
 

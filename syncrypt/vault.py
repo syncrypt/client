@@ -8,7 +8,7 @@ from glob import glob
 from pprint import pprint
 
 from syncrypt.utils.filesystem import folder_size
-from syncrypt.utils.limiter import JoinableSemaphore
+from syncrypt.utils.semaphores import JoinableSetSemaphore
 
 from .bundle import Bundle
 from .config import VaultConfig
@@ -43,10 +43,10 @@ class Vault(object):
         self.backend = Backend(self, **kwargs)
 
         self.semaphores = {
-            'update': JoinableSemaphore(32),
-            'stat': JoinableSemaphore(32),
-            'upload': JoinableSemaphore(32),
-            'download': JoinableSemaphore(32)
+            'update': JoinableSetSemaphore(32),
+            'stat': JoinableSetSemaphore(32),
+            'upload': JoinableSetSemaphore(32),
+            'download': JoinableSetSemaphore(32)
         }
 
     @property

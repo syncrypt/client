@@ -23,7 +23,8 @@ class Bundle(object):
 
     __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
             'key_size_crypt', 'store_hash', 'crypt_hash',
-            'remote_crypt_hash', 'uptodate', 'update_handle', 'key')
+            'remote_crypt_hash', 'uptodate', 'update_handle', 'key',
+            'bytes_written')
 
     def __init__(self, abspath, vault, store_hash=None):
         self.vault = vault
@@ -32,6 +33,7 @@ class Bundle(object):
         self.remote_crypt_hash = None
         self.update_handle = None
         self.key = None
+        self.bytes_written = 0
 
         if self.path is not None:
             h = hashlib.new(self.vault.config.hash_algo)
@@ -148,7 +150,7 @@ class Bundle(object):
     def update(self):
         'update encrypted hash (store in .vault)'
 
-        yield from self.vault.semaphores['update'].acquire()
+        yield from self.vault.semaphores['update'].acquire(self)
         yield from self.encrypt_semaphore.acquire()
         #logger.info('Updating %s', self)
 
@@ -199,7 +201,7 @@ class Bundle(object):
             self.uptodate = True
 
         self.encrypt_semaphore.release()
-        yield from self.vault.semaphores['update'].release()
+        yield from self.vault.semaphores['update'].release(self)
 
     def update_and_upload(self):
         backend = self.vault.backend
