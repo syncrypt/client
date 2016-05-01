@@ -1,15 +1,16 @@
 import logging
+import re
 import ssl
 import struct
 import time
-import re
 from getpass import getpass
 
 import asyncio
-from syncrypt.vendor import bert
-from syncrypt.pipes import Limit, StreamReader, Once
-from syncrypt import __version__, __project__
 from erlastic import Atom
+from syncrypt import __project__, __version__
+from syncrypt.pipes import Limit, Once, StreamReader
+from syncrypt.utils.format import format_size
+from syncrypt.vendor import bert
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -401,7 +402,7 @@ class BinaryStorageBackend(StorageBackend):
     def vault_size(self, vault):
         with (yield from self.manager.acquire_connection()) as conn:
             size = yield from conn.vault_size(vault)
-            logger.info('Vault size %s mb', size)
+            logger.debug('Vault size is: %s', format_size(size))
             return size
 
     @asyncio.coroutine

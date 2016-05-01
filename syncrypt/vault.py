@@ -26,7 +26,7 @@ class Vault(object):
 
         self.config = VaultConfig()
         if os.path.exists(self.config_path):
-            logger.info('Using config file: %s', self.config_path)
+            logger.debug('Using config file: %s', self.config_path)
             self.config.read(self.config_path)
         else:
             self.write_config(self.config_path)
@@ -87,7 +87,7 @@ class Vault(object):
             config_path = self.config_path
         if not os.path.exists(os.path.dirname(config_path)):
             os.makedirs(os.path.dirname(config_path))
-        logger.info('Writing config to %s', config_path)
+        logger.debug('Writing config to %s', config_path)
         self.config.write(config_path)
 
     def get_local_size(self):
