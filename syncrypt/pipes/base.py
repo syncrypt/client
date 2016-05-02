@@ -124,6 +124,9 @@ class Buffered(Pipe):
         return retbuf
 
 class Limit(Pipe):
+    '''
+    This pipe will at most read 'limit' bytes from the input pipe
+    '''
     def __init__(self, limit):
         self.bytes_limit = limit
         self.bytes_read = 0
@@ -131,18 +134,16 @@ class Limit(Pipe):
 
     @asyncio.coroutine
     def read(self, count=-1):
-        buf = b''
-        while True:
-            # fill up buffer
-            left = self.bytes_limit - self.bytes_read
-            if left == 0:
-                break
-            add_buf = yield from self.input.read(max(count, left))
-            if len(add_buf) == 0:
-                self._eof = True
-                break
-            self.bytes_read += len(add_buf)
-            buf += add_buf
+        # fill up buffer
+        left = self.bytes_limit - self.bytes_read
+        if left == 0:
+            self._eof = True
+            return b''
+        buf = yield from self.input.read(max(count, left))
+        if len(buf) == 0:
+            self._eof = True
+        else:
+            self.bytes_read += len(buf)
         return buf
 
 class Count(Pipe):
