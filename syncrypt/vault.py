@@ -12,7 +12,7 @@ from syncrypt.utils.semaphores import JoinableSetSemaphore
 
 from .bundle import Bundle
 from .config import VaultConfig
-from .exceptions import SecurityError
+from .exceptions import SecurityError, VaultNotInitialized
 from .identity import Identity
 from .pipes import Once
 
@@ -22,25 +22,6 @@ class Vault(object):
     def __init__(self, folder):
         self.folder = folder
         self._bundle_cache = {}
-        assert os.path.exists(folder)
-
-        self.config = VaultConfig()
-        if os.path.exists(self.config_path):
-            logger.debug('Using config file: %s', self.config_path)
-            self.config.read(self.config_path)
-        else:
-            self.write_config(self.config_path)
-
-        id_rsa_path = os.path.join(folder, '.vault', 'id_rsa')
-        id_rsa_pub_path = os.path.join(folder, '.vault', 'id_rsa.pub')
-
-        self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
-        self.identity.init()
-
-        Backend = self.config.backend_cls
-        kwargs = self.config.backend_kwargs
-        # TODO make property?
-        self.backend = Backend(self, **kwargs)
 
         self.semaphores = {
             'update': JoinableSetSemaphore(32),
@@ -48,6 +29,40 @@ class Vault(object):
             'upload': JoinableSetSemaphore(32),
             'download': JoinableSetSemaphore(32)
         }
+
+    @property
+    def config(self):
+        try:
+            return self._config
+        except AttributeError:
+            assert os.path.exists(self.folder)
+            self._config = VaultConfig()
+            if os.path.exists(self.config_path):
+                logger.debug('Using config file: %s', self.config_path)
+                self._config.read(self.config_path)
+            else:
+                raise VaultNotInitialized(self.folder)
+            return self._config
+
+    @property
+    def identity(self):
+        try:
+            return self._identity
+        except AttributeError:
+            id_rsa_path = os.path.join(self.folder, '.vault', 'id_rsa')
+            id_rsa_pub_path = os.path.join(self.folder, '.vault', 'id_rsa.pub')
+            self._identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
+            return self._identity
+
+    @property
+    def backend(self):
+        try:
+            return self._backend
+        except AttributeError:
+            Backend = self.config.backend_cls
+            kwargs = self.config.backend_kwargs
+            self._backend = Backend(self, **kwargs)
+            return self._backend
 
     @property
     def active(self):

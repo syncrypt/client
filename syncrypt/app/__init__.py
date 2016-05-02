@@ -11,6 +11,7 @@ from syncrypt.utils.semaphores import JoinableSemaphore
 from .api import SyncryptAPI
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.identity import Identity
+from syncrypt.exceptions import VaultNotInitialized
 
 logger = logging.getLogger(__name__)
 
@@ -80,12 +81,16 @@ class SyncryptApp(object):
             logger.error("%s, %s", args, kwargs)
         asyncio.get_event_loop().set_exception_handler(handler)
 
-        for vault_dir in self.config.vault_dirs:
-            self.vaults.append(Vault(vault_dir))
+        # generate or read users identity
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
         id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
         self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
         self.identity.init()
+
+        # register vault objects
+        for vault_dir in self.config.vault_dirs:
+            self.vaults.append(Vault(vault_dir))
+
         super(SyncryptApp, self).__init__()
 
     def add_vault_by_path(self, path):
@@ -110,7 +115,10 @@ class SyncryptApp(object):
                 continue
             except StorageBackendInvalidAuth:
                 pass
+            except VaultNotInitialized:
+                pass
             logger.info("Initializing %s", vault)
+            vault.identity.init()
             username, password = yield from self.auth_provider.get_auth(vault)
             vault.set_auth(username, password)
             yield from vault.backend.init()
@@ -167,10 +175,6 @@ class SyncryptApp(object):
         task.add_done_callback(cb)
 
     @asyncio.coroutine
-    def retrieve_bundle_list(self, vault):
-        yield from vault.backend.list_files()
-
-    @asyncio.coroutine
     def clone(self, clone_target):
         import shutil
         import os
@@ -224,7 +228,7 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def push(self):
         for vault in self.vaults:
-            yield from self.open_or_init(vault)
+            yield from vault.backend.open()
             for bundle in vault.walk_disk():
                 yield from self.push_bundle(bundle)
         yield from self.wait()
