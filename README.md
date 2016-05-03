@@ -1,5 +1,45 @@
 # Syncrypt platform independent desktop client
 
+## Syncrypt CLI
+
+The ``syncrypt`` executable is the command line client for Syncrypt.
+
+### Let's get started
+
+Initialize the current directory as a vault:
+
+    syncrypt init
+
+This will ask for the email and the password of your Syncrypt account. If you
+do not have an account yet, please sign up for our closed alpha mailing list
+and we might sent you an invite.
+
+After you've set up the directory, you can push all of its contents by typing:
+
+    syncrypt push
+
+To retrieve files from Syncrypt, simply write:
+
+    syncrypt pull
+
+Print out vault information:
+
+    syncrypt info
+
+Watch current directory (this is like a daemon running the foreground as it
+also provides the HTTP interface):
+
+    syncrypt watch
+
+For each command listed above, alternate directories can be specified with
+``-d``, like:
+
+    syncrypt -d ~/myfolder watch
+
+Debug logging can be activated via ``-l DEBUG``.
+
+## Installation
+
 Currently requires Python 3.
 
 Install globally:
@@ -10,15 +50,6 @@ Setup in virtualenv for development:
 
     virtualenv .
     bin/pip install -e .
-
-## Syncrypt GUI
-
-Run the Qt GUI:
-
-     syncrypt_gui
-
-If there is no Syncrypt daemon (or CLI with ``watch``) running, this will also
-start a Syncrypt daemon in a subprocess.
 
 ## Syncrypt Daemon
 
@@ -40,35 +71,6 @@ Query all vaults:
 Add a vault (current directory in this example):
 
     curl -X PUT -d $PWD 'http://127.0.0.1:28080/v1/vault/'
-
-## Syncrypt CLI
-
-``syncrypt`` is a low level tool to run core functionality directly from
-the command line. It is intended as a debug tool and must not run at the same
-time as the daemon.
-
-Init current directory (will ask for username and password):
-
-    syncrypt init
-
-Pull or push current directory:
-
-    syncrypt pull/push
-
-Watch current directory (this is like a daemon running the foreground as it
-also provides the HTTP interface):
-
-    syncrypt watch
-
-Alternate directories can be specified with ``-d``:
-
-    syncrypt -d ~/myfolder watch
-
-Print out vault information:
-
-    syncrypt info
-
-Debug logging can be activated via ``-l DEBUG``.
 
 ## Tests
 
