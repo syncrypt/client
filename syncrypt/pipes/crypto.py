@@ -2,15 +2,14 @@ import hashlib
 import logging
 import os
 
-from Crypto.Cipher import AES
-from Crypto.Cipher import PKCS1_v1_5, PKCS1_OAEP
 import Crypto.Util
+from Crypto.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5
 
 import aiofiles
 import asyncio
-
-from .base import Pipe, Buffered
 from syncrypt.utils.padding import PKCS5Padding
+
+from .base import Buffered, Pipe
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +98,6 @@ class EncryptAES(AESPipe):
         self.aes = None
         self.key = key
         self.iv = None
-        self.next_block = None
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -120,7 +118,6 @@ class DecryptAES(AESPipe):
     def __init__(self, key):
         self.aes = None
         self.key = key
-        self.next_block = None
         super(DecryptAES, self).__init__()
 
     @asyncio.coroutine
@@ -211,3 +208,4 @@ class DecryptRSA_PKCS1_OAEP(DecryptRSA):
             return dec_data
         else:
             return data
+
