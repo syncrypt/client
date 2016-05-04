@@ -1,11 +1,8 @@
 class PKCS5Padding(object):
     @staticmethod
     def pad(s, block_size):
-        if len(s) % block_size > 0:
-            return s + str.encode((block_size - len(s) % block_size) *
-                    chr(block_size - len(s) % block_size))
-        else:
-            return s
+        padding = block_size - len(s) % block_size
+        return s + bytes((padding,) * padding)
 
     @staticmethod
     def unpad(s):
