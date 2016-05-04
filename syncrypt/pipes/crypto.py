@@ -46,12 +46,52 @@ class AESPipe(Pipe):
 class PadAES(AESPipe):
     '''This pipe will add PKCS5Padding to the stream'''
 
+    def __init__(self):
+        super(PadAES, self).__init__()
+        self.next_block = None
+
     @asyncio.coroutine
     def read(self, count=-1):
-        data = yield from self.input.read(count)
-        if len(data) == 0:
-            return b''
-        return PKCS5Padding.pad(data, self.block_size)
+        if self.next_block is None:
+            this_block = yield from self.input.read(count)
+        else:
+            if len(self.next_block) == 0:
+                return b''
+            else:
+                this_block = self.next_block
+
+        self.next_block = yield from self.input.read(count)
+
+        # Only apply padding if last block
+        if len(self.next_block) == 0:
+            return PKCS5Padding.pad(this_block, self.block_size)
+        else:
+            return this_block
+
+class UnpadAES(AESPipe):
+    '''This pipe will remove PKCS5Padding from the stream'''
+
+    def __init__(self):
+        super(UnpadAES, self).__init__()
+        self.next_block = None
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        if self.next_block is None:
+            this_block = yield from self.input.read(count)
+        else:
+            if len(self.next_block) == 0:
+                return b''
+            else:
+                this_block = self.next_block
+
+        self.next_block = yield from self.input.read(count)
+
+        # Only remove padding if last block
+        if len(self.next_block) == 0:
+            return PKCS5Padding.unpad(this_block)
+        else:
+            return this_block
 
 class EncryptAES(AESPipe):
     def __init__(self, key):
@@ -59,6 +99,7 @@ class EncryptAES(AESPipe):
         self.aes = None
         self.key = key
         self.iv = None
+        self.next_block = None
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -71,7 +112,7 @@ class EncryptAES(AESPipe):
             self.aes = AES.new(self.key, AES.MODE_CBC, self.iv)
             logger.debug('Writing IV of %d bytes', len(self.iv))
             enc_data += self.iv
-        enc_data += self.aes.encrypt(PKCS5Padding.pad(data, self.block_size))
+        enc_data += self.aes.encrypt(data)
         logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
         return enc_data
 
@@ -79,6 +120,7 @@ class DecryptAES(AESPipe):
     def __init__(self, key):
         self.aes = None
         self.key = key
+        self.next_block = None
         super(DecryptAES, self).__init__()
 
     @asyncio.coroutine
@@ -91,7 +133,7 @@ class DecryptAES(AESPipe):
         data = yield from self.input.read(count)
         logger.debug('Decrypting %d bytes', len(data))
         original_content = self.aes.decrypt(data)
-        return PKCS5Padding.unpad(original_content)
+        return original_content
 
 class EncryptRSA(Buffered):
     '''

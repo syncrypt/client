@@ -11,7 +11,7 @@ import umsgpack
 
 from .pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
                     EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
-                    PadAES, SnappyCompress, SnappyDecompress, Count)
+                    PadAES, UnpadAES, SnappyCompress, SnappyDecompress, Count)
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,7 @@ class Bundle(object):
         return FileReader(self.path) \
                 >> SnappyCompress() \
                 >> Buffered(self.vault.config.enc_buf_size) \
+                >> PadAES() \
                 >> EncryptAES(self.key)
 
     @asyncio.coroutine
@@ -116,6 +117,7 @@ class Bundle(object):
         sink = stream \
                 >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
                 >> DecryptAES(self.key) \
+                >> UnpadAES() \
                 >> SnappyDecompress() \
                 >> hash_pipe \
                 >> FileWriter(self.path, create_dirs=True, create_backup=True, store_temporary=True)
