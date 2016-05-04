@@ -8,7 +8,7 @@ from os import path
 from setuptools import find_packages, setup
 
 __name__ = 'syncrypt_desktop'
-__version__ = '0.0.4'
+__version__ = '0.1.0'
 
 here = path.abspath(path.dirname(__file__))
 
