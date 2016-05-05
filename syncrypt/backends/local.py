@@ -40,7 +40,7 @@ class LocalStorageBackend(StorageBackend):
         yield from bundle.load_key()
         s = bundle.read_encrypted_stream() >> FileWriter(dest_path)
         yield from s.consume()
-        s = bundle.encrypted_fileinfo_reader() >> FileWriter(dest_path + '.file_info')
+        s = bundle.encrypted_metadata_reader() >> FileWriter(dest_path + '.file_info')
         yield from s.consume()
         file_info = open(dest_path + '.hash', 'w')
         file_info.write(bundle.crypt_hash)
@@ -76,7 +76,7 @@ class LocalStorageBackend(StorageBackend):
             base, ext = os.path.splitext(os.path.basename(f))
             with open(f, 'rb') as f:
                 file_info = f.read()
-            yield from self.vault.add_bundle_by_fileinfo(base, file_info)
+            yield from self.vault.add_bundle_by_metadata(base, file_info)
 
     @asyncio.coroutine
     def close(self):
