@@ -201,17 +201,17 @@ class BinaryStorageConnection(object):
 
         assert bundle.uptodate
 
-        fileinfo = yield from bundle.encrypted_fileinfo_reader().readall()
-        fileinfo_size = len(fileinfo)
+        metadata = yield from bundle.encrypted_metadata_reader().readall()
+        metadata_size = len(metadata)
 
         # upload key and file
         yield from self.write_term('upload', bundle.store_hash,
-                bundle.crypt_hash, fileinfo, bundle.file_size_crypt)
+                bundle.crypt_hash, metadata, bundle.file_size_crypt)
 
         yield from self.read_term() # make sure server returns 'ok'
 
-        logger.info('Uploading bundle (fileinfo: {0} bytes, content: {1} bytes)'\
-                .format(fileinfo_size, bundle.file_size_crypt))
+        logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
+                .format(metadata_size, bundle.file_size_crypt))
 
         bundle.bytes_written = 0
         reader = bundle.read_encrypted_stream()
@@ -254,7 +254,7 @@ class BinaryStorageConnection(object):
                 store_hash = server_info['hash'].decode()
                 file_info = server_info['metadata']
                 logger.debug('Server sent us: %s', store_hash)
-                yield from self.storage.vault.add_bundle_by_fileinfo(store_hash, file_info)
+                yield from self.storage.vault.add_bundle_by_metadata(store_hash, file_info)
             if revision_id and revision_id != Atom('no_revision'):
                 revision_id = revision_id.decode(self.storage.vault.config.encoding)
                 logger.info('Remote vault revision is "%s"', revision_id)
@@ -275,7 +275,7 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response[1])
 
         content_hash = server_info['content_hash'].decode()
-        fileinfo = server_info['metadata']
+        metadata = server_info['metadata']
         file_size = server_info['size']
 
         assert type(file_size) == int
@@ -285,7 +285,7 @@ class BinaryStorageConnection(object):
         # read content hash
         logger.debug('Content hash: %s', content_hash)
 
-        yield from bundle.write_encrypted_fileinfo(Once(fileinfo))
+        yield from bundle.write_encrypted_metadata(Once(metadata))
 
         yield from bundle.load_key()
 
