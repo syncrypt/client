@@ -1,0 +1,70 @@
+.\" Manpage for keyart
+.\" Aaron Toponce <aaron.toponce@gmail.com>
+.TH keyart 1 "17 Jun 2014"
+.SH NAME
+.B keyart
+\- Create ASCII art of an OpenPGP key.
+.SH SYNOPSIS
+.B keyart
+[\-c|\-\-color]
+[\-l|\-\-longid]
+[\-f|\-\-fingerprint \fIHEX\fR [\-f|\-\-fingerprint \fIHEX\fR ...]]
+[\-k|\-\-keyring \fIKEYRING\fR [\-k|\-\-keyring \fIKEYRING\fR ...]]
+[\fIKEYID\fR ...]
+.SH DESCRIPTION
+.B keyart
+creates an ASCII art representation of public OpenPGP keys. The art is an
+implementation of the Drunken Bishop by Dirk Loss. Documentation about the
+algorithm can be found in /usr/share/doc/signing-party/keyart/, or as
+appropriate for your distribution.
+
+.B keyart
+supports printing the ASCII art in both plain text (default) and ANSI
+color. ANSI color uses a "heat map", where cold (blue) represents squares in
+the room the drunk bishop has rarely visited, and hot (red) represents squares
+in the room the drunk bishop has frequently visited. There is a 1:1 ratio of
+color to printed character.
+
+The \fIKEYID\fRs are key identifiers (fingerprint, keyid, user ID, etc.
+see \fBgpg\fR(1) for details).  If no \fIKEYID\fR is given, \fBkeyart\fR
+creates an ASCII art representation for all keys found.
+
+.SH OPTIONS
+.TP 8
+.B \-c | \-\-color
+Print the ASCII art using ANSI color to the terminal.
+.TP 8
+.B \-l | \-\-longid
+Print the 16-character long ID of a on OpenPGP key in the footer badge. Default
+is to print the 8-character short ID. Silently ignored if "\fB\-f |
+\-\-fingerprint \fIHEX\fR" is passed.
+.TP 8
+.B \-f | \-\-fingerprint \fIHEX\fR
+Any arbitrary hexadecimal string of any length. Could be an MD5, SHA1, SHA2, or
+SHA3 hexadecimal checksum. Useful for comparing and analyzing potential
+collisions with existing keys. This option can be repeated multiple times.
+.TP 8
+.B \-k | \-\-keyring \fIKEYRING\fR
+An OpenPGP public key file or keyring, from which the \fIKEYID\fRs are to
+be found.  If this option is not present, the \fIKEYID\fRs are found from
+GnuPG's default keyring (usually ~/.gnupg/pubring.gpg); if it is
+repeated multiple times, the provided \fIKEYRING\fRs are used as
+successive sources.
+.TP 8
+.B \-h | \-\-help
+Print the help message and quit.
+.SH EXIT STATUS
+.TP 8
+.B 0
+\fBkeyart\fR was executed successfully.
+.TP 8
+.B 1
+\fBgpg\fR(1) or \fBgpg2\fR(1) are not installed.
+.TP 8
+.B 2
+The supplied hexadecimal string is not a multiple of 8 bytes.
+.SH SEE ALSO
+.BR gpg (1)
+.SH AUTHOR
+.B keyart
+and its documentation is written by Aaron Toponce <aaron.toponce@gmail.com>.
