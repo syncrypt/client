@@ -43,10 +43,6 @@ class Bundle(object):
             self.store_hash = store_hash
 
     @property
-    def bundle_size(self):
-        return len(self.serialized_bundle)
-
-    @property
     def serialized_bundle(self):
         return umsgpack.dumps(self.bundle)
 
