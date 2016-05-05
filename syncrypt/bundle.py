@@ -22,9 +22,8 @@ class Bundle(object):
     decrypt_semaphore = asyncio.Semaphore(value=8)
 
     __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
-            'key_size_crypt', 'store_hash', 'crypt_hash',
-            'remote_crypt_hash', 'uptodate', 'update_handle', 'key',
-            'bytes_written')
+            'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
+            'update_handle', 'key', 'bytes_written')
 
     def __init__(self, abspath, vault, store_hash=None):
         self.vault = vault
@@ -75,7 +74,6 @@ class Bundle(object):
                 self.path = os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
             else:
                 assert self.path == os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
-            self.key_size_crypt = len(encrypted_key)
             assert len(self.key) == self.key_size
         finally:
             yield from key_file.close()
