@@ -12,6 +12,7 @@ from .api import SyncryptAPI
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.identity import Identity
 from syncrypt.exceptions import VaultNotInitialized
+from syncrypt.vendor.keyart import draw_art
 
 logger = logging.getLogger(__name__)
 
@@ -207,8 +208,10 @@ class SyncryptApp(object):
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
             print()
-            print("Vault ID:         \t{0}".format(vault.config.id))
+            print(draw_art(None, '1', self.identity.get_fingerprint()))
+            print()
             print("Vault name:       \t{0}".format('Unnamed'))
+            print("Vault ID:         \t{0}".format(vault.config.id))
             print("Vault revision:   \t{0}".format(revision))
             print("Vault fingerprint:\t{0}".format(format_fingerprint(
                     vault.identity.get_fingerprint())))
