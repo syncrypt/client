@@ -29,3 +29,4 @@ class IdentityTests(VaultTestCase):
         identity2.init()
 
         self.assertEqual(fp, identity2.get_fingerprint())
+        self.assertEqual(identity2.key_size(), 4096)
