@@ -9,22 +9,6 @@ import re
 import subprocess
 import sys
 
-PARSER = argparse.ArgumentParser(
-    description='Creates ASCII art from OpenPGP keys.')
-PARSER.add_argument('-c', '--color', help='Print the art with ANSI color.',
-                    action='store_true')
-PARSER.add_argument('-l', '--longid', action='store_true',
-                    help='Print the 16-character long ID of a key.')
-PARSER.add_argument('-f', '--fingerprint', type=str, metavar=('HEX'),
-                    action='append',
-                    help='A hexadecimal string representing a fingerprint.')
-PARSER.add_argument('-k', '--keyring', type=str, metavar=('KEYRING'),
-                    action='append',
-                    help='A publicly exported OpenPGP key or keyring.')
-PARSER.add_argument('keyid', type=str, nargs='*', metavar=('KEYID'),
-                    help='A key identifier (email, ID, fingerprint, etc.).')
-ARGS = PARSER.parse_args()
-
 def test_env():
     """Test if and where GPG is installed."""
     try:
@@ -37,7 +21,7 @@ def test_env():
         print("Please install GnuPG before using this script.")
         sys.exit(1)
 
-def draw_art(key_size, key_algo, key_fpr):
+def draw_art(key_size, key_algo, key_fpr, color=True, longid=True):
     """Execute the Drunken Bishop algorithm on a key."""
     art = ''
     f_bytes = []
@@ -183,13 +167,13 @@ def draw_art(key_size, key_algo, key_fpr):
 
         # Insert the 'coin' into the art at this position
         if i == 104: # Starting position
-            art = art.format(_get_coin(visit, ARGS.color, coin='S'))
+            art = art.format(_get_coin(visit, color, coin='S'))
         elif i == walk[len(walk)-1]: # Ending position
-            art = art.format(_get_coin(visit, ARGS.color, coin='E'))
+            art = art.format(_get_coin(visit, color, coin='E'))
         else:
-            art = art.format(_get_coin(visit, ARGS.color))
+            art = art.format(_get_coin(visit, color))
 
-    if key_size and ARGS.longid:
+    if key_size and longid:
         footer = "["+key_fpr[-16:]+"]"
     elif key_size:
         footer = "["+key_fpr[-8:]+"]"
@@ -251,6 +235,22 @@ def gpg_cmd(cmd):
             algo = None
 
 if __name__ == '__main__':
+    PARSER = argparse.ArgumentParser(
+        description='Creates ASCII art from OpenPGP keys.')
+    PARSER.add_argument('-c', '--color', help='Print the art with ANSI color.',
+                        action='store_true')
+    PARSER.add_argument('-l', '--longid', action='store_true',
+                        help='Print the 16-character long ID of a key.')
+    PARSER.add_argument('-f', '--fingerprint', type=str, metavar=('HEX'),
+                        action='append',
+                        help='A hexadecimal string representing a fingerprint.')
+    PARSER.add_argument('-k', '--keyring', type=str, metavar=('KEYRING'),
+                        action='append',
+                        help='A publicly exported OpenPGP key or keyring.')
+    PARSER.add_argument('keyid', type=str, nargs='*', metavar=('KEYID'),
+                        help='A key identifier (email, ID, fingerprint, etc.).')
+    ARGS = PARSER.parse_args()
+
     gpg_bin = test_env()
     strip_nonhex = re.compile('[^a-fA-F0-9]+')
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
             if len(fpr) % 8 != 0:
                 print("Hex string must be a multiple of 8 bytes.")
                 sys.exit(2)
-            print(draw_art(None, None, fpr))
+            print(draw_art(None, None, fpr, color=ARGS.color, longid=ARGS.longid))
 
     if ARGS.keyring:
         cmd.append('--no-default-keyring')
