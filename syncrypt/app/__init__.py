@@ -208,7 +208,7 @@ class SyncryptApp(object):
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
             print()
-            print(draw_art(None, '1', self.identity.get_fingerprint()))
+            print(draw_art(None, '1', vault.identity.get_fingerprint()))
             print()
             print("Vault name:       \t{0}".format('Unnamed'))
             print("Vault ID:         \t{0}".format(vault.config.id))
