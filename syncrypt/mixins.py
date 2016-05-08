@@ -21,7 +21,7 @@ class MetadataHolder:
 
     @property
     def serialized_metadata(self):
-        return umsgpack.dumps(self.metadata)
+        return umsgpack.packb(self.metadata)
 
     def encrypted_metadata_reader(self):
         return Once(self.serialized_metadata) \
@@ -38,4 +38,4 @@ class MetadataHolder:
     @asyncio.coroutine
     def update_serialized_metadata(self, stream):
         serialized_metadata = yield from stream.read()
-        self.metadata = umsgpack.loads(serialized_metadata)
+        self.metadata = umsgpack.unpackb(serialized_metadata)
