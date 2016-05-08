@@ -61,7 +61,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def read_response(self, assert_ok=True):
         decoded = yield from self.read_term(assert_ok=True)
-        return decoded[1]
+        return decoded[1] if len(decoded) > 1 else None
 
     @asyncio.coroutine
     def write_term(self, *term):
@@ -232,6 +232,38 @@ class BinaryStorageConnection(object):
                     bundle.bytes_written - bundle.file_size_crypt)
             raise Exception('Uploaded size did not match')
         yield from self.read_term() # make sure server returns 'ok'
+
+
+    @asyncio.coroutine
+    def vault_metadata(self):
+        logger.debug('Getting metadata for %s', self.storage.vault)
+
+        # upload key and file
+        yield from self.write_term('vault_metadata')
+
+        metadata = yield from self.read_response()
+
+        logger.debug('Metadata size is %d bytes', len(metadata))
+
+        if not metadata is None:
+            yield from self.storage.vault.write_encrypted_metadata(Once(metadata))
+        else:
+            logger.warn('Empty metadata for %s', self.storage.vault)
+
+    @asyncio.coroutine
+    def set_vault_metadata(self):
+
+        vault = self.storage.vault
+        metadata = yield from vault.encrypted_metadata_reader().readall()
+
+        logger.debug('Setting metadata for %s (%d bytes)', self.storage.vault,
+                len(metadata))
+
+        # upload metadata
+        yield from self.write_term('set_vault_metadata', metadata)
+
+        # assert :ok
+        yield from self.read_response()
 
 
     @asyncio.coroutine
@@ -420,6 +452,16 @@ class BinaryStorageBackend(StorageBackend):
     def list_files(self):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.list_files()
+
+    @asyncio.coroutine
+    def vault_metadata(self):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.vault_metadata()
+
+    @asyncio.coroutine
+    def set_vault_metadata(self):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.set_vault_metadata()
 
     @asyncio.coroutine
     def upload(self, bundle):

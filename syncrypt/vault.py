@@ -45,6 +45,14 @@ class Vault(MetadataHolder):
                 raise VaultNotInitialized(self.folder)
             return self._config
 
+    def __get_metadata(self):
+        return {'name': 'My funny vault lolz'}
+
+    def __set_metadata(self, metadata):
+        pass
+
+    metadata = property(__get_metadata, __set_metadata)
+
     @property
     def identity(self):
         try:
@@ -78,7 +86,7 @@ class Vault(MetadataHolder):
         return os.path.join(self.folder, '.vault', 'data')
 
     @property
-    def metadata_path(self):
+    def bundle_metadata_path(self):
         return os.path.join(self.folder, '.vault', 'metadata')
 
     @property
@@ -119,8 +127,8 @@ class Vault(MetadataHolder):
         '''
         A generator of all registered bundles in this vault
         '''
-        for f in glob(os.path.join(self.metadata_path, '??/*')):
-            store_hash = os.path.relpath(f, self.metadata_path).replace('/', '')
+        for f in glob(os.path.join(self.bundle_metadata_path, '??/*')):
+            store_hash = os.path.relpath(f, self.bundle_metadata_path).replace('/', '')
             if len(store_hash) == 64:
                 yield Bundle(None, vault=self, store_hash=store_hash)
 

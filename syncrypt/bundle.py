@@ -213,5 +213,5 @@ class Bundle(MetadataHolder):
 
     @property
     def path_metadata(self):
-        return os.path.join(self.vault.metadata_path, \
+        return os.path.join(self.vault.bundle_metadata_path, \
                 self.store_hash[:2], self.store_hash[2:])
