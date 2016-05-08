@@ -46,10 +46,15 @@ class Vault(MetadataHolder):
             return self._config
 
     def __get_metadata(self):
-        return {'name': 'My funny vault lolz'}
+        return {
+            'name': self.config.vault.get('name', '')
+        }
 
     def __set_metadata(self, metadata):
-        pass
+        if 'name' in metadata:
+            logger.debug('Setting vault\'s name to "%s"', metadata['name'])
+            self.config.vault['name'] = metadata['name']
+            self.write_config()
 
     metadata = property(__get_metadata, __set_metadata)
 

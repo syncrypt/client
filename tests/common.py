@@ -154,6 +154,9 @@ class CommonTestsMixin(object):
     def test_vault_metadata(self):
         backend = self.vault.backend
         yield from backend.open()
+
+        self.vault.config.vault['name'] = 'My Library'
+
         yield from backend.set_vault_metadata()
         yield from backend.vault_metadata()
 
