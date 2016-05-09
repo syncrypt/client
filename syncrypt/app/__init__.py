@@ -211,7 +211,7 @@ class SyncryptApp(object):
             print()
             print(draw_art(None, '1', vault.identity.get_fingerprint()))
             print()
-            print("Vault name:       \t{0}".format('Unnamed'))
+            print("Vault name:       \t{0}".format(vault.config.vault.get('name', 'Unnamed')))
             print("Vault ID:         \t{0}".format(vault.config.id))
             print("Vault revision:   \t{0}".format(revision))
             print("Vault fingerprint:\t{0}".format(format_fingerprint(
