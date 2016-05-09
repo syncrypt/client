@@ -243,7 +243,10 @@ class BinaryStorageConnection(object):
 
         metadata = yield from self.read_response()
 
-        logger.debug('Metadata size is %d bytes', len(metadata))
+        if metadata is None:
+            logger.debug('Metadata is not yet set')
+        else:
+            logger.debug('Metadata size is %d bytes', len(metadata))
 
         if not metadata is None:
             yield from self.storage.vault.write_encrypted_metadata(Once(metadata))
