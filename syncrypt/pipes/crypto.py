@@ -142,7 +142,7 @@ class EncryptRSA(Buffered):
     def __init__(self, public_key):
         self.public_key = public_key
         self.block_size = self.get_block_size()
-        logger.debug('Decrypting block size: %d bytes', self.block_size)
+        logger.debug('Encrypting block size: %d bytes', self.block_size)
         super(EncryptRSA, self).__init__(self.block_size)
 
     def get_block_size(self):

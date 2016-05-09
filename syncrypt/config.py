@@ -61,6 +61,7 @@ class VaultConfig(Config):
         'vault': {
             # File patterns to ignore (comma separated list)
             'ignore': '.*',
+            'name': ''
         },
         'remote': {
             # Protocol to use

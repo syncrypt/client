@@ -12,6 +12,7 @@ from .api import SyncryptAPI
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.identity import Identity
 from syncrypt.exceptions import VaultNotInitialized
+from syncrypt.vendor.keyart import draw_art
 
 logger = logging.getLogger(__name__)
 
@@ -202,13 +203,16 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def info(self):
         for (index, vault) in enumerate(self.vaults):
+            yield from self.retrieve_metadata(vault)
             remote_size = yield from self.get_remote_size_for_vault(vault)
             revision = 'revision' in vault.config.vault and vault.config.vault['revision'] or '?'
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
             print()
+            print(draw_art(None, '1', vault.identity.get_fingerprint()))
+            print()
+            print("Vault name:       \t{0}".format(vault.config.vault.get('name', 'Unnamed')))
             print("Vault ID:         \t{0}".format(vault.config.id))
-            print("Vault name:       \t{0}".format('Unnamed'))
             print("Vault revision:   \t{0}".format(revision))
             print("Vault fingerprint:\t{0}".format(format_fingerprint(
                     vault.identity.get_fingerprint())))
@@ -229,6 +233,7 @@ class SyncryptApp(object):
     def push(self):
         for vault in self.vaults:
             yield from vault.backend.open()
+            yield from vault.backend.set_vault_metadata()
             for bundle in vault.walk_disk():
                 yield from self.push_bundle(bundle)
         yield from self.wait()
@@ -237,6 +242,11 @@ class SyncryptApp(object):
     def get_remote_size_for_vault(self, vault):
         yield from vault.backend.open()
         return (yield from vault.backend.vault_size(vault))
+
+    @asyncio.coroutine
+    def retrieve_metadata(self, vault):
+        yield from vault.backend.open()
+        return (yield from vault.backend.vault_metadata())
 
     @asyncio.coroutine
     def pull(self):

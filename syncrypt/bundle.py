@@ -2,9 +2,6 @@ import hashlib
 import logging
 import os
 
-import Crypto.Util.number
-from Crypto.Cipher import AES
-
 import aiofiles
 import asyncio
 import umsgpack
@@ -12,10 +9,11 @@ import umsgpack
 from .pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
                     EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
                     PadAES, UnpadAES, SnappyCompress, SnappyDecompress, Count)
+from .mixins import MetadataHolder
 
 logger = logging.getLogger(__name__)
 
-class Bundle(object):
+class Bundle(MetadataHolder):
     'A Bundle represents a file and some additional information'
 
     encrypt_semaphore = asyncio.Semaphore(value=8)
@@ -42,11 +40,7 @@ class Bundle(object):
             self.store_hash = store_hash
 
     @property
-    def serialized_bundle(self):
-        return umsgpack.dumps(self.bundle)
-
-    @property
-    def bundle(self):
+    def metadata(self):
         return {
             'filename': os.path.relpath(self.path, self.vault.folder),
             'key': self.key,
@@ -65,33 +59,28 @@ class Bundle(object):
 
     @asyncio.coroutine
     def load_key(self):
-        key_file = yield from aiofiles.open(self.path_fileinfo, 'rb')
+        metadata_file = yield from aiofiles.open(self.path_metadata, 'rb')
         try:
-            encrypted_key = yield from key_file.read()
-            fileinfo = umsgpack.loads(encrypted_key)
-            self.key = fileinfo[b'key']
+            metadata_contents = yield from metadata_file.read()
+            metadata = umsgpack.loads(metadata_contents)
+            self.key = metadata[b'key']
             if self.path is None:
-                self.path = os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
+                self.path = os.path.join(self.vault.folder, metadata[b'filename'].decode())
             else:
-                assert self.path == os.path.join(self.vault.folder, fileinfo[b'filename'].decode())
+                assert self.path == os.path.join(self.vault.folder, metadata[b'filename'].decode())
             assert len(self.key) == self.key_size
         finally:
-            yield from key_file.close()
+            yield from metadata_file.close()
 
     @asyncio.coroutine
     def generate_key(self):
         self.key = os.urandom(self.key_size)
-        if not os.path.exists(os.path.dirname(self.path_fileinfo)):
-            os.makedirs(os.path.dirname(self.path_fileinfo))
+        if not os.path.exists(os.path.dirname(self.path_metadata)):
+            os.makedirs(os.path.dirname(self.path_metadata))
         assert len(self.key) == self.key_size
 
-        sink = Once(self.serialized_bundle) >> FileWriter(self.path_fileinfo)
+        sink = Once(self.serialized_metadata) >> FileWriter(self.path_metadata)
         yield from sink.consume()
-
-    def encrypted_fileinfo_reader(self):
-        return Once(self.serialized_bundle) \
-                >> SnappyCompress() \
-                >> EncryptRSA_PKCS1_OAEP(self.vault.identity.public_key)
 
     def read_encrypted_stream(self):
         assert not self.key is None
@@ -100,6 +89,10 @@ class Bundle(object):
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> PadAES() \
                 >> EncryptAES(self.key)
+
+    @property
+    def identity(self):
+        return self.vault.identity
 
     @asyncio.coroutine
     def write_encrypted_stream(self, stream, assert_hash=None):
@@ -132,15 +125,11 @@ class Bundle(object):
         return passed
 
     @asyncio.coroutine
-    def write_encrypted_fileinfo(self, stream):
-        logger.debug("Updating fileinfo on disk")
-        sink = stream \
-                >> DecryptRSA_PKCS1_OAEP(self.vault.identity.private_key) \
-                >> SnappyDecompress() \
-                >> FileWriter(self.path_fileinfo, create_dirs=True)
-
+    def update_serialized_metadata(self, stream):
+        logger.debug("Updating metadata on disk")
+        sink = stream >> FileWriter(self.path_metadata, create_dirs=True)
         yield from sink.consume()
-        assert os.path.exists(self.path_fileinfo)
+        assert os.path.exists(self.path_metadata)
 
     @asyncio.coroutine
     def update(self):
@@ -223,6 +212,6 @@ class Bundle(object):
         return os.path.relpath(self.path, self.vault.folder)
 
     @property
-    def path_fileinfo(self):
-        return os.path.join(self.vault.fileinfo_path, \
+    def path_metadata(self):
+        return os.path.join(self.vault.bundle_metadata_path, \
                 self.store_hash[:2], self.store_hash[2:])

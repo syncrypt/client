@@ -15,10 +15,11 @@ from .config import VaultConfig
 from .exceptions import SecurityError, VaultNotInitialized
 from .identity import Identity
 from .pipes import Once
+from .mixins import MetadataHolder
 
 logger = logging.getLogger(__name__)
 
-class Vault(object):
+class Vault(MetadataHolder):
     def __init__(self, folder):
         self.folder = folder
         self._bundle_cache = {}
@@ -43,6 +44,19 @@ class Vault(object):
             else:
                 raise VaultNotInitialized(self.folder)
             return self._config
+
+    def __get_metadata(self):
+        return {
+            'name': self.config.vault.get('name', '')
+        }
+
+    def __set_metadata(self, metadata):
+        if 'name' in metadata:
+            logger.debug('Setting vault\'s name to "%s"', metadata['name'])
+            self.config.vault['name'] = metadata['name']
+            self.write_config()
+
+    metadata = property(__get_metadata, __set_metadata)
 
     @property
     def identity(self):
@@ -77,8 +91,8 @@ class Vault(object):
         return os.path.join(self.folder, '.vault', 'data')
 
     @property
-    def fileinfo_path(self):
-        return os.path.join(self.folder, '.vault', 'fileinfo')
+    def bundle_metadata_path(self):
+        return os.path.join(self.folder, '.vault', 'metadata')
 
     @property
     def revision(self):
@@ -118,8 +132,8 @@ class Vault(object):
         '''
         A generator of all registered bundles in this vault
         '''
-        for f in glob(os.path.join(self.fileinfo_path, '??/*')):
-            store_hash = os.path.relpath(f, self.fileinfo_path).replace('/', '')
+        for f in glob(os.path.join(self.bundle_metadata_path, '??/*')):
+            store_hash = os.path.relpath(f, self.bundle_metadata_path).replace('/', '')
             if len(store_hash) == 64:
                 yield Bundle(None, vault=self, store_hash=store_hash)
 
@@ -147,9 +161,9 @@ class Vault(object):
     def clear_bundle_cache(self):
         self._bundle_cache = {}
 
-    def add_bundle_by_fileinfo(self, store_hash, fileinfo):
+    def add_bundle_by_metadata(self, store_hash, metadata):
         bundle = Bundle(None, vault=self, store_hash=store_hash)
-        yield from bundle.write_encrypted_fileinfo(Once(fileinfo))
+        yield from bundle.write_encrypted_metadata(Once(metadata))
 
     def bundle_for(self, relpath):
         # check if path should be ignored

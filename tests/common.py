@@ -151,6 +151,19 @@ class CommonTestsMixin(object):
 
         yield from app.stop()
 
+    def test_vault_metadata(self):
+        backend = self.vault.backend
+        yield from backend.open()
+
+        self.vault.config.vault['name'] = 'My Library'
+
+        yield from backend.set_vault_metadata()
+        yield from backend.vault_metadata()
+
+        # new connection
+        vault2 = Vault(self.vault.folder)
+        yield from vault2.backend.vault_metadata()
+
     def test_download(self):
         'for all files -> upload file, delete file, download file'
         backend = self.vault.backend

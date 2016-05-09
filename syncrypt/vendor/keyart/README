@@ -1,0 +1,32 @@
+OpenPGP Random Art
+------------------
+
+keyart takes any argument that can uniquely identify a key (name, email
+address, short key ID, long key ID, fingerprint, etc), and prints out its
+random visualization ASCII art based on the public key fingerprint. Please see
+'doc/drunken-bishop.txt' for more information about the algorithm and changes
+compared to OpenSSH keys.
+
+Usage
+-----
+
+keyart can take a publicly exported GPG key or keyring to draw the art, or it
+can use an identifier to uniquely identify a key in your public keyring, such as
+an email address, short key ID, long key ID or key fingerprint.
+
+To produce the random art for a key:
+
+    $ keyart 0x8086060F
+    +----[DSA 1024]-----+
+    |E  . . ^^i.        |
+    |:l. . i.^i:.       |
+    |^^.. :.^: :        |
+    |: ^   .l           |
+    |.. .  . :          |
+    |       . S         |
+    |                   |
+    |                   |
+    |                   |
+    |                   |
+    |                   |
+    +----[8086060F]-----+

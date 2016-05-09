@@ -4,6 +4,7 @@ import os
 import os.path
 
 from Crypto.PublicKey import RSA
+import Crypto.Util.number
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ class Identity(object):
         with open(self.id_rsa_path, 'rb') as id_rsa:
             private_key = RSA.importKey(id_rsa.read())
         self._keypair = (public_key, private_key)
+
+    def key_size(self):
+        return Crypto.Util.number.size(self.private_key.n)
 
     def init(self):
         if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):
