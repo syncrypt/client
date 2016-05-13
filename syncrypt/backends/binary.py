@@ -59,7 +59,7 @@ class BinaryStorageConnection(object):
         return decoded
 
     @asyncio.coroutine
-    def read_response(self, assert_ok=True):
+    def read_response(self):
         decoded = yield from self.read_term(assert_ok=True)
         return decoded[1] if len(decoded) > 1 else None
 
@@ -192,7 +192,9 @@ class BinaryStorageConnection(object):
 
         response = yield from self.read_term()
 
-        return rewrite_atoms_dict(response[1])
+        dct = rewrite_atoms_dict(response[1])
+        dct.update(**rewrite_atoms_dict(response[2]))
+        return dct
 
     @asyncio.coroutine
     def upload(self, bundle):
@@ -308,6 +310,7 @@ class BinaryStorageConnection(object):
         response = yield from self.read_term()
 
         server_info = rewrite_atoms_dict(response[1])
+        server_info.update(**rewrite_atoms_dict(response[2]))
 
         content_hash = server_info['content_hash'].decode()
         metadata = server_info['metadata']
