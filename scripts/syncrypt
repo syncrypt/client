@@ -24,7 +24,10 @@ class SyncryptCmd():
                 help='Log level: ' + ', '.join(LOGLEVELS))
 
     def __init__(self):
-        self.parser = argparse.ArgumentParser(description=self.description)
+        self.parser = argparse.ArgumentParser(
+                description=self.description,
+                prog='%s %s' % ('syncryt', self.command)
+            )
         self.configure_parser(self.parser)
         self.config = None
 
