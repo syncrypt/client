@@ -12,48 +12,109 @@ from syncrypt.config import AppConfig
 from syncrypt.utils.logging import setup_logging
 from syncrypt.app.cli import CLIAuthenticationProvider
 
-COMMANDS = ['init', 'pull', 'push', 'watch', 'clone', 'info']
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
-parser = argparse.ArgumentParser(description='Run Syncrypt client')
-parser.add_argument('command', metavar='cmd', type=str,
-        choices=COMMANDS, help='Command to run: ' + ', '.join(COMMANDS))
-parser.add_argument('-d', metavar='DIRECTORY', type=str,
-        action='append', dest='directory', help='directory (default: .)')
-parser.add_argument('-t', metavar='CLONE_TARGET', type=str,
-        dest='clone_target', help='Directory to clone to (clone command only)')
-parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
-        dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
+class SyncryptCmd():
+    command = None
+    description = None
 
-config = parser.parse_args()
+    def configure_parser(self, parser):
+        parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
+                dest='loglevel', choices=LOGLEVELS,
+                help='Log level: ' + ', '.join(LOGLEVELS))
 
-setup_logging(config.loglevel)
+    def __init__(self):
+        self.parser = argparse.ArgumentParser(description=self.description)
+        self.configure_parser(self.parser)
+        self.config = None
 
-# For now, each command will work on a default AppConfig object. When
-# you want app-level configuration, use ``syncrypt_daemon``.
-app_config = AppConfig()
-for directory in (['.'] if config.directory is None else config.directory):
-    app_config.add_vault_dir(directory)
+    def parse(self, args):
+        self.config = self.parser.parse_args(args)
 
-app = SyncryptApp(app_config, auth_provider=CLIAuthenticationProvider())
+    def setup(self):
+        setup_logging(self.config.loglevel)
+        self.loop = asyncio.get_event_loop()
 
-loop = asyncio.get_event_loop()
-if config.command == 'init':
-    loop.run_until_complete(app.init())
-elif config.command == 'watch':
-    loop.run_until_complete(app.start())
-    loop.run_forever()
-elif config.command == 'pull':
-    loop.run_until_complete(app.pull())
-elif config.command == 'push':
-    loop.run_until_complete(app.push())
-elif config.command == 'clone':
-    if config.clone_target:
-        loop.run_until_complete(app.clone(config.clone_target))
-    else:
-        print("Clone target must be set (-t)")
-elif config.command == 'info':
-    loop.run_until_complete(app.info())
+    def shutdown(self):
+        self.loop.close()
 
-loop.close()
+    def run(self):
+        raise NotImplementedError()
+
+class MultipleVaultCmd(SyncryptCmd):
+    '''command that supports multiple vault directories'''
+
+    def configure_parser(self, parser):
+        super(MultipleVaultCmd, self).configure_parser(parser)
+        parser.add_argument('-d', metavar='DIRECTORY', type=str,
+                action='append', dest='directory', help='directory (default: .)')
+
+    def setup(self):
+        super(MultipleVaultCmd, self).setup()
+
+        # For now, each command will work on a default AppConfig object. When
+        # you want app-level configuration, use ``syncrypt_daemon``.
+        app_config = AppConfig()
+        DIRECTORIES = (['.'] if self.config.directory is None else self.config.directory)
+        for directory in DIRECTORIES:
+            app_config.add_vault_dir(directory)
+
+        self.app = SyncryptApp(app_config, auth_provider=CLIAuthenticationProvider())
+
+class Pull(MultipleVaultCmd):
+    command = 'pull'
+    description = 'pull all files from the latest revision'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.pull())
+
+class Push(MultipleVaultCmd):
+    command = 'push'
+    description = 'push local changes to the server'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.push())
+
+class Watch(MultipleVaultCmd):
+    command = 'watch'
+    description = 'watch directory for changes'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.watch())
+
+class Init(MultipleVaultCmd):
+    command = 'init'
+    description = 'register the directory as a Syncrypt vault'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.init())
+
+class Info(MultipleVaultCmd):
+    command = 'info'
+    description = 'show vault information'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.info())
+
+COMMANDS = [Init(), Pull(), Push(), Watch(), Info()]
+COMMAND_NAMES = [c.command for c in COMMANDS]
+
+global_parser = argparse.ArgumentParser(
+    usage='''syncrypt <command> [<args>]
+
+available commands:
+''' + '\n'.join([
+    '  {0.command:11s} {0.description}'.format(c) for c in COMMANDS
+    ]))
+
+global_parser.add_argument('command', help='Subcommand to run', choices=COMMAND_NAMES)
+
+args = global_parser.parse_args(sys.argv[1:2])
+
+for c in COMMANDS:
+    if c.command == args.command:
+        c.parse(sys.argv[2:])
+        c.setup()
+        c.run()
+        c.shutdown()
 
