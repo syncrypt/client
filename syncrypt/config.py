@@ -40,6 +40,10 @@ class Config(object):
         with open(config_file, 'w') as f:
             self._config.write(f)
 
+    def set(self, setting, value):
+        realm, setting_ = setting.split('.')
+        self._config[realm][setting_] = value
+
     def update(self, section, dct):
         self._config[section].update(dct)
 

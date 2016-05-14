@@ -230,6 +230,12 @@ class SyncryptApp(object):
         return {v.folder: v.state for v in self.vaults}
 
     @asyncio.coroutine
+    def set(self, setting, value):
+        for vault in self.vaults:
+            vault.config.set(setting, value)
+            vault.write_config()
+
+    @asyncio.coroutine
     def push(self):
         for vault in self.vaults:
             yield from vault.backend.open()

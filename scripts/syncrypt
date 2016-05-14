@@ -99,7 +99,22 @@ class Info(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.info())
 
-COMMANDS = [Init(), Pull(), Push(), Watch(), Info()]
+class ConfigSet(MultipleVaultCmd):
+    command = 'set'
+    description = 'set a vault config parameter'
+
+    def configure_parser(self, parser):
+        super(ConfigSet, self).configure_parser(parser)
+        parser.add_argument('setting', help='the thing to set')
+        parser.add_argument('value', help='the value to set it to')
+
+    def run(self):
+        self.loop.run_until_complete(
+            self.app.set(self.config.setting, self.config.value)
+        )
+
+
+COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), ConfigSet()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

@@ -26,6 +26,12 @@ Print out vault information:
 
     syncrypt info
 
+You can also give your vault a name. This name will be visible to other users
+of the vault as well, but not to anyone else. To set a new name, use:
+
+    syncrypt set vault.name "My Library"
+    syncrypt push
+
 Watch current directory (this is like a daemon running the foreground as it
 also provides the HTTP interface):
 
