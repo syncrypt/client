@@ -288,7 +288,7 @@ class BinaryStorageConnection(object):
             assert isinstance(file_count, int)
             for n in range(file_count):
                 server_info = yield from self.read_term(assert_ok=False)
-                store_hash = server_info['hash'].decode()
+                store_hash = server_info['file_hash'].decode()
                 file_info = server_info['metadata']
                 logger.debug('Server sent us: %s', store_hash)
                 yield from self.storage.vault.add_bundle_by_metadata(store_hash, file_info)
