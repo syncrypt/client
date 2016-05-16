@@ -233,7 +233,17 @@ class BinaryStorageConnection(object):
                     bundle.file_size_crypt, bundle.bytes_written,
                     bundle.bytes_written - bundle.file_size_crypt)
             raise Exception('Uploaded size did not match')
-        yield from self.read_term() # make sure server returns 'ok'
+
+        # server should return the reponse
+        response = yield from self.read_response()
+        server_info = rewrite_atoms_dict(response)
+
+        # if all went well, store revision_id in vault
+        revision_id = server_info['rid']
+        revision_id = revision_id.decode(self.storage.vault.config.encoding)
+        logger.info('Remote vault revision is "%s"', revision_id)
+        self.storage.vault.config.update('vault', {'revision': revision_id})
+        self.storage.vault.write_config()
 
 
     @asyncio.coroutine
