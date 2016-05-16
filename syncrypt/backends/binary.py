@@ -41,6 +41,14 @@ class BinaryStorageConnection(object):
     def __repr__(self):
         return "<Slot %d %d %d>" % (self.connecting, self.connected, self.available.is_set())
 
+    def _update_revision(self, revision_id):
+        if isinstance(revision_id, bytes):
+            revision_id = revision_id.decode(self.storage.vault.config.encoding)
+        logger.debug('Remote vault revision is "%s"', revision_id)
+        # if all went well, store revision_id in vault
+        self.storage.vault.config.update('vault', {'revision': revision_id})
+        self.storage.vault.write_config()
+
     @asyncio.coroutine
     def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
@@ -239,11 +247,7 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response)
 
         # if all went well, store revision_id in vault
-        revision_id = server_info['rid']
-        revision_id = revision_id.decode(self.storage.vault.config.encoding)
-        logger.info('Remote vault revision is "%s"', revision_id)
-        self.storage.vault.config.update('vault', {'revision': revision_id})
-        self.storage.vault.write_config()
+        self._update_revision(server_info['rid'])
 
 
     @asyncio.coroutine
@@ -280,6 +284,34 @@ class BinaryStorageConnection(object):
         # assert :ok
         yield from self.read_response()
 
+    @asyncio.coroutine
+    def changes(self, since_rev, to_rev):
+        logger.info('Getting a list of changes for vault %s (%s to %s)',
+                self.storage.vault, since_rev, to_rev)
+
+        # upload key and file
+        if to_rev:
+            yield from self.write_term('changes', since_rev, to_rev)
+        else:
+            yield from self.write_term('changes', since_rev)
+
+        response = yield from self.read_response()
+
+        # response is either list or stream
+        if len(response) > 0 and response[0] == Atom('stream_response'):
+            # TBD
+            pass
+        else:
+            for server_info in response:
+                store_hash = server_info['file_hash'].decode()
+                file_info = server_info['metadata']
+                if file_info == Atom('nil'):
+                    logger.warn('Skipping file %s (no metadata!)', store_hash)
+                    continue
+                logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
+                        len(file_info))
+                yield from self.storage.vault.add_bundle_by_metadata(store_hash, file_info)
+                self._update_revision(server_info['rid'])
 
     @asyncio.coroutine
     def list_files(self):
@@ -300,14 +332,14 @@ class BinaryStorageConnection(object):
                 server_info = yield from self.read_term(assert_ok=False)
                 store_hash = server_info['file_hash'].decode()
                 file_info = server_info['metadata']
-                logger.debug('Server sent us: %s', store_hash)
+                if file_info == Atom('nil'):
+                    logger.warn('Skipping file %s (no metadata!)', store_hash)
+                    continue
+                logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
+                        len(file_info))
                 yield from self.storage.vault.add_bundle_by_metadata(store_hash, file_info)
             if revision_id and revision_id != Atom('no_revision'):
-                revision_id = revision_id.decode(self.storage.vault.config.encoding)
-                logger.info('Remote vault revision is "%s"', revision_id)
-                # if all went well, store revision_id in vault
-                self.storage.vault.config.update('vault', {'revision': revision_id})
-                self.storage.vault.write_config()
+                self._update_revision(revision_id)
 
     @asyncio.coroutine
     def download(self, bundle):
@@ -468,6 +500,11 @@ class BinaryStorageBackend(StorageBackend):
     def list_files(self):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.list_files()
+
+    @asyncio.coroutine
+    def changes(self, since_rev, to_rev):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.changes(since_rev, to_rev)
 
     @asyncio.coroutine
     def vault_metadata(self):
