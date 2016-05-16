@@ -113,8 +113,20 @@ class ConfigSet(MultipleVaultCmd):
             self.app.set(self.config.setting, self.config.value)
         )
 
+class ConfigUnset(MultipleVaultCmd):
+    command = 'unset'
+    description = 'unset a vault config parameter'
 
-COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), ConfigSet()]
+    def configure_parser(self, parser):
+        super(ConfigUnset, self).configure_parser(parser)
+        parser.add_argument('setting', help='the thing to unset')
+
+    def run(self):
+        self.loop.run_until_complete(self.app.unset(self.config.setting))
+
+
+COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), Log(), ConfigSet(),
+        ConfigUnset()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

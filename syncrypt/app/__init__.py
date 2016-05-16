@@ -235,6 +235,12 @@ class SyncryptApp(object):
             vault.write_config()
 
     @asyncio.coroutine
+    def unset(self, setting):
+        for vault in self.vaults:
+            vault.config.unset(setting)
+            vault.write_config()
+
+    @asyncio.coroutine
     def push(self):
         for vault in self.vaults:
             yield from vault.backend.open()

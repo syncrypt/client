@@ -44,6 +44,11 @@ class Config(object):
         realm, setting_ = setting.split('.')
         self._config[realm][setting_] = value
 
+    def unset(self, setting):
+        realm, setting_ = setting.split('.')
+        if setting_ in self._config[realm]:
+            del self._config[realm][setting_]
+
     def update(self, section, dct):
         self._config[section].update(dct)
 
