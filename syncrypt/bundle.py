@@ -215,3 +215,30 @@ class Bundle(MetadataHolder):
     def path_metadata(self):
         return os.path.join(self.vault.bundle_metadata_path, \
                 self.store_hash[:2], self.store_hash[2:])
+
+
+class VirtualBundle(Bundle):
+    '''
+    A VirtualBundle is a Bundle that will never change anything on the
+    filesystem
+    '''
+
+    __slots__ = Bundle.__slots__ + ('_metadata',)
+
+    def __get_metadata(self):
+        return self._metadata
+
+    def __set_metadata(self, metadata):
+        self._metadata = metadata
+        if 'filename' in metadata:
+            self.path = metadata['filename']
+
+    metadata = property(__get_metadata, __set_metadata)
+
+    def load_key(self):
+        self.key = self.metadata[b'key']
+
+    @asyncio.coroutine
+    def update_serialized_metadata(self, stream):
+        yield from MetadataHolder.update_serialized_metadata(self, stream)
+

@@ -287,13 +287,10 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def changes(self, since_rev, to_rev, queue):
         logger.info('Getting a list of changes for vault %s (%s to %s)',
-                self.storage.vault, since_rev, to_rev)
+                self.storage.vault, since_rev or 'earliest', to_rev or 'latest')
 
         # upload key and file
-        if to_rev:
-            yield from self.write_term('changes', since_rev, to_rev)
-        else:
-            yield from self.write_term('changes', since_rev)
+        yield from self.write_term('changes', since_rev, to_rev)
 
         response = yield from self.read_response()
 
@@ -304,13 +301,13 @@ class BinaryStorageConnection(object):
         else:
             for server_info in response:
                 store_hash = server_info['file_hash'].decode()
-                file_info = server_info['metadata']
-                if file_info == Atom('nil'):
+                metadata = server_info['metadata']
+                if metadata == Atom('nil'):
                     logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
-                        len(file_info))
-                yield from queue.put((store_hash, file_info))
+                        len(metadata))
+                yield from queue.put((store_hash, metadata, server_info))
                 self._update_revision(server_info['rid'])
             yield from queue.put(None)
 
@@ -332,13 +329,13 @@ class BinaryStorageConnection(object):
             for n in range(file_count):
                 server_info = yield from self.read_term(assert_ok=False)
                 store_hash = server_info['file_hash'].decode()
-                file_info = server_info['metadata']
-                if file_info == Atom('nil'):
+                metadata = server_info['metadata']
+                if metadata == Atom('nil'):
                     logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
-                        len(file_info))
-                yield from queue.put((store_hash, file_info))
+                        len(metadata))
+                yield from queue.put((store_hash, metadata, server_info))
             yield from queue.put(None)
             if revision_id and revision_id != Atom('no_revision'):
                 self._update_revision(revision_id)

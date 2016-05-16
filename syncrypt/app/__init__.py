@@ -6,13 +6,15 @@ import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt import Vault
 from syncrypt.backends.base import StorageBackendInvalidAuth
+from syncrypt.bundle import VirtualBundle
+from syncrypt.exceptions import VaultNotInitialized
+from syncrypt.identity import Identity
+from syncrypt.pipes import Once
+from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore
+from syncrypt.vendor.keyart import draw_art
 
 from .api import SyncryptAPI
-from syncrypt.utils.format import format_fingerprint, format_size
-from syncrypt.identity import Identity
-from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.vendor.keyart import draw_art
 
 logger = logging.getLogger(__name__)
 
@@ -241,6 +243,23 @@ class SyncryptApp(object):
             vault.write_config()
 
     @asyncio.coroutine
+    def print_log(self):
+        for vault in self.vaults:
+            yield from vault.backend.open()
+            queue = yield from vault.backend.changes(None, None)
+            while True:
+                item = yield from queue.get()
+                if item is None:
+                    break
+                store_hash, metadata, server_info = item
+                bundle = VirtualBundle(None, vault, store_hash=store_hash)
+                yield from bundle.write_encrypted_metadata(Once(metadata))
+                created_at = server_info['created_at'].decode(vault.config.encoding)
+                operation = server_info['operation'].decode(vault.config.encoding)
+                print("%-27s %-9s %s" % (created_at, operation, bundle.relpath))
+        yield from self.wait()
+
+    @asyncio.coroutine
     def push(self):
         for vault in self.vaults:
             yield from vault.backend.open()
@@ -272,7 +291,8 @@ class SyncryptApp(object):
                 item = yield from queue.get()
                 if item is None:
                     break
-                bundle = yield from vault.add_bundle_by_metadata(*item)
+                store_hash, metadata, server_info = item
+                bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
                 yield from self.pull_bundle(bundle)
         yield from self.wait()
 

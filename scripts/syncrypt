@@ -124,6 +124,13 @@ class ConfigUnset(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.unset(self.config.setting))
 
+class Log(MultipleVaultCmd):
+    command = 'log'
+    description = 'show recent changes (file uploads, deletions, etc)'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.print_log())
+
 
 COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), Log(), ConfigSet(),
         ConfigUnset()]

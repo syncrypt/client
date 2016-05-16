@@ -89,7 +89,7 @@ class LocalStorageBackend(StorageBackend):
             base, ext = os.path.splitext(os.path.basename(f))
             with open(f, 'rb') as f:
                 metadata = f.read()
-            yield from queue.put((base, metadata))
+            yield from queue.put((base, metadata, {}))
         yield from queue.put(None)
         return queue
 
