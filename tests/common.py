@@ -230,6 +230,8 @@ class CommonTestsMixin(object):
         shutil.copytree(os.path.join(self.vault.folder, '.vault'),
                         os.path.join(other_vault_path, '.vault'))
         self.other_vault = Vault(other_vault_path)
+        self.other_vault.config.unset('vault.revision')
+        self.other_vault.write_config()
 
         app.add_vault(self.other_vault)
 

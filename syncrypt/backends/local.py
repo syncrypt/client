@@ -84,11 +84,14 @@ class LocalStorageBackend(StorageBackend):
     @asyncio.coroutine
     def list_files(self):
         logger.info('Listing files')
+        queue = asyncio.Queue()
         for f in (glob(os.path.join(self.path, '*.metadata'))):
             base, ext = os.path.splitext(os.path.basename(f))
             with open(f, 'rb') as f:
                 metadata = f.read()
-            yield from self.vault.add_bundle_by_metadata(base, metadata)
+            yield from queue.put((base, metadata))
+        yield from queue.put(None)
+        return queue
 
     @asyncio.coroutine
     def close(self):

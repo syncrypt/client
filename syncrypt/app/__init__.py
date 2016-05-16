@@ -261,14 +261,18 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def pull(self):
+        # TODO: do a change detection (.vault/metadata store vs filesystem)
         for vault in self.vaults:
             yield from self.open_or_init(vault)
             if vault.revision:
-                yield from vault.backend.changes(vault.revision, None)
+                queue = yield from vault.backend.changes(vault.revision, None)
             else:
-                yield from vault.backend.list_files()
-            # TODO: only walk over newly created files
-            for bundle in vault.walk():
+                queue = yield from vault.backend.list_files()
+            while True:
+                item = yield from queue.get()
+                if item is None:
+                    break
+                bundle = yield from vault.add_bundle_by_metadata(*item)
                 yield from self.pull_bundle(bundle)
         yield from self.wait()
 

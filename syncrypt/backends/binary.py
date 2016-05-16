@@ -285,7 +285,7 @@ class BinaryStorageConnection(object):
         yield from self.read_response()
 
     @asyncio.coroutine
-    def changes(self, since_rev, to_rev):
+    def changes(self, since_rev, to_rev, queue):
         logger.info('Getting a list of changes for vault %s (%s to %s)',
                 self.storage.vault, since_rev, to_rev)
 
@@ -310,11 +310,12 @@ class BinaryStorageConnection(object):
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
                         len(file_info))
-                yield from self.storage.vault.add_bundle_by_metadata(store_hash, file_info)
+                yield from queue.put((store_hash, file_info))
                 self._update_revision(server_info['rid'])
+            yield from queue.put(None)
 
     @asyncio.coroutine
-    def list_files(self):
+    def list_files(self, queue):
 
         logger.info('Getting a list of files for vault %s', self.storage.vault)
 
@@ -337,7 +338,8 @@ class BinaryStorageConnection(object):
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
                         len(file_info))
-                yield from self.storage.vault.add_bundle_by_metadata(store_hash, file_info)
+                yield from queue.put((store_hash, file_info))
+            yield from queue.put(None)
             if revision_id and revision_id != Atom('no_revision'):
                 self._update_revision(revision_id)
 
@@ -499,12 +501,16 @@ class BinaryStorageBackend(StorageBackend):
     @asyncio.coroutine
     def list_files(self):
         with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.list_files()
+            queue = asyncio.Queue()
+            asyncio.get_event_loop().create_task(conn.list_files(queue))
+            return queue
 
     @asyncio.coroutine
     def changes(self, since_rev, to_rev):
         with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.changes(since_rev, to_rev)
+            queue = asyncio.Queue()
+            asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue))
+            return queue
 
     @asyncio.coroutine
     def vault_metadata(self):

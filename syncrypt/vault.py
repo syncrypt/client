@@ -5,8 +5,8 @@ import os.path
 import sys
 from fnmatch import fnmatch
 from glob import glob
-from pprint import pprint
 
+import asyncio
 from syncrypt.utils.filesystem import folder_size
 from syncrypt.utils.semaphores import JoinableSetSemaphore
 
@@ -14,8 +14,8 @@ from .bundle import Bundle
 from .config import VaultConfig
 from .exceptions import SecurityError, VaultNotInitialized
 from .identity import Identity
-from .pipes import Once
 from .mixins import MetadataHolder
+from .pipes import Once
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,6 @@ class Vault(MetadataHolder):
 
     @property
     def active(self):
-        #print ({k: v.count for (k, v) in self.semaphores.items()})
         return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
@@ -161,9 +160,11 @@ class Vault(MetadataHolder):
     def clear_bundle_cache(self):
         self._bundle_cache = {}
 
+    @asyncio.coroutine
     def add_bundle_by_metadata(self, store_hash, metadata):
         bundle = Bundle(None, vault=self, store_hash=store_hash)
         yield from bundle.write_encrypted_metadata(Once(metadata))
+        return bundle
 
     def bundle_for(self, relpath):
         # check if path should be ignored
