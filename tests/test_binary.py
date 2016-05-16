@@ -25,9 +25,9 @@ class BinaryServerTests(VaultTestCase, CommonTestsMixin):
     def test_revision_increase_after_push(self):
         app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
-        prev_rev = self.vault.config.vault.get('revision', None)
+        prev_rev = self.vault.revision
         yield from app.push()
-        post_rev = self.vault.config.vault['revision']
+        post_rev = self.vault.revision
         self.assertNotEqual(prev_rev, post_rev)
         self.assertTrue(not post_rev is None)
 

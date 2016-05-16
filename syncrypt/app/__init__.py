@@ -205,7 +205,6 @@ class SyncryptApp(object):
         for (index, vault) in enumerate(self.vaults):
             yield from self.retrieve_metadata(vault)
             remote_size = yield from self.get_remote_size_for_vault(vault)
-            revision = 'revision' in vault.config.vault and vault.config.vault['revision'] or '?'
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
             print()
@@ -213,7 +212,7 @@ class SyncryptApp(object):
             print()
             print("Vault name:       \t{0}".format(vault.config.vault.get('name', 'Unnamed')))
             print("Vault ID:         \t{0}".format(vault.config.id))
-            print("Vault revision:   \t{0}".format(revision))
+            print("Vault revision:   \t{0}".format(vault.revision or '?'))
             print("Vault fingerprint:\t{0}".format(format_fingerprint(
                     vault.identity.get_fingerprint())))
             print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
