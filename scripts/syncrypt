@@ -44,6 +44,20 @@ class SyncryptCmd():
     def run(self):
         raise NotImplementedError()
 
+class SingleVaultCmd(SyncryptCmd):
+    '''command that supports only a single vault directory'''
+
+    def configure_parser(self, parser):
+        super(SingleVaultCmd, self).configure_parser(parser)
+        parser.add_argument('-d', metavar='DIRECTORY', type=str,
+                default='.', dest='directory', help='directory (default: .)')
+
+    def setup(self):
+        super(SingleVaultCmd, self).setup()
+        app_config = AppConfig()
+        app_config.add_vault_dir(self.config.directory )
+        self.app = SyncryptApp(app_config, auth_provider=CLIAuthenticationProvider())
+
 class MultipleVaultCmd(SyncryptCmd):
     '''command that supports multiple vault directories'''
 
@@ -85,7 +99,7 @@ class Watch(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.watch())
 
-class Init(MultipleVaultCmd):
+class Init(SingleVaultCmd):
     command = 'init'
     description = 'register the directory as a Syncrypt vault'
 
@@ -99,7 +113,7 @@ class Info(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.info())
 
-class ConfigSet(MultipleVaultCmd):
+class ConfigSet(SingleVaultCmd):
     command = 'set'
     description = 'set a vault config parameter'
 
@@ -113,7 +127,7 @@ class ConfigSet(MultipleVaultCmd):
             self.app.set(self.config.setting, self.config.value)
         )
 
-class ConfigUnset(MultipleVaultCmd):
+class ConfigUnset(SingleVaultCmd):
     command = 'unset'
     description = 'unset a vault config parameter'
 
@@ -131,9 +145,20 @@ class Log(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.print_log())
 
+class Export(SingleVaultCmd):
+    command = 'export'
+    description = 'export vault config and keys to backup or share'
+
+    def configure_parser(self, parser):
+        super(Export, self).configure_parser(parser)
+        parser.add_argument('filename', help='export filename')
+
+    def run(self):
+        self.loop.run_until_complete(self.app.export(self.config.filename))
+
 
 COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), Log(), ConfigSet(),
-        ConfigUnset()]
+        ConfigUnset(), Export()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

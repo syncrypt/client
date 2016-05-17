@@ -1,6 +1,8 @@
 import logging
 import os.path
 import sys
+import zipfile
+from io import StringIO
 
 import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
@@ -241,6 +243,34 @@ class SyncryptApp(object):
         for vault in self.vaults:
             vault.config.unset(setting)
             vault.write_config()
+
+    @asyncio.coroutine
+    def export(self, filename):
+        vault = self.vaults[0]
+        zipf = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED)
+
+        # include config but strip auth information
+        vault.config.unset('remote.auth')
+        vault.config.unset('remote.username')
+        vault.config.unset('remote.password')
+
+        # also strip revision as 
+        vault.config.unset('vault.revision')
+
+        temp_config = StringIO()
+        vault.config._config.write(temp_config)
+        temp_config.seek(0)
+        zipf.writestr('.vault/config', temp_config.read().encode(vault.config.encoding))
+
+        # include private and public key
+        def include(f):
+            zipf.write(f, arcname=os.path.relpath(f, vault.folder))
+        include(vault.identity.id_rsa_path)
+        include(vault.identity.id_rsa_pub_path)
+
+        zipf.close()
+
+        logger.info("Vault export has been written to: %s" % filename)
 
     @asyncio.coroutine
     def print_log(self):
