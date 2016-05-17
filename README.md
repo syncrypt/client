@@ -32,6 +32,30 @@ of the vault as well, but not to anyone else. To set a new name, use:
     syncrypt set vault.name "My Library"
     syncrypt push
 
+### Backup your keys
+
+It is important to store your vault's keys at another place other than your
+computer. Otherwise, you won't be able to recover your files in case of a
+disk failure. You can create a ZIP file with all necessary information to
+decrypt a Vault by typing:
+
+    syncrypt export vault-backup.zip
+
+It is recommened to save this file on an USB stick or a similar not-connected
+storage and keep it at a safe place.
+
+If you want to share your vault with another person, they need to get this
+file as well.
+
+In order to restore a backup or download your vault on another machine, copy
+this file into an empty folder, and type:
+
+    unzip vault-backup.zip
+    syncrypt init
+    syncrypt pull
+
+### Advanced Usage
+
 Watch current directory (this is like a daemon running the foreground as it
 also provides the HTTP interface):
 
