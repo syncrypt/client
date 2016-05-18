@@ -53,14 +53,19 @@ class BinaryStorageConnection(object):
     def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
         pl_read = (yield from self.reader.read(4))
+        #logger.debug('Read: %s (%d bytes)', pl_read, len(pl_read))
         if len(pl_read) != 4:
             raise ConnectionResetException()
         pl_tuple = struct.unpack('!I', pl_read)
         packet_length = pl_tuple[0]
         assert packet_length > 0
-        packet = yield from self.reader.read(packet_length)
-        if len(packet) != packet_length:
-            raise ConnectionResetException()
+        #logger.debug('Will read %d bytes', packet_length)
+        packet = b''
+        while len(packet) < packet_length:
+            buf = yield from self.reader.read(packet_length - len(packet))
+            if len(buf) == 0:
+                raise ConnectionResetException()
+            packet += buf
         decoded = bert.decode(packet)
         if assert_ok and decoded[0] != Atom('ok'):
             raise UnsuccessfulResponse(decoded)
@@ -77,6 +82,7 @@ class BinaryStorageConnection(object):
         packet = bert.encode((Atom(term[0]),) + term[1:])
         packet_length = len(packet)
         assert packet_length > 0
+        #logger.debug('About to write: %s', packet)
         self.writer.write(struct.pack('!I', packet_length))
         self.writer.write(packet)
         yield from self.writer.drain()
@@ -359,7 +365,7 @@ class BinaryStorageConnection(object):
 
         assert type(file_size) == int
 
-        logger.info('Downloading content ({} bytes)'.format(file_size))
+        logger.debug('Downloading content ({} bytes)'.format(file_size))
 
         # read content hash
         logger.debug('Content hash: %s', content_hash)
