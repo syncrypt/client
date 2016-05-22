@@ -405,6 +405,10 @@ class BinaryStorageManager(object):
         self.concurrency = concurrency
         self.slots = [BinaryStorageConnection(backend) for i in range(concurrency)]
 
+    def get_active_connection_count(self):
+        return len([conn for conn in self.slots if conn.connected or conn.connecting])
+
+
     @asyncio.coroutine
     def close(self):
         logged = False
@@ -418,13 +422,16 @@ class BinaryStorageManager(object):
     @asyncio.coroutine
     def acquire_connection(self):
         'return an available connection or block until one is free'
+        for conn in self.slots:
+            if conn.connected and conn.available.is_set():
+                logger.debug('Found an available connection!')
+                conn.available.clear()
+                return conn
         # trigger at most one connection
         for conn in self.slots:
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
                 yield from conn.connect()
-                break
-            if conn.connected and conn.available.is_set():
                 break
 
         #logger.debug("Wait for empty slot in: %s", self.slots)
@@ -477,11 +484,11 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def open(self):
-        with (yield from self.manager.acquire_connection()) as conn:
-            self.invalid_auth = False
-            self.connected = True
-            version = yield from conn.version()
-            logger.info('Logged in to server (version %s)', version)
+        if self.manager.get_active_connection_count() == 0:
+            with (yield from self.manager.acquire_connection()) as conn:
+                self.invalid_auth = False
+                version = yield from conn.version()
+                logger.info('Logged in to server (version %s)', version)
 
     @asyncio.coroutine
     def vault_size(self, vault):

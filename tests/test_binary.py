@@ -31,9 +31,22 @@ class BinaryServerTests(VaultTestCase, CommonTestsMixin):
         self.assertNotEqual(prev_rev, post_rev)
         self.assertTrue(not post_rev is None)
 
+    def test_take_only_one_connection(self):
+        vault = self.vault
+
+        app = SyncryptApp(AppConfig())
+        app.add_vault(vault)
+        yield from app.retrieve_metadata(vault)
+        yield from app.get_remote_size_for_vault(vault)
+        yield from app.retrieve_metadata(vault)
+        yield from app.get_remote_size_for_vault(vault)
+        yield from app.get_remote_size_for_vault(vault)
+
+        self.assertEqual(vault.backend.manager.get_active_connection_count(), 1)
+
 
 if __name__ == '__main__':
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.DEBUG)
+    from syncrypt.utils.logging import setup_logging
+    setup_logging(logging.DEBUG)
     unittest.main()
 
