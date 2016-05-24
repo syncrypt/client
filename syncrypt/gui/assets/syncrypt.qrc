@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="syncrypt">
-    <file>icon_sync_64px.png</file>
-    <file>vault.png</file>
-  </qresource>
-</RCC>

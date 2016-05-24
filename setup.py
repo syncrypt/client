@@ -40,9 +40,8 @@ class DistCommand(Command):
         assert os.getcwd() == self.cwd, 'Must be in package root: %s' % self.cwd
         os.system('rm -rf ./dist/syncrypt*.zip')
         os.system('rm -rf ./dist/syncrypt')
-        os.system('rm -rf ./dist/syncrypt_gui')
         os.system('PYTHONPATH=lib/python3.5/site-packages/ pyinstaller syncrypt.spec')
-        os.system('cp ./dist/syncrypt_gui/* ./dist/syncrypt')
+        #os.system('cp ./dist/syncrypt_gui/* ./dist/syncrypt')
         zipname = '{name}-{version}.{platform}-{machine}.zip'.format(
                 name=__name__,
                 version=__version__,
@@ -94,7 +93,6 @@ setup(
     scripts=[
         'scripts/syncrypt',
         'scripts/syncrypt_daemon',
-        'scripts/syncrypt_gui',
     ],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
@@ -112,8 +110,6 @@ setup(
         'umsgpack',
         'colorlog',
         'hachiko',
-        # PyQt is not available on PyPI
-        #'pyqt5',
         'python-snappy',
         'erlastic',
     ],
