@@ -6,11 +6,9 @@ from io import StringIO
 
 import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
-from syncrypt import Vault
 from syncrypt.backends.base import StorageBackendInvalidAuth
-from syncrypt.bundle import VirtualBundle
 from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.identity import Identity
+from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import Once
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore

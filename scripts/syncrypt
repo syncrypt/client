@@ -6,11 +6,11 @@ import os.path
 import sys
 
 import asyncio
-from syncrypt import Vault
 from syncrypt.app import SyncryptApp
-from syncrypt.config import AppConfig
-from syncrypt.utils.logging import setup_logging
 from syncrypt.app.cli import CLIAuthenticationProvider
+from syncrypt.config import AppConfig
+from syncrypt.models import Vault
+from syncrypt.utils.logging import setup_logging
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 

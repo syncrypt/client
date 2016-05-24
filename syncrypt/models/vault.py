@@ -7,15 +7,15 @@ from fnmatch import fnmatch
 from glob import glob
 
 import asyncio
+from syncrypt.config import VaultConfig
+from syncrypt.exceptions import SecurityError, VaultNotInitialized
+from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
 from syncrypt.utils.semaphores import JoinableSetSemaphore
 
+from .base import MetadataHolder
 from .bundle import Bundle
-from .config import VaultConfig
-from .exceptions import SecurityError, VaultNotInitialized
 from .identity import Identity
-from .mixins import MetadataHolder
-from .pipes import Once
 
 logger = logging.getLogger(__name__)
 

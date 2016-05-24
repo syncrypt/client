@@ -10,11 +10,10 @@ import aiohttp
 import asyncio
 import asynctest
 import hypothesis.strategies as st
-
-from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.config import AppConfig
+from syncrypt.models import Vault
 from tests.base import VaultTestCase
 
 

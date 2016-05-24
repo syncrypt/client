@@ -5,7 +5,7 @@ import unittest
 
 import asyncio
 import asynctest
-from syncrypt import Bundle, Vault
+from syncrypt.models import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.pipes import (Buffered, DecryptRSA, DecryptRSA_PKCS1_OAEP,

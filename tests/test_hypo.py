@@ -9,7 +9,7 @@ from glob import glob
 import asyncio
 import asynctest
 from hypothesis import example, given, settings
-from syncrypt import Bundle, Vault
+from syncrypt.models import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.config import AppConfig

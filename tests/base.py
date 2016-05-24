@@ -1,13 +1,14 @@
-import unittest
+import os
 import os.path
 import shutil
-import os
+import unittest
 
 import asyncio
 import asynctest
-from syncrypt import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
+from syncrypt.models import Vault
+
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
@@ -23,5 +24,4 @@ class VaultTestCase(asynctest.TestCase):
                 shutil.rmtree(vault_folder)
             shutil.copytree(self.folder, vault_folder)
             self.vault = Vault(vault_folder)
-
 

@@ -9,5 +9,3 @@ except DistributionNotFound:
     VERSION = __project__ + '-' + '(local)'
 else:
     VERSION = __project__ + '-' + __version__
-    from .vault import Vault
-    from .bundle import Bundle

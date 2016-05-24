@@ -2,7 +2,7 @@ import os
 import os.path
 
 import asynctest
-from syncrypt.identity import Identity
+from syncrypt.models import Identity
 from syncrypt.config import Config
 from .base import VaultTestCase
 

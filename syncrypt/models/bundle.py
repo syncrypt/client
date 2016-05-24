@@ -6,10 +6,10 @@ import aiofiles
 import asyncio
 import umsgpack
 
-from .pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
+from syncrypt.pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
                     EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
                     PadAES, UnpadAES, SnappyCompress, SnappyDecompress, Count)
-from .mixins import MetadataHolder
+from .base import MetadataHolder
 
 logger = logging.getLogger(__name__)
 
