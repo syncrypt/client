@@ -21,14 +21,13 @@ class Bundle(MetadataHolder):
 
     __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
             'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
-            'update_handle', 'key', 'bytes_written')
+            'key', 'bytes_written')
 
     def __init__(self, abspath, vault, store_hash=None):
         self.vault = vault
         self.path = abspath
         self.uptodate = False
         self.remote_crypt_hash = None
-        self.update_handle = None
         self.key = None
         self.bytes_written = 0
 
@@ -187,22 +186,6 @@ class Bundle(MetadataHolder):
 
         self.encrypt_semaphore.release()
         yield from self.vault.semaphores['update'].release(self)
-
-    def update_and_upload(self):
-        backend = self.vault.backend
-        def _update(bundle):
-            logger.debug('Scheduled update is executing for %s', bundle)
-            yield from bundle.update()
-            yield from backend.stat(bundle)
-            if bundle.remote_hash_differs:
-                yield from backend.upload(bundle)
-        asyncio.ensure_future(_update(self))
-
-    def schedule_update(self):
-        if self.update_handle:
-            self.update_handle.cancel()
-        loop = asyncio.get_event_loop()
-        self.update_handle = loop.call_later(1.0, self.update_and_upload)
 
     def __str__(self):
         return "<Bundle: {0.relpath}>".format(self)

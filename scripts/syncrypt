@@ -97,7 +97,8 @@ class Watch(MultipleVaultCmd):
     description = 'watch directory for changes'
 
     def run(self):
-        self.loop.run_until_complete(self.app.watch())
+        self.loop.run_until_complete(self.app.start())
+        self.loop.run_forever()
 
 class Init(SingleVaultCmd):
     command = 'init'

@@ -30,9 +30,9 @@ class VaultEventHandler(AIOEventHandler):
         bundle = self.vault.bundle_for(os.path.relpath(path, self.vault.folder))
         if not bundle is None:
             logger.info('File creation detected (%s)', bundle)
-            bundle.schedule_update()
+            self.app.schedule_update(bundle)
         else:
-            logger.debug('Ignoring file creation: %s', event.src_path)
+            logger.debug('Ignoring file creation: %s', path)
 
     @asyncio.coroutine
     def on_file_removed(self, path):
@@ -40,7 +40,7 @@ class VaultEventHandler(AIOEventHandler):
         if not bundle is None:
             logger.info('File delete detected (%s)', bundle)
         else:
-            logger.debug('Ignoring file delete: %s', event.src_path)
+            logger.debug('Ignoring file delete: %s', path)
 
     @asyncio.coroutine
     def on_deleted(self, event):
@@ -69,6 +69,10 @@ class SyncryptApp(object):
     def __init__(self, config, auth_provider=None):
         self.auth_provider = auth_provider
         self.vaults = []
+
+        # map from Bundle -> Future
+        self.update_handles = {}
+
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
@@ -108,6 +112,22 @@ class SyncryptApp(object):
         # TODO: close open connections etc
         self.config.remove_vault_dir(os.path.abspath(vault.folder))
         self.vaults.remove(vault)
+
+    def update_and_upload(self, bundle):
+        del self.update_handles[bundle]
+        def _update(bundle):
+            logger.debug('Scheduled update is executing for %s', bundle)
+            yield from bundle.update()
+            yield from bundle.vault.backend.stat(bundle)
+            if bundle.remote_hash_differs:
+                yield from bundle.vault.backend.upload(bundle)
+        asyncio.ensure_future(_update(bundle))
+
+    def schedule_update(self, bundle):
+        if bundle in self.update_handles:
+            self.update_handles[bundle].cancel()
+        loop = asyncio.get_event_loop()
+        self.update_handles[bundle] = loop.call_later(1.0, self.update_and_upload, bundle)
 
     @asyncio.coroutine
     def init(self, vault=None):
