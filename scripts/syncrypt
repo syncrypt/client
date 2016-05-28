@@ -21,7 +21,7 @@ class SyncryptCmd():
     def configure_parser(self, parser):
         parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
                 dest='loglevel', choices=LOGLEVELS,
-                help='Log level: ' + ', '.join(LOGLEVELS))
+                help='log level: ' + ', '.join(LOGLEVELS)+ ' (default: INFO)')
 
     def __init__(self):
         self.parser = argparse.ArgumentParser(
@@ -89,7 +89,14 @@ class Push(MultipleVaultCmd):
     command = 'push'
     description = 'push local changes to the server'
 
+    def configure_parser(self, parser):
+        super(Push, self).configure_parser(parser)
+        parser.add_argument('-k', action='store_true', dest='upload_identity',
+                help='upload my public key as well')
+
     def run(self):
+        if self.config.upload_identity:
+            self.loop.run_until_complete(self.app.upload_identity())
         self.loop.run_until_complete(self.app.push())
 
 class Watch(MultipleVaultCmd):

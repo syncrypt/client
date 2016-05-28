@@ -16,10 +16,18 @@ from .base import StorageBackend, StorageBackendInvalidAuth
 
 logger = logging.getLogger(__name__)
 
-class UnsuccessfulResponse(Exception):
+BINARY_DEBUG = False
+
+class BinaryStorageException(Exception):
     pass
 
-class ConnectionResetException(Exception):
+class UnsuccessfulResponse(BinaryStorageException):
+    pass
+
+class ConnectionResetException(BinaryStorageException):
+    pass
+
+class UnexpectedResponseException(BinaryStorageException):
     pass
 
 def rewrite_atoms_dict(bert_dict):
@@ -67,6 +75,8 @@ class BinaryStorageConnection(object):
                 raise ConnectionResetException()
             packet += buf
         decoded = bert.decode(packet)
+        if BINARY_DEBUG:
+            logger.debug('[READ] Unserialized: %s', decoded)
         if assert_ok and decoded[0] != Atom('ok'):
             raise UnsuccessfulResponse(decoded)
         return decoded
@@ -79,10 +89,13 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def write_term(self, *term):
         '''write a BERT tuple'''
+        if BINARY_DEBUG:
+            logger.debug('[WRITE] Unserialized: %s', term)
         packet = bert.encode((Atom(term[0]),) + term[1:])
         packet_length = len(packet)
         assert packet_length > 0
-        #logger.debug('About to write: %s', packet)
+        if BINARY_DEBUG:
+            logger.debug('[WRITE] Serialized: %s', packet)
         self.writer.write(struct.pack('!I', packet_length))
         self.writer.write(packet)
         yield from self.writer.drain()
@@ -395,6 +408,20 @@ class BinaryStorageConnection(object):
         return size
 
     @asyncio.coroutine
+    def upload_identity(self, identity):
+        logger.debug('Uploading my public key to server')
+
+        # upload public key and fingerprint
+        yield from self.write_term('add_user_key',
+                identity.export_public_key(),
+                identity.get_fingerprint())
+
+        response = yield from self.read_term()
+
+        if response[0] == Atom('user_key_added'):
+            raise UnexpectedResponseException()
+
+    @asyncio.coroutine
     def version(self):
         return self.server_version
 
@@ -531,6 +558,11 @@ class BinaryStorageBackend(StorageBackend):
     def set_vault_metadata(self):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.set_vault_metadata()
+
+    @asyncio.coroutine
+    def upload_identity(self):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.upload_identity(self.vault.identity)
 
     @asyncio.coroutine
     def upload(self, bundle):
