@@ -335,6 +335,7 @@ class SyncryptApp(object):
                 store_hash, metadata, server_info = item
                 bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
                 yield from self.pull_bundle(bundle)
+                vault.update_revision(server_info['rid'])
         yield from self.wait()
 
     @asyncio.coroutine

@@ -49,14 +49,6 @@ class BinaryStorageConnection(object):
     def __repr__(self):
         return "<Slot %d %d %d>" % (self.connecting, self.connected, self.available.is_set())
 
-    def _update_revision(self, revision_id):
-        if isinstance(revision_id, bytes):
-            revision_id = revision_id.decode(self.storage.vault.config.encoding)
-        logger.debug('Remote vault revision is "%s"', revision_id)
-        # if all went well, store revision_id in vault
-        self.storage.vault.config.update('vault', {'revision': revision_id})
-        self.storage.vault.write_config()
-
     @asyncio.coroutine
     def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
@@ -266,7 +258,7 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response)
 
         # if all went well, store revision_id in vault
-        self._update_revision(server_info['rid'])
+        self.storage.vault.update_revision(server_info['rid'])
 
 
     @asyncio.coroutine
@@ -315,8 +307,19 @@ class BinaryStorageConnection(object):
 
         # response is either list or stream
         if len(response) > 0 and response[0] == Atom('stream_response'):
-            # TBD
-            pass
+            (_, file_count) = response
+            assert isinstance(file_count, int)
+            for n in range(file_count):
+                server_info = yield from self.read_term(assert_ok=False)
+                store_hash = server_info['file_hash'].decode()
+                metadata = server_info['metadata']
+                if metadata == Atom('nil'):
+                    logger.warn('Skipping file %s (no metadata!)', store_hash)
+                    continue
+                logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
+                        len(metadata))
+                yield from queue.put((store_hash, metadata, server_info))
+            yield from queue.put(None)
         else:
             for server_info in response:
                 store_hash = server_info['file_hash'].decode()
@@ -327,7 +330,6 @@ class BinaryStorageConnection(object):
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
                         len(metadata))
                 yield from queue.put((store_hash, metadata, server_info))
-                self._update_revision(server_info['rid'])
             yield from queue.put(None)
 
     @asyncio.coroutine
@@ -357,7 +359,7 @@ class BinaryStorageConnection(object):
                 yield from queue.put((store_hash, metadata, server_info))
             yield from queue.put(None)
             if revision_id and revision_id != Atom('no_revision'):
-                self._update_revision(revision_id)
+                self.storage.vault.update_revision(revision_id)
 
     @asyncio.coroutine
     def download(self, bundle):

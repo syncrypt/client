@@ -183,6 +183,12 @@ class Vault(MetadataHolder):
 
         return self._bundle_cache[relpath]
 
+    def update_revision(self, revision_id):
+        if isinstance(revision_id, bytes):
+            revision_id = revision_id.decode(self.config.encoding)
+        logger.debug('Update vault revision to "%s"', revision_id)
+        self.config.update('vault', {'revision': revision_id})
+        self.write_config()
 
     def package_info(self):
         '''
