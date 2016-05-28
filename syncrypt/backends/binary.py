@@ -415,7 +415,15 @@ class BinaryStorageConnection(object):
             yield from self.write_term('list_user_keys')
 
         keys = yield from self.read_response()
-        return keys
+
+        def transform_key(key):
+            key = rewrite_atoms_dict(key)
+            key['fingerprint'] = key['fingerprint'].decode()
+            key['created_at'] = key['created_at'].decode()
+            return key
+
+        return map(transform_key, keys)
+
 
     @asyncio.coroutine
     def upload_identity(self, identity):

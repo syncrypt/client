@@ -228,9 +228,13 @@ class SyncryptApp(object):
         yield from self.pull()
 
     @asyncio.coroutine
-    def list_keys(self, user=None):
+    def list_keys(self, user=None, with_art=False):
         for key in (yield from self.vaults[0].backend.list_keys(user)):
-            print(key)
+            fingerprint = key['fingerprint']
+            created_at = key['created_at']
+            if with_art:
+                print(draw_art(None, '1', fingerprint))
+            print("{0:24}\t{1}".format(format_fingerprint(fingerprint), created_at))
 
     @asyncio.coroutine
     def info(self):
