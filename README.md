@@ -1,12 +1,29 @@
-# Syncrypt platform independent desktop client
+# Syncrypt client
 
-## Syncrypt CLI
+Syncrypt is a fully encrypted file storage service for groups and private
+backups. This is the client that you can use to store and retrieve files.
+The client will also do all encryption.
 
-The ``syncrypt`` executable is the command line client for Syncrypt.
+## Installation
 
-### Let's get started
+Option 1: Download one of the distribution packages:
 
-Initialize the current directory as a vault:
+* OS X (*TBD*)
+* Linux (*TBD*)
+* Windows (*TBD*)
+
+Option 2: Install from PyPI (*TBD*)
+
+    pip install syncrypt-client
+
+Option 3: Install from source:
+
+    pip install git+https://github.com/syncrypt/client
+
+## Let's get started
+
+The ``syncrypt`` executable is the command line client for Syncrypt. Initialize
+the current directory as a vault:
 
     syncrypt init
 
@@ -68,18 +85,6 @@ For each command listed above, alternate directories can be specified with
 
 Debug logging can be activated via ``-l DEBUG``.
 
-## Installation
-
-Currently requires Python 3.
-
-Install globally:
-
-    pip install .
-
-Setup in virtualenv for development:
-
-    virtualenv .
-    bin/pip install -e .
 
 ## Syncrypt Daemon
 
@@ -111,10 +116,10 @@ Run tests:
 
 ## Develop
 
-In order to rebuild the UI files, you can use the ``build_ui`` command:
+Setup in virtualenv for development:
 
+    virtualenv .
     bin/pip install -e '.[dev]'
-    bin/python setup.py build_ui
 
 ## Deploy
 
