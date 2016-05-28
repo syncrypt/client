@@ -228,8 +228,8 @@ class SyncryptApp(object):
         yield from self.pull()
 
     @asyncio.coroutine
-    def list_keys(self):
-        for key in (yield from self.vaults[0].backend.list_keys()):
+    def list_keys(self, user=None):
+        for key in (yield from self.vaults[0].backend.list_keys(user)):
             print(key)
 
     @asyncio.coroutine

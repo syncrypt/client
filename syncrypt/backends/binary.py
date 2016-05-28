@@ -408,8 +408,11 @@ class BinaryStorageConnection(object):
         return size
 
     @asyncio.coroutine
-    def list_keys(self):
-        yield from self.write_term('list_user_keys')
+    def list_keys(self, user=None):
+        if user:
+            yield from self.write_term('list_user_keys', user)
+        else:
+            yield from self.write_term('list_user_keys')
 
         keys = yield from self.read_response()
         return keys
@@ -532,9 +535,9 @@ class BinaryStorageBackend(StorageBackend):
             return size
 
     @asyncio.coroutine
-    def list_keys(self):
+    def list_keys(self, user=None):
         with (yield from self.manager.acquire_connection()) as conn:
-            return (yield from conn.list_keys())
+            return (yield from conn.list_keys(user))
 
     @asyncio.coroutine
     def stat(self, bundle):
