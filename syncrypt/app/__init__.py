@@ -1,6 +1,7 @@
 import logging
 import os.path
 import sys
+import iso8601
 from io import StringIO
 
 import asyncio
@@ -295,9 +296,12 @@ class SyncryptApp(object):
                 store_hash, metadata, server_info = item
                 bundle = VirtualBundle(None, vault, store_hash=store_hash)
                 yield from bundle.write_encrypted_metadata(Once(metadata))
-                created_at = server_info['created_at'].decode(vault.config.encoding)
+                rev_id = server_info['id'].decode(vault.config.encoding)
+                created_at = iso8601.parse_date(
+                    server_info['created_at'].decode(vault.config.encoding)
+                )
                 operation = server_info['operation'].decode(vault.config.encoding)
-                print("%-27s %-9s %s" % (created_at, operation, bundle.relpath))
+                print("%-40s %-29s %-9s %s" % (rev_id, created_at, operation, bundle.relpath))
         yield from self.wait()
 
     @asyncio.coroutine
@@ -335,7 +339,9 @@ class SyncryptApp(object):
                 store_hash, metadata, server_info = item
                 bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
                 yield from self.pull_bundle(bundle)
-                vault.update_revision(server_info['rid'])
+                rev_id = server_info.get('id')
+                if rev_id:
+                    vault.update_revision(rev_id)
         yield from self.wait()
 
     @asyncio.coroutine
@@ -379,4 +385,3 @@ class SyncryptApp(object):
             yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
             yield from bundle.vault.semaphores['download'].release(bundle)
-
