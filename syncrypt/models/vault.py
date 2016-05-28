@@ -85,7 +85,7 @@ class Vault(MetadataHolder):
         return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
-        return '<Vault: {0} [{1}]>'.format(self.folder, self.state)
+        return '<Vault: {0}>'.format(self.folder)
 
     @property
     def crypt_path(self):
