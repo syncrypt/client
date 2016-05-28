@@ -1,7 +1,6 @@
 import logging
 import os.path
 import sys
-import zipfile
 from io import StringIO
 
 import asyncio
@@ -9,7 +8,7 @@ from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
-from syncrypt.pipes import Once
+from syncrypt.pipes import Once, FileWriter
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
@@ -276,29 +275,8 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def export(self, filename):
         vault = self.vaults[0]
-        zipf = zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED)
-
-        # include config but strip auth information
-        vault.config.unset('remote.auth')
-        vault.config.unset('remote.username')
-        vault.config.unset('remote.password')
-
-        # also strip revision as 
-        vault.config.unset('vault.revision')
-
-        temp_config = StringIO()
-        vault.config._config.write(temp_config)
-        temp_config.seek(0)
-        zipf.writestr('.vault/config', temp_config.read().encode(vault.config.encoding))
-
-        # include private and public key
-        def include(f):
-            zipf.write(f, arcname=os.path.relpath(f, vault.folder))
-        include(vault.identity.id_rsa_path)
-        include(vault.identity.id_rsa_pub_path)
-
-        zipf.close()
-
+        export_pipe = vault.package_info() >> FileWriter(filename)
+        yield from export_pipe.consume()
         logger.info("Vault export has been written to: %s" % filename)
 
     @asyncio.coroutine

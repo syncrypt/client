@@ -3,8 +3,10 @@ import logging
 import os
 import os.path
 import sys
+import zipfile
 from fnmatch import fnmatch
 from glob import glob
+from io import BytesIO, StringIO
 
 import asyncio
 from syncrypt.config import VaultConfig
@@ -180,4 +182,37 @@ class Vault(MetadataHolder):
                     Bundle(os.path.join(self.folder, relpath), vault=self)
 
         return self._bundle_cache[relpath]
+
+
+    def package_info(self):
+        '''
+        return a pipe that will contain vault info such as id, private and
+        public key
+        '''
+        memview = BytesIO()
+        zipf = zipfile.ZipFile(memview, 'w', zipfile.ZIP_DEFLATED)
+
+        # include config but strip auth information
+        self.config.unset('remote.auth')
+        self.config.unset('remote.username')
+        self.config.unset('remote.password')
+
+        # also strip revision as 
+        self.config.unset('vault.revision')
+
+        temp_config = StringIO()
+        self.config._config.write(temp_config)
+        temp_config.seek(0)
+        zipf.writestr('.vault/config', temp_config.read().encode(self.config.encoding))
+
+        # include private and public key
+        def include(f):
+            zipf.write(f, arcname=os.path.relpath(f, self.folder))
+        include(self.identity.id_rsa_path)
+        include(self.identity.id_rsa_pub_path)
+
+        zipf.close()
+
+        memview.seek(0)
+        return Once(memview.read())
 
