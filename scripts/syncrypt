@@ -93,9 +93,13 @@ class Keys(SingleVaultCmd):
         super(Keys, self).configure_parser(parser)
         parser.add_argument('-u', action='store', dest='user',
                 help='user email to list keys for')
+        parser.add_argument('--art', action='store_true', dest='art',
+                help='show ascii art for each key')
 
     def run(self):
-        self.loop.run_until_complete(self.app.list_keys(self.config.user))
+        self.loop.run_until_complete(
+                self.app.list_keys(self.config.user, with_art=self.config.art)
+            )
 
 class Push(MultipleVaultCmd):
     command = 'push'
