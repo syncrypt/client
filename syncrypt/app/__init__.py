@@ -229,6 +229,11 @@ class SyncryptApp(object):
         yield from self.pull()
 
     @asyncio.coroutine
+    def list_keys(self):
+        for key in (yield from self.vaults[0].backend.list_keys()):
+            print(key)
+
+    @asyncio.coroutine
     def info(self):
         for (index, vault) in enumerate(self.vaults):
             yield from self.retrieve_metadata(vault)

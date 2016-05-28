@@ -85,6 +85,13 @@ class Pull(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.pull())
 
+class Keys(SingleVaultCmd):
+    command = 'keys'
+    description = 'list keys'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.list_keys())
+
 class Push(MultipleVaultCmd):
     command = 'push'
     description = 'push local changes to the server'
@@ -166,7 +173,7 @@ class Export(SingleVaultCmd):
 
 
 COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), Log(), ConfigSet(),
-        ConfigUnset(), Export()]
+        ConfigUnset(), Export(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

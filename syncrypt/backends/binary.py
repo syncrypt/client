@@ -408,6 +408,13 @@ class BinaryStorageConnection(object):
         return size
 
     @asyncio.coroutine
+    def list_keys(self):
+        yield from self.write_term('list_user_keys')
+
+        keys = yield from self.read_response()
+        return keys
+
+    @asyncio.coroutine
     def upload_identity(self, identity):
         logger.debug('Uploading my public key to server')
 
@@ -523,6 +530,11 @@ class BinaryStorageBackend(StorageBackend):
             size = yield from conn.vault_size(vault)
             logger.debug('Vault size is: %s', format_size(size))
             return size
+
+    @asyncio.coroutine
+    def list_keys(self):
+        with (yield from self.manager.acquire_connection()) as conn:
+            return (yield from conn.list_keys())
 
     @asyncio.coroutine
     def stat(self, bundle):
