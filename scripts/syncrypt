@@ -93,7 +93,7 @@ class Keys(SingleVaultCmd):
         super(Keys, self).configure_parser(parser)
         parser.add_argument('-u', '--user', action='store', dest='user',
                 help='user email to list keys for')
-        parser.add_argument('--upload', action='store', dest='upload',
+        parser.add_argument('--upload', action='store_true',
                 help='upload your public keys to the server')
         parser.add_argument('--art', action='store_true', dest='art',
                 help='show ascii art for each key')
