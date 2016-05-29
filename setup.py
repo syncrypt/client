@@ -112,6 +112,7 @@ setup(
         'hachiko',
         'python-snappy',
         'erlastic',
+        'iso8601'
     ],
 
     # List additional groups of dependencies here (e.g. development
