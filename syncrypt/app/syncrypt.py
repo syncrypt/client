@@ -7,7 +7,7 @@ import asyncio
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
-from syncrypt.pipes import Once, FileWriter
+from syncrypt.pipes import Once, FileWriter, StdoutWriter
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
@@ -236,9 +236,14 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def export(self, filename):
         vault = self.vaults[0]
-        export_pipe = vault.package_info() >> FileWriter(filename)
+        export_pipe = vault.package_info()
+        if filename is None:
+            export_pipe = export_pipe >> StdoutWriter()
+        else:
+            export_pipe = export_pipe >> FileWriter(filename)
         yield from export_pipe.consume()
-        logger.info("Vault export has been written to: %s" % filename)
+        if filename:
+            logger.info("Vault export has been written to: %s" % filename)
 
     @asyncio.coroutine
     def print_log(self):

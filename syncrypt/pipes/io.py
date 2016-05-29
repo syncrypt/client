@@ -1,4 +1,5 @@
 import logging
+import sys
 import os.path
 import shutil
 
@@ -37,6 +38,17 @@ class FileReader(Source):
     def close(self):
         if self.handle:
             yield from self.handle.close()
+
+class StdoutWriter(Sink):
+    def __init__(self):
+        self.handle = sys.stdout
+        super(StdoutWriter, self).__init__()
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        contents = yield from self.input.read(count)
+        self.handle.buffer.write(contents)
+        return contents
 
 class FileWriter(Sink):
     # simple wrapper for aiofiles

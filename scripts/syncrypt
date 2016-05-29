@@ -176,7 +176,7 @@ class Export(SingleVaultCmd):
 
     def configure_parser(self, parser):
         super(Export, self).configure_parser(parser)
-        parser.add_argument('filename', help='export filename')
+        parser.add_argument('-o', '--output', dest='filename', help='export filename')
 
     def run(self):
         self.loop.run_until_complete(self.app.export(self.config.filename))

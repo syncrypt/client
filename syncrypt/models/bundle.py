@@ -52,6 +52,10 @@ class Bundle(MetadataHolder):
         return self.vault.config.aes_key_len >> 3
 
     @property
+    def identity(self):
+        return self.vault.identity
+
+    @property
     def remote_hash_differs(self):
         return self.remote_crypt_hash is None or \
                 self.remote_crypt_hash != self.crypt_hash
@@ -88,10 +92,6 @@ class Bundle(MetadataHolder):
                 >> Buffered(self.vault.config.enc_buf_size) \
                 >> PadAES() \
                 >> EncryptAES(self.key)
-
-    @property
-    def identity(self):
-        return self.vault.identity
 
     @asyncio.coroutine
     def write_encrypted_stream(self, stream, assert_hash=None):
