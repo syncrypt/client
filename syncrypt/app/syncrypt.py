@@ -2,6 +2,7 @@ import logging
 import os.path
 import sys
 from io import StringIO
+import iso8601
 
 import asyncio
 from syncrypt.backends.base import StorageBackendInvalidAuth
@@ -257,9 +258,13 @@ class SyncryptApp(object):
                 store_hash, metadata, server_info = item
                 bundle = VirtualBundle(None, vault, store_hash=store_hash)
                 yield from bundle.write_encrypted_metadata(Once(metadata))
-                created_at = server_info['created_at'].decode(vault.config.encoding)
+                rev_id = server_info['id'].decode(vault.config.encoding)
+                created_at = iso8601.parse_date(
+                    server_info['created_at'].decode(vault.config.encoding)
+                )
                 operation = server_info['operation'].decode(vault.config.encoding)
-                print("%-27s %-9s %s" % (created_at, operation, bundle.relpath))
+                print("%-40s %-29s %-9s %s" % (rev_id, created_at, operation, bundle.relpath))
+
         yield from self.wait()
 
     @asyncio.coroutine
@@ -297,8 +302,8 @@ class SyncryptApp(object):
                 store_hash, metadata, server_info = item
                 bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
                 yield from self.pull_bundle(bundle)
-                if 'rid' in server_info:
-                    vault.update_revision(server_info['rid'])
+                if 'id' in server_info:
+                    vault.update_revision(server_info['id'])
         yield from self.wait()
 
     @asyncio.coroutine

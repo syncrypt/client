@@ -258,7 +258,7 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response)
 
         # if all went well, store revision_id in vault
-        self.storage.vault.update_revision(server_info['rid'])
+        self.storage.vault.update_revision(server_info['id'])
 
 
     @asyncio.coroutine
@@ -311,6 +311,7 @@ class BinaryStorageConnection(object):
             assert isinstance(file_count, int)
             for n in range(file_count):
                 server_info = yield from self.read_term(assert_ok=False)
+                server_info = rewrite_atoms_dict(server_info)
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
                 if metadata == Atom('nil'):
