@@ -26,7 +26,7 @@ class SyncryptCmd():
     def __init__(self):
         self.parser = argparse.ArgumentParser(
                 description=self.description,
-                prog='%s %s' % ('syncryt', self.command)
+                prog='%s %s' % ('syncrypt', self.command)
             )
         self.configure_parser(self.parser)
         self.config = None
