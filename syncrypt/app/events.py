@@ -1,5 +1,10 @@
+import logging
+import os
+
 import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
+
+logger = logging.getLogger(__name__)
 
 def create_watchdog(app, vault):
     return AIOWatchdog(vault.folder, event_handler=VaultEventHandler(app, vault))
