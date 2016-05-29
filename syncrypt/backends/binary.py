@@ -363,6 +363,12 @@ class BinaryStorageConnection(object):
                 self.storage.vault.update_revision(revision_id)
 
     @asyncio.coroutine
+    def add_user_vault_key(self, email, fingerprint, content):
+        # download key and file
+        yield from self.write_term('add_user_vault_key', email, fingerprint, content)
+        yield from self.read_term()
+
+    @asyncio.coroutine
     def download(self, bundle):
 
         logger.info('Downloading %s', bundle)
@@ -427,7 +433,6 @@ class BinaryStorageConnection(object):
 
         return map(transform_key, keys)
 
-
     @asyncio.coroutine
     def upload_identity(self, identity):
         logger.debug('Uploading my public key to server')
@@ -441,6 +446,11 @@ class BinaryStorageConnection(object):
 
         if response[0] == Atom('user_key_added'):
             raise UnexpectedResponseException()
+
+    @asyncio.coroutine
+    def add_vault_user(self, email):
+        yield from self.write_term('add_vault_user', email)
+        yield from self.read_term()
 
     @asyncio.coroutine
     def version(self):
@@ -602,6 +612,18 @@ class BinaryStorageBackend(StorageBackend):
                 yield from conn.download(bundle)
             except UnsuccessfulResponse:
                 logger.error('Could not download bundle: %s', str(bundle))
+
+    def __getattr__(self, name):
+        @asyncio.coroutine
+        def myco(*args, **kwargs):
+            with (yield from self.manager.acquire_connection()) as conn:
+                yield from getattr(conn, name)(*args, **kwargs)
+        return myco
+
+    @asyncio.coroutine
+    def add_vault_user(self, email):
+        with (yield from self.manager.acquire_connection()) as conn:
+            yield from conn.add_vault_user(email)
 
     @asyncio.coroutine
     def close(self):

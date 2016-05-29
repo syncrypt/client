@@ -2,13 +2,14 @@ import logging
 import os.path
 import sys
 from io import StringIO
-import iso8601
 
 import asyncio
+import iso8601
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
-from syncrypt.pipes import Once, FileWriter, StdoutWriter
+from syncrypt.pipes import (EncryptRSA_PKCS1_OAEP, FileWriter, Once,
+                            SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
@@ -251,15 +252,27 @@ class SyncryptApp(object):
         vault = self.vaults[0]
         yield from vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
+        try:
+            yield from vault.backend.add_vault_user(email)
+        except Exception as e:
+            # TODO remove this try/catch when server is fixed
+            print(e)
         for key in (yield from vault.backend.list_keys(email)):
-            logger.info('Uploading vault package for key %s', key)
-            #identity = Identity.from_key(key['key'])
-            #export_pipe = vault.package_info()
-            #if filename is None:
-            #    export_pipe = export_pipe >> StdoutWriter()
-            #else:
-            #    export_pipe = export_pipe >> FileWriter(filename)
-            #yield from export_pipe.consume()
+            # retrieve key and verify fingerprint
+            fingerprint = key['fingerprint']
+            identity = Identity.from_public_key(key['public_key'], vault.config)
+            assert identity.get_fingerprint() == fingerprint
+
+            # construct and encrypt package
+            export_pipe = vault.package_info() \
+                >> EncryptRSA_PKCS1_OAEP(identity.public_key)
+            content = yield from export_pipe.readall()
+
+            logger.info('Uploading vault package for %s/%s', email,
+                    format_fingerprint(fingerprint))
+            logger.debug('Package length is: %d', len(content))
+
+            yield from vault.backend.add_user_vault_key(email, fingerprint, content)
 
     @asyncio.coroutine
     def print_log(self):
@@ -362,4 +375,3 @@ class SyncryptApp(object):
             yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
             yield from bundle.vault.semaphores['download'].release(bundle)
-
