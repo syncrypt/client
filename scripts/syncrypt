@@ -85,6 +85,17 @@ class Pull(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.pull())
 
+class AddUser(SingleVaultCmd):
+    command = 'add-user'
+    description = 'add another user to this vault'
+
+    def configure_parser(self, parser):
+        super(AddUser, self).configure_parser(parser)
+        parser.add_argument('email', help='the user\'s email')
+
+    def run(self):
+        self.loop.run_until_complete(self.app.add_user(self.config.email))
+
 class Keys(SingleVaultCmd):
     command = 'keys'
     description = 'list keys'
@@ -182,8 +193,8 @@ class Export(SingleVaultCmd):
         self.loop.run_until_complete(self.app.export(self.config.filename))
 
 
-COMMANDS = [Init(), Pull(), Push(), Watch(), Info(), Log(), ConfigSet(),
-        ConfigUnset(), Export(), Keys()]
+COMMANDS = [Init(), Pull(), Push(), Watch(), AddUser(), Info(), Log(),
+        ConfigSet(), ConfigUnset(), Export(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

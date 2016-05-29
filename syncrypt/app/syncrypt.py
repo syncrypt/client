@@ -247,6 +247,21 @@ class SyncryptApp(object):
             logger.info("Vault export has been written to: %s" % filename)
 
     @asyncio.coroutine
+    def add_user(self, email):
+        vault = self.vaults[0]
+        yield from vault.backend.open()
+        logger.info('Adding user "%s" to %s', email, vault)
+        for key in (yield from vault.backend.list_keys(email)):
+            logger.info('Uploading vault package for key %s', key)
+            #identity = Identity.from_key(key['key'])
+            #export_pipe = vault.package_info()
+            #if filename is None:
+            #    export_pipe = export_pipe >> StdoutWriter()
+            #else:
+            #    export_pipe = export_pipe >> FileWriter(filename)
+            #yield from export_pipe.consume()
+
+    @asyncio.coroutine
     def print_log(self):
         for vault in self.vaults:
             yield from vault.backend.open()

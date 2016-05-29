@@ -16,6 +16,11 @@ class Identity(object):
         self.id_rsa_pub_path = id_rsa_pub_path
         self.config = config
 
+    @classmethod
+    def from_key(cls, key, config):
+        identity = cls(None, None, config)
+        return identity
+
     @property
     def private_key(self):
         try:
