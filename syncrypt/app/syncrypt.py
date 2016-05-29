@@ -109,7 +109,7 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def upload_identity(self):
         for vault in self.vaults:
-            yield from vault.backend.upload_identity()
+            yield from vault.backend.upload_identity(vault.identity)
 
     @asyncio.coroutine
     def open_or_init(self, vault):

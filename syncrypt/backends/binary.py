@@ -556,11 +556,6 @@ class BinaryStorageBackend(StorageBackend):
             return size
 
     @asyncio.coroutine
-    def list_keys(self, user=None):
-        with (yield from self.manager.acquire_connection()) as conn:
-            return (yield from conn.list_keys(user))
-
-    @asyncio.coroutine
     def stat(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
             bundle.remote_crypt_hash = None
@@ -586,21 +581,6 @@ class BinaryStorageBackend(StorageBackend):
             return queue
 
     @asyncio.coroutine
-    def vault_metadata(self):
-        with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.vault_metadata()
-
-    @asyncio.coroutine
-    def set_vault_metadata(self):
-        with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.set_vault_metadata()
-
-    @asyncio.coroutine
-    def upload_identity(self):
-        with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.upload_identity(self.vault.identity)
-
-    @asyncio.coroutine
     def upload(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
             yield from conn.upload(bundle)
@@ -617,13 +597,8 @@ class BinaryStorageBackend(StorageBackend):
         @asyncio.coroutine
         def myco(*args, **kwargs):
             with (yield from self.manager.acquire_connection()) as conn:
-                yield from getattr(conn, name)(*args, **kwargs)
+                return (yield from getattr(conn, name)(*args, **kwargs))
         return myco
-
-    @asyncio.coroutine
-    def add_vault_user(self, email):
-        with (yield from self.manager.acquire_connection()) as conn:
-            yield from conn.add_vault_user(email)
 
     @asyncio.coroutine
     def close(self):
