@@ -162,7 +162,7 @@ class SyncryptApp(object):
         task.add_done_callback(cb)
 
     @asyncio.coroutine
-    def clone(self, clone_target):
+    def clone_local(self, clone_target):
         import shutil
         import os
 
@@ -234,6 +234,15 @@ class SyncryptApp(object):
         for vault in self.vaults:
             vault.config.unset(setting)
             vault.write_config()
+
+    @asyncio.coroutine
+    def clone(self, vault_id, local_directory):
+        os.makedirs(local_directory)
+        yield from self.import_(None, local_directory)
+
+    @asyncio.coroutine
+    def import_(self, package_info, local_directory):
+        raise NotImplementedError
 
     @asyncio.coroutine
     def export(self, filename):

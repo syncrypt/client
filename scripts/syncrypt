@@ -30,6 +30,7 @@ class SyncryptCmd():
             )
         self.configure_parser(self.parser)
         self.config = None
+        self.app_config = AppConfig()
 
     def parse(self, args):
         self.config = self.parser.parse_args(args)
@@ -37,6 +38,7 @@ class SyncryptCmd():
     def setup(self):
         setup_logging(self.config.loglevel)
         self.loop = asyncio.get_event_loop()
+        self.app = SyncryptApp(self.app_config, auth_provider=CLIAuthenticationProvider())
 
     def shutdown(self):
         self.loop.close()
@@ -53,10 +55,8 @@ class SingleVaultCmd(SyncryptCmd):
                 default='.', dest='directory', help='directory (default: .)')
 
     def setup(self):
+        self.app_config.add_vault_dir(self.config.directory)
         super(SingleVaultCmd, self).setup()
-        app_config = AppConfig()
-        app_config.add_vault_dir(self.config.directory )
-        self.app = SyncryptApp(app_config, auth_provider=CLIAuthenticationProvider())
 
 class MultipleVaultCmd(SyncryptCmd):
     '''command that supports multiple vault directories'''
@@ -67,16 +67,26 @@ class MultipleVaultCmd(SyncryptCmd):
                 action='append', dest='directory', help='directory (default: .)')
 
     def setup(self):
-        super(MultipleVaultCmd, self).setup()
-
         # For now, each command will work on a default AppConfig object. When
         # you want app-level configuration, use ``syncrypt_daemon``.
-        app_config = AppConfig()
         DIRECTORIES = (['.'] if self.config.directory is None else self.config.directory)
         for directory in DIRECTORIES:
-            app_config.add_vault_dir(directory)
+            self.app_config.add_vault_dir(directory)
 
-        self.app = SyncryptApp(app_config, auth_provider=CLIAuthenticationProvider())
+        super(MultipleVaultCmd, self).setup()
+
+class Clone(SyncryptCmd):
+    command = 'clone'
+    description = 'clone a remote vault to a local directory'
+
+    def configure_parser(self, parser):
+        super(Clone, self).configure_parser(parser)
+        parser.add_argument('vault_id', help='vault id')
+        parser.add_argument('directory', help='local directory')
+
+    def run(self):
+        self.loop.run_until_complete(self.app.clone(self.config.vault_id, 
+                self.config.directory))
 
 class Pull(MultipleVaultCmd):
     command = 'pull'
@@ -193,7 +203,7 @@ class Export(SingleVaultCmd):
         self.loop.run_until_complete(self.app.export(self.config.filename))
 
 
-COMMANDS = [Init(), Pull(), Push(), Watch(), AddUser(), Info(), Log(),
+COMMANDS = [Init(), Clone(), Pull(), Push(), Watch(), AddUser(), Info(), Log(),
         ConfigSet(), ConfigUnset(), Export(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
