@@ -364,8 +364,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def add_user_vault_key(self, email, fingerprint, content):
-        # download key and file
-        yield from self.write_term('add_user_vault_key', email, fingerprint, content)
+        yield from self.write_term('add_user_vault_key', fingerprint, content)
         yield from self.read_term()
 
     @asyncio.coroutine
