@@ -91,15 +91,20 @@ class Keys(SingleVaultCmd):
 
     def configure_parser(self, parser):
         super(Keys, self).configure_parser(parser)
-        parser.add_argument('-u', action='store', dest='user',
+        parser.add_argument('-u', '--user', action='store', dest='user',
                 help='user email to list keys for')
+        parser.add_argument('--upload', action='store', dest='upload',
+                help='upload your public keys to the server')
         parser.add_argument('--art', action='store_true', dest='art',
                 help='show ascii art for each key')
 
     def run(self):
-        self.loop.run_until_complete(
-                self.app.list_keys(self.config.user, with_art=self.config.art)
-            )
+        if self.config.upload:
+            self.loop.run_until_complete(self.app.upload_identity())
+        else:
+            self.loop.run_until_complete(
+                    self.app.list_keys(self.config.user, with_art=self.config.art)
+                )
 
 class Push(MultipleVaultCmd):
     command = 'push'
@@ -107,12 +112,8 @@ class Push(MultipleVaultCmd):
 
     def configure_parser(self, parser):
         super(Push, self).configure_parser(parser)
-        parser.add_argument('-k', action='store_true', dest='upload_identity',
-                help='upload my public key as well')
 
     def run(self):
-        if self.config.upload_identity:
-            self.loop.run_until_complete(self.app.upload_identity())
         self.loop.run_until_complete(self.app.push())
 
 class Watch(MultipleVaultCmd):
