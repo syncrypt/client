@@ -49,6 +49,23 @@ of the vault as well, but not to anyone else. To set a new name, use:
     syncrypt set vault.name "My Library"
     syncrypt push
 
+### Securely share your vault
+
+In order to share your vault with another user, use:
+
+    syncrypt add-user mail@example.org
+
+This command will add the user to the vault. To safely transfer the vault's
+private key to the user, the command will also download the user's public
+keys and encrypt the vault information with it. The package will then be
+send to the new user over the Syncrypt server. Note that the server will
+never be able to see the vault's private key.
+
+Make sure that the other user has uploaded at least one public key. The public
+keys get uploaded automatically after a successful ``init`` (see above) or via:
+
+    syncrypt keys --upload
+
 ### Backup your keys
 
 It is important to store your vault's keys at another place other than your
@@ -56,7 +73,7 @@ computer. Otherwise, you won't be able to recover your files in case of a
 disk failure. You can create a ZIP file with all necessary information to
 decrypt a Vault by typing:
 
-    syncrypt export vault-backup.zip
+    syncrypt export -o vault-backup.zip
 
 It is recommened to save this file on an USB stick or a similar not-connected
 storage and keep it at a safe place.
