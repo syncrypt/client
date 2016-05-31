@@ -104,7 +104,7 @@ class SyncryptApp(object):
             username, password = yield from self.auth_provider.get_auth(vault)
             vault.set_auth(username, password)
             yield from vault.backend.init()
-            yield from vault.backend.upload_identity()
+            yield from vault.backend.upload_identity(vault.identity)
 
     @asyncio.coroutine
     def upload_identity(self):
