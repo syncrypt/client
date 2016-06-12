@@ -3,7 +3,7 @@ import asyncio
 class AuthenticationProvider():
 
     @asyncio.coroutine
-    def get_auth(self, vault):
+    def get_auth(self, backend):
         raise NotImplementedError
 
 
@@ -14,5 +14,5 @@ class DummyAuthenticationProvider(AuthenticationProvider):
         self.password = password
 
     @asyncio.coroutine
-    def get_auth(self, vault):
+    def get_auth(self, backend):
         return self.username, self.password

@@ -56,40 +56,20 @@ class Config(object):
     def config_dir(self):
         return os.path.join(os.path.expanduser('~/.config'), 'syncrypt')
 
-class VaultConfig(Config):
-    aes_key_len = 256
-    block_size = 16
-    enc_buf_size = block_size * 10 * 1024
+class BackendMixin():
+    DEFAULT_BACKEND_CFG = {
+        # Protocol to use
+        'type': 'binary',
 
-    # This list contains file patterns that we will always ignore. If an item
-    # was removed from this list, syncrypt will not function as expected.
-    # See below for a list of user-defineable ignore patterns
-    hard_ignore = ['.vault', '*.scbackup', '*.sctemp*']
+        # Syncrypt server host
+        'host': 'prod1.syncrypt.space',
+        'port': 1337,
+        'ssl': True,
 
-    default_config = {
-        'vault': {
-            # File patterns to ignore (comma separated list)
-            'ignore': '.*',
-            'name': ''
-        },
-        'remote': {
-            # Protocol to use
-            'type': 'binary',
-
-            # Syncrypt server host
-            'host': 'prod1.syncrypt.space',
-            'port': 1337,
-            'ssl': True,
-
-            # How many concurent uploads/downloads we want to
-            # support
-            'concurrency': 4
-        }
+        # How many concurent uploads/downloads we want to
+        # support
+        'concurrency': 4
     }
-
-    @property
-    def id(self):
-        return self._config['vault'].get('id', None)
 
     @property
     def backend_cls(self):
@@ -112,11 +92,34 @@ class VaultConfig(Config):
         kwargs.pop('type')
         return kwargs
 
+class VaultConfig(Config, BackendMixin):
+    aes_key_len = 256
+    block_size = 16
+    enc_buf_size = block_size * 10 * 1024
+
+    # This list contains file patterns that we will always ignore. If an item
+    # was removed from this list, syncrypt will not function as expected.
+    # See below for a list of user-defineable ignore patterns
+    hard_ignore = ['.vault', '*.scbackup', '*.sctemp*']
+
+    default_config = {
+        'vault': {
+            # File patterns to ignore (comma separated list)
+            'ignore': '.*',
+            'name': ''
+        },
+        'remote': BackendMixin.DEFAULT_BACKEND_CFG
+    }
+
+    @property
+    def id(self):
+        return self._config['vault'].get('id', None)
+
     @property
     def ignore_patterns(self):
         return self._config['vault']['ignore'].split(',') + self.hard_ignore
 
-class AppConfig(Config):
+class AppConfig(Config, BackendMixin):
     default_config = {
         'app': {
             'concurrency': 8,
@@ -125,7 +128,8 @@ class AppConfig(Config):
         'api': {
             'host': '127.0.0.1',
             'port': '28080'
-        }
+        },
+        'remote': BackendMixin.DEFAULT_BACKEND_CFG
     }
 
     @property

@@ -23,10 +23,10 @@ def readline_from_stdin(password=False):
 class CLIAuthenticationProvider(AuthenticationProvider):
 
     @asyncio.coroutine
-    def get_auth(self, vault):
+    def get_auth(self, backend):
         username = None
         while not username:
-            print('Email for {}: '.format(vault.backend.host), end='', flush=True)
+            print('Email for {}: '.format(backend.host), end='', flush=True)
             username = yield from readline_from_stdin()
         password = getpass()
         return username, password

@@ -82,11 +82,11 @@ class Clone(SyncryptCmd):
     def configure_parser(self, parser):
         super(Clone, self).configure_parser(parser)
         parser.add_argument('vault_id', help='vault id')
-        parser.add_argument('directory', help='local directory')
+        parser.add_argument('directory', nargs='?', help='local directory')
 
     def run(self):
-        self.loop.run_until_complete(self.app.clone(self.config.vault_id, 
-                self.config.directory))
+        self.loop.run_until_complete(self.app.clone(self.config.vault_id,
+                self.config.directory or self.config.vault_id))
 
 class Pull(MultipleVaultCmd):
     command = 'pull'
@@ -105,6 +105,13 @@ class AddUser(SingleVaultCmd):
 
     def run(self):
         self.loop.run_until_complete(self.app.add_user(self.config.email))
+
+class Vaults(SyncryptCmd):
+    command = 'vaults'
+    description = 'list vaults'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.list_vaults())
 
 class Keys(SingleVaultCmd):
     command = 'keys'
@@ -203,8 +210,8 @@ class Export(SingleVaultCmd):
         self.loop.run_until_complete(self.app.export(self.config.filename))
 
 
-COMMANDS = [Init(), Clone(), Pull(), Push(), Watch(), AddUser(), Info(), Log(),
-        ConfigSet(), ConfigUnset(), Export(), Keys()]
+COMMANDS = [Init(), Vaults(), Clone(), Pull(), Push(), Watch(), AddUser(),
+        Info(), Log(), ConfigSet(), ConfigUnset(), Export(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

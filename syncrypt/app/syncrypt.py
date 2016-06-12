@@ -6,6 +6,7 @@ from io import StringIO
 import asyncio
 import iso8601
 from syncrypt.backends.base import StorageBackendInvalidAuth
+from syncrypt.backends.binary import BinaryStorageBackend
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import (EncryptRSA_PKCS1_OAEP, FileWriter, Once,
@@ -101,15 +102,17 @@ class SyncryptApp(object):
                 pass
             logger.info("Initializing %s", vault)
             vault.identity.init()
-            username, password = yield from self.auth_provider.get_auth(vault)
+            username, password = yield from self.auth_provider.get_auth(vault.backend)
             vault.set_auth(username, password)
             yield from vault.backend.init()
-            yield from vault.backend.upload_identity(vault.identity)
+            yield from vault.backend.upload_identity(self.identity)
 
     @asyncio.coroutine
     def upload_identity(self):
-        for vault in self.vaults:
-            yield from vault.backend.upload_identity(vault.identity)
+        backend = yield from self.open_backend()
+        yield from backend.upload_identity(self.identity)
+        logger.info('Uploaded public key with fingerprint "{0}".'.format(
+            format_fingerprint(self.identity.get_fingerprint())))
 
     @asyncio.coroutine
     def open_or_init(self, vault):
@@ -187,6 +190,12 @@ class SyncryptApp(object):
         yield from self.pull()
 
     @asyncio.coroutine
+    def list_vaults(self):
+        backend = yield from self.open_backend()
+        for vault in (yield from backend.list_vaults()):
+            print("{0}".format(vault['id'].decode('utf-8')))
+
+    @asyncio.coroutine
     def list_keys(self, user=None, with_art=False):
         for key in (yield from self.vaults[0].backend.list_keys(user)):
             fingerprint = key['fingerprint']
@@ -236,6 +245,19 @@ class SyncryptApp(object):
             vault.write_config()
 
     @asyncio.coroutine
+    def open_backend(self):
+        cfg = self.config
+        backend = cfg.backend_cls(**cfg.backend_kwargs)
+        while True:
+            try:
+                yield from backend.open()
+            except StorageBackendInvalidAuth:
+                username, password = yield from self.auth_provider.get_auth(backend)
+                backend.username = username
+                backend.password = password
+                continue
+            break
+        return backend
     def clone(self, vault_id, local_directory):
         os.makedirs(local_directory)
         yield from self.import_(None, local_directory)

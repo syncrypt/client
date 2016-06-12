@@ -24,6 +24,9 @@ class BinaryStorageException(Exception):
 class UnsuccessfulResponse(BinaryStorageException):
     pass
 
+class ServerError(UnsuccessfulResponse):
+    pass
+
 class ConnectionResetException(BinaryStorageException):
     pass
 
@@ -70,7 +73,10 @@ class BinaryStorageConnection(object):
         if BINARY_DEBUG:
             logger.debug('[READ] Unserialized: %s', decoded)
         if assert_ok and decoded[0] != Atom('ok'):
-            raise UnsuccessfulResponse(decoded)
+            if decoded[0] == Atom('error'):
+                raise ServerError(decoded[1:])
+            else:
+                raise UnsuccessfulResponse(decoded)
         return decoded
 
     @asyncio.coroutine
@@ -131,12 +137,16 @@ class BinaryStorageConnection(object):
         else:
             # we don't have auth token yet
             if self.storage.username is None or self.storage.username == '':
+                yield from self.disconnect()
                 raise StorageBackendInvalidAuth('no username/email given')
 
             vault = self.storage.vault
-            logger.debug('Log into %s...', vault)
+            if vault is None:
+                yield from self.write_term('login', self.storage.username,
+                        self.storage.password)
 
-            if vault.config.id is None:
+                response = yield from self.read_term(assert_ok=False)
+            elif vault.config.id is None:
                 yield from self.write_term('login', self.storage.username,
                         self.storage.password)
 
@@ -195,7 +205,7 @@ class BinaryStorageConnection(object):
                 self.writer = None
             self.connected = False
             self.connecting = False
-            self.available.set()
+            self.available.clear()
 
     def __enter__(self):
         return self
@@ -334,6 +344,17 @@ class BinaryStorageConnection(object):
             yield from queue.put(None)
 
     @asyncio.coroutine
+    def list_vaults(self):
+
+        logger.info('Getting a list of vaults')
+
+        # upload key and file
+        yield from self.write_term('list_vaults')
+        response = yield from self.read_term()
+
+        return list(map(rewrite_atoms_dict, response[1]))
+
+    @asyncio.coroutine
     def list_files(self, queue):
 
         logger.info('Getting a list of files for vault %s', self.storage.vault)
@@ -366,6 +387,14 @@ class BinaryStorageConnection(object):
     def add_user_vault_key(self, email, fingerprint, content):
         yield from self.write_term('add_user_vault_key', fingerprint, content)
         yield from self.read_term()
+
+    @asyncio.coroutine
+    def get_user_vault_key(self, fingerprint, vault_id):
+        yield from self.write_term('vault_login', self.storage.username,
+                self.storage.password, vault_id)
+        auth_token = yield from self.read_term()
+        yield from self.write_term('get_user_vault_key', fingerprint, vault_id)
+        return (yield from self.read_term())
 
     @asyncio.coroutine
     def download(self, bundle):
@@ -511,7 +540,7 @@ class BinaryStorageManager(object):
 
 class BinaryStorageBackend(StorageBackend):
 
-    def __init__(self, vault, auth=None, host=None, port=None,
+    def __init__(self, vault=None, auth=None, host=None, port=None,
             concurrency=None, username=None, password=None, ssl=False):
         self.host = host
         self.port = port
