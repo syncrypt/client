@@ -56,7 +56,7 @@ class Config(object):
     def config_dir(self):
         return os.path.join(os.path.expanduser('~/.config'), 'syncrypt')
 
-class BackendMixin():
+class BackendConfigMixin():
     DEFAULT_BACKEND_CFG = {
         # Protocol to use
         'type': 'binary',
@@ -92,7 +92,7 @@ class BackendMixin():
         kwargs.pop('type')
         return kwargs
 
-class VaultConfig(Config, BackendMixin):
+class VaultConfig(Config, BackendConfigMixin):
     aes_key_len = 256
     block_size = 16
     enc_buf_size = block_size * 10 * 1024
@@ -108,7 +108,7 @@ class VaultConfig(Config, BackendMixin):
             'ignore': '.*',
             'name': ''
         },
-        'remote': BackendMixin.DEFAULT_BACKEND_CFG
+        'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }
 
     @property
@@ -119,7 +119,7 @@ class VaultConfig(Config, BackendMixin):
     def ignore_patterns(self):
         return self._config['vault']['ignore'].split(',') + self.hard_ignore
 
-class AppConfig(Config, BackendMixin):
+class AppConfig(Config, BackendConfigMixin):
     default_config = {
         'app': {
             'concurrency': 8,
@@ -129,8 +129,16 @@ class AppConfig(Config, BackendMixin):
             'host': '127.0.0.1',
             'port': '28080'
         },
-        'remote': BackendMixin.DEFAULT_BACKEND_CFG
+        'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }
+
+    def __init__(self):
+        super(AppConfig, self).__init__()
+        self.config_file = os.path.join(self.config_dir, 'config')
+
+    def read_config_file(self):
+        logger.debug('Reading application config from %s', self.config_file)
+        self.read(self.config_file)
 
     @property
     def vault_dirs(self):
@@ -156,13 +164,7 @@ class MaterializedAppConfig(AppConfig):
 
     def __init__(self, syncrypt_config_dir=None):
         super(MaterializedAppConfig, self).__init__()
-
-        self.config_file = os.path.join(self.config_dir, 'config')
-
-        logger.debug('Reading application config from %s', self.config_file)
-
-        self.read(self.config_file)
-
+        self.read_config_file()
         logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
 
     def add_vault_dir(self, folder):

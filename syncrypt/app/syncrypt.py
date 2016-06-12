@@ -197,7 +197,8 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def list_keys(self, user=None, with_art=False):
-        for key in (yield from self.vaults[0].backend.list_keys(user)):
+        backend = yield from self.open_backend()
+        for key in (yield from backend.list_keys(user)):
             fingerprint = key['fingerprint']
             created_at = key['created_at']
             if with_art:
@@ -245,23 +246,35 @@ class SyncryptApp(object):
             vault.write_config()
 
     @asyncio.coroutine
-    def open_backend(self):
+    def open_backend(self, always_ask_for_creds=False):
+        'open a backend connection that will be independent from any vault'
+
         cfg = self.config
         backend = cfg.backend_cls(**cfg.backend_kwargs)
-        while True:
-            try:
-                yield from backend.open()
-            except StorageBackendInvalidAuth:
+        for try_num in range(3):
+            if always_ask_for_creds or try_num >= 1:
                 username, password = yield from self.auth_provider.get_auth(backend)
                 backend.username = username
                 backend.password = password
+                backend.auth = None
+            try:
+                yield from backend.open()
+                if backend.auth and not 'auth' in cfg.remote:
+                    cfg.update('remote', {'auth': backend.auth})
+                    cfg.write(cfg.config_file)
+            except StorageBackendInvalidAuth:
+                logger.error('Invalid login')
                 continue
             break
         return backend
 
     @asyncio.coroutine
     def clone(self, vault_id, local_directory):
-        backend = yield from self.open_backend()
+        # We will always ask for credentials here, because we need a valid
+        # username and password for 'get_user_vault_key'. The user auth
+        # token is not enough, because right now we can't use it to generate
+        # a vault auth token.
+        backend = yield from self.open_backend(always_ask_for_creds=True)
 
         logger.info('Retrieving encrypted key for vault %s (Fingerprint: %s)',
                 vault_id, format_fingerprint(self.identity.get_fingerprint()))

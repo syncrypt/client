@@ -146,6 +146,13 @@ class BinaryStorageConnection(object):
                         self.storage.password)
 
                 response = yield from self.read_term(assert_ok=False)
+
+                if response[0] != Atom('ok'):
+                    yield from self.disconnect()
+                    raise StorageBackendInvalidAuth(response)
+
+                self.storage.auth = response[1].decode()
+
             elif vault.config.id is None:
                 yield from self.write_term('login', self.storage.username,
                         self.storage.password)

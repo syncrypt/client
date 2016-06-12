@@ -31,6 +31,7 @@ class SyncryptCmd():
         self.configure_parser(self.parser)
         self.config = None
         self.app_config = AppConfig()
+        self.app_config.read_config_file()
 
     def parse(self, args):
         self.config = self.parser.parse_args(args)
