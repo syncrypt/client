@@ -203,7 +203,7 @@ class Vault(MetadataHolder):
         self.config.unset('remote.username')
         self.config.unset('remote.password')
 
-        # also strip revision as 
+        # also strip revision
         self.config.unset('vault.revision')
 
         temp_config = StringIO()
@@ -221,4 +221,21 @@ class Vault(MetadataHolder):
 
         memview.seek(0)
         return Once(memview.read())
+
+    @staticmethod
+    def from_package_info(package_info, local_directory, auth_token=None):
+        try:
+            os.makedirs(local_directory)
+        except FileExistsError:
+            raise IOError('Directory "%s" already exists.' % local_directory)
+
+        zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
+        zipf.extractall(path=local_directory)
+        vault = Vault(local_directory)
+
+        if auth_token:
+            vault.config.update('remote', {'auth': auth_token})
+            vault.write_config()
+
+        return vault
 

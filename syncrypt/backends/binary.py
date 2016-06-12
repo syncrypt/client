@@ -392,9 +392,12 @@ class BinaryStorageConnection(object):
     def get_user_vault_key(self, fingerprint, vault_id):
         yield from self.write_term('vault_login', self.storage.username,
                 self.storage.password, vault_id)
-        auth_token = yield from self.read_term()
+        auth_token = yield from self.read_response()
+        auth_token = auth_token.decode()
         yield from self.write_term('get_user_vault_key', fingerprint, vault_id)
-        return (yield from self.read_term())
+        response = yield from self.read_response()
+        response = rewrite_atoms_dict(response)
+        return auth_token, response['encrypted_content']
 
     @asyncio.coroutine
     def download(self, bundle):

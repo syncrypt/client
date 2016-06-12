@@ -9,8 +9,8 @@ from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
-from syncrypt.pipes import (EncryptRSA_PKCS1_OAEP, FileWriter, Once,
-                            SnappyCompress, StdoutWriter)
+from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
+                            FileWriter, Once, SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
@@ -258,13 +258,28 @@ class SyncryptApp(object):
                 continue
             break
         return backend
-    def clone(self, vault_id, local_directory):
-        os.makedirs(local_directory)
-        yield from self.import_(None, local_directory)
 
     @asyncio.coroutine
-    def import_(self, package_info, local_directory):
-        raise NotImplementedError
+    def clone(self, vault_id, local_directory):
+        backend = yield from self.open_backend()
+
+        logger.info('Retrieving encrypted key for vault %s (Fingerprint: %s)',
+                vault_id, format_fingerprint(self.identity.get_fingerprint()))
+        auth_token, package_info = yield from \
+                backend.get_user_vault_key(self.identity.get_fingerprint(), vault_id)
+
+        # decrypt package
+        export_pipe = Once(package_info) \
+            >> DecryptRSA_PKCS1_OAEP(self.identity.private_key)
+
+        decrypted_package_info = yield from export_pipe.readall()
+
+        vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
+
+        self.add_vault(vault)
+
+        yield from self.pull()
+
 
     @asyncio.coroutine
     def export(self, filename):
