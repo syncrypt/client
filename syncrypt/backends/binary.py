@@ -577,7 +577,7 @@ class BinaryStorageBackend(StorageBackend):
             with (yield from self.manager.acquire_connection()) as conn:
                 self.invalid_auth = False
                 version = yield from conn.version()
-                logger.info('Logged in to server (version %s)', version)
+                logger.debug('Logged in to server (version %s)', version)
 
     @asyncio.coroutine
     def vault_size(self, vault):
