@@ -194,6 +194,7 @@ class SyncryptApp(object):
         backend = yield from self.open_backend()
         for vault in (yield from backend.list_vaults()):
             print("{0}".format(vault['id'].decode('utf-8')))
+        yield from backend.close()
 
     @asyncio.coroutine
     def list_keys(self, user=None, with_art=False):
@@ -204,6 +205,7 @@ class SyncryptApp(object):
             if with_art:
                 print(draw_art(None, '1', fingerprint))
             print("{0:24}\t{1}".format(format_fingerprint(fingerprint), created_at))
+        yield from backend.close()
 
     @asyncio.coroutine
     def info(self):
@@ -290,6 +292,8 @@ class SyncryptApp(object):
         vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
 
         self.add_vault(vault)
+
+        yield from backend.close()
 
         yield from self.pull()
 

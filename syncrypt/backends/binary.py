@@ -511,7 +511,7 @@ class BinaryStorageManager(object):
         for conn in self.slots:
             if conn.connected or conn.connecting:
                 if not logged:
-                    logger.info('Disconnecting from server')
+                    logger.debug('Disconnecting from server')
                     logged = True
                 yield from conn.disconnect()
 
