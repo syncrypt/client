@@ -296,7 +296,7 @@ class SyncryptApp(object):
 
         yield from backend.close()
 
-        yield from self.pull()
+        yield from self.pull_vault(vault)
 
 
     @asyncio.coroutine
@@ -385,22 +385,26 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def pull(self):
-        # TODO: do a change detection (.vault/metadata store vs filesystem)
         for vault in self.vaults:
-            yield from self.open_or_init(vault)
-            if vault.revision:
-                queue = yield from vault.backend.changes(vault.revision, None)
-            else:
-                queue = yield from vault.backend.list_files()
-            while True:
-                item = yield from queue.get()
-                if item is None:
-                    break
-                store_hash, metadata, server_info = item
-                bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
-                yield from self.pull_bundle(bundle)
-                if 'id' in server_info:
-                    vault.update_revision(server_info['id'])
+            yield from self.pull_vault(vault)
+
+    @asyncio.coroutine
+    def pull_vault(self, vault):
+        # TODO: do a change detection (.vault/metadata store vs filesystem)
+        yield from self.open_or_init(vault)
+        if vault.revision:
+            queue = yield from vault.backend.changes(vault.revision, None)
+        else:
+            queue = yield from vault.backend.list_files()
+        while True:
+            item = yield from queue.get()
+            if item is None:
+                break
+            store_hash, metadata, server_info = item
+            bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
+            yield from self.pull_bundle(bundle)
+            if 'id' in server_info:
+                vault.update_revision(server_info['id'])
         yield from self.wait()
 
     @asyncio.coroutine
