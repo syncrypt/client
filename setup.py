@@ -112,6 +112,7 @@ setup(
         'hachiko',
         'python-snappy',
         'erlastic',
+        'tzlocal',
         'iso8601'
     ],
 

@@ -14,6 +14,7 @@ from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
 from syncrypt.utils.format import format_fingerprint, format_size
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
+from tzlocal import get_localzone
 
 from .api import SyncryptAPI
 from .events import create_watchdog
@@ -338,7 +339,8 @@ class SyncryptApp(object):
             yield from vault.backend.add_user_vault_key(email, fingerprint, content)
 
     @asyncio.coroutine
-    def print_log(self):
+    def print_log(self, verbose=False):
+        local_tz = get_localzone()
         for vault in self.vaults:
             yield from vault.backend.open()
             queue = yield from vault.backend.changes(None, None)
@@ -350,11 +352,15 @@ class SyncryptApp(object):
                 bundle = VirtualBundle(None, vault, store_hash=store_hash)
                 yield from bundle.write_encrypted_metadata(Once(metadata))
                 rev_id = server_info['id'].decode(vault.config.encoding)
-                created_at = iso8601.parse_date(
-                    server_info['created_at'].decode(vault.config.encoding)
-                )
+                created_at = iso8601.parse_date(server_info['created_at'].decode())\
+                        .astimezone(local_tz)\
+                        .strftime('%x %X')
                 operation = server_info['operation'].decode(vault.config.encoding)
-                print("%-40s %-29s %-9s %s" % (rev_id, created_at, operation, bundle.relpath))
+                if verbose:
+                    print("%s | %s %-9s %s" % (created_at, rev_id,
+                        operation, bundle.relpath))
+                else:
+                    print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
 
         yield from self.wait()
 

@@ -227,10 +227,16 @@ global_parser.add_argument('command', help='Subcommand to run', choices=COMMAND_
 
 args = global_parser.parse_args(sys.argv[1:2])
 
-for c in COMMANDS:
-    if c.command == args.command:
-        c.parse(sys.argv[2:])
-        c.setup()
-        c.run()
-        c.shutdown()
+if __name__ == '__main__':
+    # setlocale() is called here so that strftime will use the correct user
+    # locale when formatting datetime objects.
+    import locale
+    locale.setlocale(locale.LC_TIME, '')
+
+    for c in COMMANDS:
+        if c.command == args.command:
+            c.parse(sys.argv[2:])
+            c.setup()
+            c.run()
+            c.shutdown()
 
