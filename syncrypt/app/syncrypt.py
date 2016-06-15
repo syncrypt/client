@@ -273,11 +273,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def clone(self, vault_id, local_directory):
-        # We will always ask for credentials here, because we need a valid
-        # username and password for 'get_user_vault_key'. The user auth
-        # token is not enough, because right now we can't use it to generate
-        # a vault auth token.
-        backend = yield from self.open_backend(always_ask_for_creds=True)
+        backend = yield from self.open_backend()
 
         logger.info('Retrieving encrypted key for vault %s (Fingerprint: %s)',
                 vault_id, format_fingerprint(self.identity.get_fingerprint()))

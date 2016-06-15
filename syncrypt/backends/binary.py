@@ -397,8 +397,11 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def get_user_vault_key(self, fingerprint, vault_id):
-        yield from self.write_term('vault_login', self.storage.username,
-                self.storage.password, vault_id)
+        if self.storage.auth:
+            yield from self.write_term('vault_login', self.storage.auth, vault_id)
+        else:
+            yield from self.write_term('vault_login', self.storage.username,
+                    self.storage.password, vault_id)
         auth_token = yield from self.read_response()
         auth_token = auth_token.decode()
         yield from self.write_term('get_user_vault_key', fingerprint, vault_id)
