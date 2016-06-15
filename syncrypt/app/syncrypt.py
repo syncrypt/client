@@ -312,6 +312,12 @@ class SyncryptApp(object):
             logger.info("Vault export has been written to: %s" % filename)
 
     @asyncio.coroutine
+    def login(self):
+        backend = yield from self.open_backend(always_ask_for_creds=True)
+        logger.info('Successfully logged in and stored auth token.')
+        yield from backend.close()
+
+    @asyncio.coroutine
     def add_user(self, email):
         vault = self.vaults[0]
         yield from vault.backend.open()
