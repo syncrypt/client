@@ -4,6 +4,11 @@ Syncrypt is a fully encrypted file storage service for groups and private
 backups. This is the client that you can use to store and retrieve files.
 The client will also do all encryption.
 
+The source code for this client is released under the GNU General Public License
+Version 3. For more information have a look at the `LICENSE` file in this
+directory. Additional information on the GNU GPLv3 can be found here:
+http://www.gnu.org/licenses/quick-guide-gplv3.html
+
 ## Installation
 
 Option 1: Download one of the distribution packages:
