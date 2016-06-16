@@ -475,13 +475,14 @@ class BinaryStorageConnection(object):
         return map(transform_key, keys)
 
     @asyncio.coroutine
-    def upload_identity(self, identity):
+    def upload_identity(self, identity, description=""):
         logger.debug('Uploading my public key to server')
 
         # upload public key and fingerprint
         yield from self.write_term('add_user_key',
                 identity.export_public_key(),
-                identity.get_fingerprint())
+                identity.get_fingerprint(),
+                description)
 
         response = yield from self.read_term()
 

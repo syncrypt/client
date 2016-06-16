@@ -1,4 +1,5 @@
 import logging
+import socket
 import os.path
 import sys
 from io import StringIO
@@ -111,7 +112,8 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def upload_identity(self):
         backend = yield from self.open_backend()
-        yield from backend.upload_identity(self.identity)
+        description = socket.gethostname()
+        yield from backend.upload_identity(self.identity, description)
         logger.info('Uploaded public key with fingerprint "{0}".'.format(
             format_fingerprint(self.identity.get_fingerprint())))
         yield from backend.close()
@@ -201,13 +203,18 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def list_keys(self, user=None, with_art=False):
         backend = yield from self.open_backend()
-        for key in (yield from backend.list_keys(user)):
+        key_list = (yield from backend.list_keys(user))
+        self.print_key_list(key_list, with_art=with_art)
+        yield from backend.close()
+
+    def print_key_list(self, key_list, with_art=False):
+        for key in key_list:
             fingerprint = key['fingerprint']
+            description = key['description'].decode()
             created_at = key['created_at']
             if with_art:
                 print(draw_art(None, '1', fingerprint))
-            print("{0:24}\t{1}".format(format_fingerprint(fingerprint), created_at))
-        yield from backend.close()
+            print("{0:24}\t{1}\t{2}".format(format_fingerprint(fingerprint), description, created_at))
 
     @asyncio.coroutine
     def info(self):
