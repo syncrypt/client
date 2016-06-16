@@ -196,8 +196,13 @@ class Log(MultipleVaultCmd):
     command = 'log'
     description = 'show recent changes (file uploads, deletions, etc)'
 
+    def configure_parser(self, parser):
+        super(Log, self).configure_parser(parser)
+        parser.add_argument('-v', '--verbose', action='store_true',
+                help='print more information')
+
     def run(self):
-        self.loop.run_until_complete(self.app.print_log())
+        self.loop.run_until_complete(self.app.print_log(self.config.verbose))
 
 class Login(SyncryptCmd):
     command = 'login'

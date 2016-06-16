@@ -361,7 +361,7 @@ class SyncryptApp(object):
                         .strftime('%x %X')
                 operation = server_info['operation'].decode(vault.config.encoding)
                 if verbose:
-                    print("%s | %s %-9s %s" % (created_at, rev_id,
+                    print("%s | %s | %-9s %s" % (created_at, rev_id,
                         operation, bundle.relpath))
                 else:
                     print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
