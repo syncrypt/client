@@ -2,15 +2,15 @@ A guide through the Syncrypt Desktop source code
 ================================================
 
 This is a quick writeup of the Syncrypt Desktop internals, so that you
-can quickly get a grip how it works. It is not complicated. We will start
+can quickly get a grip on how it works. It is not complicated. We will start
 from the inner core machinery and work ourselves outwards.
 
 Pipes
 -----
 
 At the heart of the Syncrypt Desktop client is a tiny abstraction dubbed
-*Pipes*. Pipes can be seen operators or functions on streams and operate
-asyncronusly thanks to the asyncio framework from Python 3.
+*Pipes*. Pipes can be seen as operators or functions on streams and operate
+asynchronously thanks to the asyncio framework from Python 3.
 
 There are Pipes for various functions, for example IO (reading and writing
 files), cryptographic functions (symmetric and asymmetric encryption and
