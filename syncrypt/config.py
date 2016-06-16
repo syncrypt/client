@@ -62,7 +62,7 @@ class BackendConfigMixin():
         'type': 'binary',
 
         # Syncrypt server host
-        'host': 'prod1.syncrypt.space',
+        'host': 'storage.syncrypt.space',
         'port': 1337,
         'ssl': True,
 
