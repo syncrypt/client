@@ -327,27 +327,32 @@ class SyncryptApp(object):
         vault = self.vaults[0]
         yield from vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
-        try:
-            yield from vault.backend.add_vault_user(email)
-        except Exception as e:
-            # TODO remove this try/catch when server is fixed
-            print(e)
-        for key in (yield from vault.backend.list_keys(email)):
-            # retrieve key and verify fingerprint
-            fingerprint = key['fingerprint']
-            identity = Identity.from_public_key(key['public_key'], vault.config)
-            assert identity.get_fingerprint() == fingerprint
+        yield from vault.backend.add_vault_user(email)
 
-            # construct and encrypt package
-            export_pipe = vault.package_info() \
-                >> EncryptRSA_PKCS1_OAEP(identity.public_key)
-            content = yield from export_pipe.readall()
+        key_list = yield from vault.backend.list_keys(email)
+        key_list = list(key_list)
 
-            logger.info('Uploading vault package for %s/%s', email,
-                    format_fingerprint(fingerprint))
-            logger.debug('Package length is: %d', len(content))
+        self.print_key_list(key_list)
+        print('\nPlease verify the above keys.')
+        yesno = input('Do you really want to send the keys to all of the fingerprints listed above? [y/N] ')
 
-            yield from vault.backend.add_user_vault_key(email, fingerprint, content)
+        if yesno in ('y', 'Y'):
+            for key in key_list:
+                # retrieve key and verify fingerrint
+                fingerprint = key['fingerprint']
+                identity = Identity.from_public_key(key['public_key'], vault.config)
+                assert identity.get_fingerprint() == fingerprint
+
+                # construct and encrypt package
+                export_pipe = vault.package_info() \
+                    >> EncryptRSA_PKCS1_OAEP(identity.public_key)
+                content = yield from export_pipe.readall()
+
+                logger.info('Uploading vault package for %s/%s', email,
+                        format_fingerprint(fingerprint))
+                logger.debug('Package length is: %d', len(content))
+
+                yield from vault.backend.add_user_vault_key(email, fingerprint, content)
 
     @asyncio.coroutine
     def print_log(self, verbose=False):
