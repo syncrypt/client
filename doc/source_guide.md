@@ -5,6 +5,10 @@ This is a quick writeup of the Syncrypt Desktop internals, so that you
 can quickly get a grip on how it works. It is not complicated. We will start
 from the inner core machinery and work ourselves outwards.
 
+Before digging through the source code, make sure that you've read the
+general information about the [Syncrypt encryption](doc/encryption.md).
+
+
 Pipes
 -----
 
@@ -25,15 +29,42 @@ calculated from the compressed content.
 
 You can explore all available Pipes in the directory ``syncrypt/pipes/``.
 
+
 Bundles
 -------
 
 To see these Pipes in action, you can take a look at the ``Bundle`` class.
-A Bundle basically describes a file with meta information.
+A Bundle basically describes a file with additional information, like the file
+size and the content hash.
 
-...
+A Bundle has the functions ``read_encrypted_stream`` and
+``write_encrypted_stream``, which will return a Pipe and consume a Pipe,
+respectively. Equipped with our Pipes toolkit, we can now easily reason
+about how an encrypted stream is constructed:
+
+    def read_encrypted_stream(self):
+        return FileReader(self.path) \
+                >> SnappyCompress() \
+                >> Buffered(self.vault.config.enc_buf_size) \
+                >> PadAES() \
+                >> EncryptAES(self.key)
+
 
 Vaults
 ------
 
 ...
+
+
+Storage backend
+---------------
+
+...
+
+
+SyncryptApp
+-----------
+
+Finally, the SyncryptApp object is the outer shell of the Syncrypt client.
+It basically calls the backend and ties together the different models.
+
