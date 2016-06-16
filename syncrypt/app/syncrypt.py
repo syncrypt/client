@@ -114,6 +114,7 @@ class SyncryptApp(object):
         yield from backend.upload_identity(self.identity)
         logger.info('Uploaded public key with fingerprint "{0}".'.format(
             format_fingerprint(self.identity.get_fingerprint())))
+        yield from backend.close()
 
     @asyncio.coroutine
     def open_or_init(self, vault):
@@ -312,6 +313,7 @@ class SyncryptApp(object):
         backend = yield from self.open_backend(always_ask_for_creds=True)
         logger.info('Successfully logged in and stored auth token.')
         yield from backend.close()
+        yield from self.upload_identity()
 
     @asyncio.coroutine
     def add_user(self, email):
