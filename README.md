@@ -27,14 +27,20 @@ Option 3: Install from source:
 
 ## Let's get started
 
-The ``syncrypt`` executable is the command line client for Syncrypt. Initialize
-the current directory as a vault:
+The ``syncrypt`` executable is the command line interface for Syncrypt. You
+can login to syncrypt so that you won't have to enter your login for every
+command you issue.
 
-    syncrypt init
+    syncrypt login
 
 This will ask for the email and the password of your Syncrypt account. If you
-do not have an account yet, please sign up for our closed alpha mailing list
-and we might send you an invite.
+do not have an account yet, please [sign up](https://syncrypt.space/) for our
+closed alpha mailing list and we will send you an invite.
+
+You can now initialize an arbitary directory as a vault. Simply change into
+this directory using ``cd`` and call:
+
+    syncrypt init
 
 After you've set up the directory, you can push all of its contents by typing:
 
@@ -67,7 +73,7 @@ sent to the new user over the Syncrypt server. Note that the server will
 never be able to see the vault's private key.
 
 Make sure that the other user has uploaded at least one public key. The public
-keys get uploaded automatically after a successful ``init`` (see above) or via:
+keys get uploaded automatically after a successful ``login`` (see above) or via:
 
     syncrypt keys --upload
 
