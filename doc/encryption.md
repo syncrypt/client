@@ -1,5 +1,5 @@
-The Syncrypt Encryption Scheme
-==============================
+Syncrypt Encryption
+===================
 
 In this document you will find a detailed description on how Syncrypt encrypts
 your files, interacts with the server and handles your cryptographic keys.
@@ -15,27 +15,40 @@ Vaults
 Syncrypt employs both symmetric and asymmetric encryption to secure your files.
 Asymmetric encryption on the level of the vault means that you hold the private
 key to the vault and the server will never see it. That keypair will be used to
-encrypt vault metadata and file metadata.
+encrypt *file* metadata and *vault* metadata.
 
-Syncrypt uses RSA ... *todo*
+Currently, the vault metadata protected by the vault key solely consists of
 
-The vault metadata protected by the vault key consists of:
+ * the vault name.
 
- * vault name
- * ...
-
+By default, Syncrypt uses 4096 bit RSA keys.
 
 File encryption
 ---------------
 
 For the actual encryption of the contents of a file, Syncrypt uses AES, a symmetric
-encryption scheme. *todo*
+encryption algorithm. The AES key is part of the file metadata and is protected
+by the vault key.
 
-The file metadata (which is also protected by the *vault* key) consists of:
+What is sent to the server when a file is uploaded?
 
- * file name
- * ....
+ * SHA-256 Hash of the file path
+ * Message Authentication Code (MAC), see *Authenticated Encrypted* below
+ * File metadata (which is also protected by the *vault* key):
+   * file name and path
+   * AES key
+ * Encrypted file contents
 
+Prior to the encryption, the file content is compressed using (snappy)[http://google.github.io/snappy/].
+
+Authenticated Encryption
+------------------------
+
+To ensure data integrity, Syncrypt uses a Message Authentication Code (MAC) for
+each file revision. This code is basically the SHA-256 hash of the plaintext file
+contents and the file's AES key. In Authenticated Encryption, this is known as
+*Encrypt-and-MAC*. We might change the AE protocol to *Encrypt-then-MAC* in the
+future, because it has been proven more robust.
 
 Sharing files with new users or devices
 ---------------------------------------
