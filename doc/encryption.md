@@ -39,7 +39,7 @@ What is sent to the server when a file is uploaded?
    * AES key
  * Encrypted file contents
 
-Prior to the encryption, the file content is compressed using (snappy)[http://google.github.io/snappy/].
+Prior to the encryption, the file content is compressed using [snappy](http://google.github.io/snappy/).
 
 Authenticated Encryption
 ------------------------
