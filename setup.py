@@ -52,7 +52,7 @@ class DistCommand(Command):
         os.system('cp dist/syncrypt-bin ./dist/syncrypt/syncrypt')
         os.system('cp dist-files/* ./dist/syncrypt/')
         os.system('cd dist; rm -f {0}; zip {0} -r ./syncrypt'.format(zipname))
-        os.system('sha256sum {0} > {0}.sha256'.format(os.path.join('dist', zipname)))
+        os.system('shasum -a 256 {0} > {0}.sha256'.format(os.path.join('dist', zipname)))
         print("Generated {0}".format(os.path.join('dist', zipname)))
 
 cmdclass['dist'] = DistCommand
