@@ -1,7 +1,7 @@
 from pkg_resources import get_distribution, DistributionNotFound
 
 __project__ = 'syncrypt'
-__version__ = '0.1.2'  # required for initial installation
+__version__ = '0.1.3'
 
 try:
     __version__ = get_distribution(__project__).version
