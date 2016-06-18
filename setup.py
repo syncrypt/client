@@ -7,7 +7,7 @@ from os import path
 
 from setuptools import find_packages, setup
 
-__name__ = 'syncrypt_client'
+__name__ = 'syncrypt'
 __version__ = '0.1.1'
 
 here = path.abspath(path.dirname(__file__))
@@ -26,7 +26,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 class DistCommand(Command):
-    description = "packages syncrypt and syncrypt gui for the current platform"
+    description = "packages syncrypt client for the current platform"
     user_options = []
 
     def initialize_options(self): pass
@@ -69,7 +69,7 @@ setup(
 
     # Author details
     author='Hannes Gräuler',
-    author_email='hannes@smasi.de',
+    author_email='hannes@syncrypt.space',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -79,9 +79,8 @@ setup(
         #   5 - Production/Stable
         'Development Status :: 3 - Alpha',
 
-        # Indicate who your project is intended for
-        'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
+        'Topic :: Communications :: File Sharing',
+        'Topic :: System :: Archiving',
 
         'Programming Language :: Python :: 3',
     ],
