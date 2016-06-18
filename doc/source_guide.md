@@ -6,7 +6,7 @@ can quickly get a grip on how it works. It is not complicated. We will start
 from the inner core machinery and work ourselves outwards.
 
 Before digging through the source code, make sure that you've read the
-general information about the [Syncrypt encryption](doc/encryption.md).
+general information about the [Syncrypt encryption](encryption.md).
 
 
 Pipes

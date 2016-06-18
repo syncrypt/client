@@ -33,7 +33,7 @@ by the vault key.
 What is sent to the server when a file is uploaded?
 
  * SHA-256 Hash of the file path
- * Message Authentication Code (MAC), see *Authenticated Encrypted* below
+ * Message Authentication Code (MAC), see *Authenticated Encryption* below
  * File metadata (which is also protected by the *vault* key):
    * file name and path
    * AES key
