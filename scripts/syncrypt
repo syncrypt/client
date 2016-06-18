@@ -6,11 +6,17 @@ import os.path
 import sys
 
 import asyncio
+from syncrypt import __project__, __version__
 from syncrypt.app import SyncryptApp
 from syncrypt.app.cli import CLIAuthenticationProvider
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
+
+COPYRIGHT = '''Syncrypt v{version}
+(c) 2016 Syncrypt UG
+Licensed under the GPLv3 | Source: https://github.com/syncrypt/client'''\
+    .format(version=__version__)
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
@@ -228,16 +234,18 @@ COMMANDS = [Init(), Vaults(), Clone(), Pull(), Push(), Watch(), AddUser(),
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawDescriptionHelpFormatter,
     usage='''syncrypt <command> [<args>]
+
+''' + COPYRIGHT  + '''
 
 available commands:
 ''' + '\n'.join([
     '  {0.command:11s} {0.description}'.format(c) for c in COMMANDS
     ]))
 
-global_parser.add_argument('command', help='Subcommand to run', choices=COMMAND_NAMES)
-
-args = global_parser.parse_args(sys.argv[1:2])
+global_parser.add_argument('command', help='Subcommand to run', choices=COMMAND_NAMES, nargs='?')
+global_parser.add_argument('-v', '--version', action='store_true', help='Show version information')
 
 if __name__ == '__main__':
     # setlocale() is called here so that strftime will use the correct user
@@ -245,10 +253,17 @@ if __name__ == '__main__':
     import locale
     locale.setlocale(locale.LC_TIME, '')
 
-    for c in COMMANDS:
-        if c.command == args.command:
-            c.parse(sys.argv[2:])
-            c.setup()
-            c.run()
-            c.shutdown()
+    args = global_parser.parse_args(sys.argv[1:2])
+
+    if args.version:
+        print(COPYRIGHT)
+    elif args.command:
+        for c in COMMANDS:
+            if c.command == args.command:
+                c.parse(sys.argv[2:])
+                c.setup()
+                c.run()
+                c.shutdown()
+    else:
+        global_parser.print_help()
 

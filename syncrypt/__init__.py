@@ -1,6 +1,6 @@
 from pkg_resources import get_distribution, DistributionNotFound
 
-__project__ = 'syncrypt_desktop'
+__project__ = 'syncrypt'
 __version__ = None  # required for initial installation
 
 try:
