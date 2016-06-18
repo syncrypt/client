@@ -11,15 +11,15 @@ http://www.gnu.org/licenses/quick-guide-gplv3.html
 
 ## Installation
 
-Option 1: Download one of the distribution packages:
+Option 1: Install from PyPI (requires Python 3)
+
+    pip install syncrypt
+
+Option 2: Download one of the distribution packages:
 
 * OS X (*TBD*)
 * Linux (*TBD*)
 * Windows (*TBD*)
-
-Option 2: Install from PyPI (*TBD*)
-
-    pip install syncrypt-client
 
 Option 3: Install from source:
 
