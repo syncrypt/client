@@ -73,10 +73,10 @@ setup(
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+
+        'Intended Audience :: End Users/Desktop',
+
         'Development Status :: 3 - Alpha',
 
         'Topic :: Communications :: File Sharing',
