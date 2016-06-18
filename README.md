@@ -115,27 +115,6 @@ For each command listed above, alternate directories can be specified with
 Debug logging can be activated via ``-l DEBUG``.
 
 
-## Syncrypt Daemon
-
-The ``syncrypt_daemon`` is a daemon script for UNIX-like systems. It provides
-an HTTP API through which it can be queried and commanded to take action.
-
-Run the daemon:
-
-     syncrypt_daemon
-
-Query statistics:
-
-     curl http://127.0.0.1:28080/v1/stats
-
-Query all vaults:
-
-     curl http://127.0.0.1:28080/v1/vault/
-
-Add a vault (current directory in this example):
-
-    curl -X PUT -d $PWD 'http://127.0.0.1:28080/v1/vault/'
-
 ## Tests
 
 Run tests:
