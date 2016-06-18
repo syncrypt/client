@@ -68,9 +68,9 @@ In order to share your vault with another user, use:
 
 This command will add the user to the vault. To safely transfer the vault's
 key to the target user or device, the command will ask the Syncrypt server
-for all keys of this user. Syncrypt will ask you know to verify each
-fingerprint (for example over another communication channel like over the
-phone).
+for all keys of this user. Syncrypt will ask you then to verify each
+fingerprint (for example by using an already trusted external communication
+channel).
 
 Only if you are sure about the matching fingerprints, proceed by typing ``y``.
 Syncrypt will now create a package containing the vault keys and encrypt this
