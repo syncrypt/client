@@ -1,0 +1,5 @@
+To install Syncrypt either add this folder to your path or copy the syncrypt
+binary to a folder inside your PATH such as /usr/bin.
+
+A simple and non-intrusive method is to add this folder to your path temporarily
+by executing: . ./activate.sh

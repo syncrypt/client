@@ -38,7 +38,6 @@ class DistCommand(Command):
         import platform
 
         assert os.getcwd() == self.cwd, 'Must be in package root: %s' % self.cwd
-        os.system('rm -rf ./dist/syncrypt*.zip')
         os.system('rm -rf ./dist/syncrypt')
         os.system('PYTHONPATH=lib/python3.5/site-packages/ pyinstaller syncrypt.spec')
         #os.system('cp ./dist/syncrypt_gui/* ./dist/syncrypt')
@@ -48,7 +47,11 @@ class DistCommand(Command):
                 platform=platform.system().lower(),
                 machine=platform.machine()
         )
-        os.system('cd dist; zip {0} -r ./syncrypt'.format(zipname))
+        os.system('mkdir ./dist/syncrypt')
+        os.system('cp README.md LICENSE ./dist/syncrypt')
+        os.system('cp dist/syncrypt-bin ./dist/syncrypt/syncrypt')
+        os.system('cp dist-files/* ./dist/syncrypt/')
+        os.system('cd dist; rm -f {0}; zip {0} -r ./syncrypt'.format(zipname))
         print("Generated {0}".format(os.path.join('dist', zipname)))
 
 cmdclass['dist'] = DistCommand
