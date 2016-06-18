@@ -67,13 +67,19 @@ In order to share your vault with another user, use:
     syncrypt add-user mail@example.org
 
 This command will add the user to the vault. To safely transfer the vault's
-private key to the user, the command will also download the user's public
-keys and encrypt the vault information with it. The package will then be
-sent to the new user over the Syncrypt server. Note that the server will
-never be able to see the vault's private key.
+key to the target user or device, the command will ask the Syncrypt server
+for all keys of this user. Syncrypt will ask you know to verify each
+fingerprint (for example over another communication channel like over the
+phone).
 
-Make sure that the other user has uploaded at least one public key. The public
-keys get uploaded automatically after a successful ``login`` (see above) or via:
+Only if you are sure about the matching fingerprints, proceed by typing ``y``.
+Syncrypt will now create a package containing the vault keys and encrypt this
+package with the public key of the target device. This encrypted package will
+then be sent to the new user or device through the Syncrypt server.
+
+If you don't see any fingerprints of the target user, make sure that the other
+user has uploaded at least one public key. The public keys for a device will
+get uploaded after a successful ``login`` (see above) or by typing:
 
     syncrypt keys --upload
 
