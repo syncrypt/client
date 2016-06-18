@@ -7,7 +7,7 @@ from os import path
 
 from setuptools import find_packages, setup
 
-__name__ = 'syncrypt_desktop'
+__name__ = 'syncrypt_client'
 __version__ = '0.1.1'
 
 here = path.abspath(path.dirname(__file__))
@@ -61,11 +61,11 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version=__version__,
 
-    description='A Syncrypt client',
+    description='Syncrypt client',
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/bakkdoor/syncrypt_desktop',
+    url='https://github.com/syncrypt/client',
 
     # Author details
     author='Hannes Gräuler',
@@ -92,7 +92,6 @@ setup(
 
     scripts=[
         'scripts/syncrypt',
-        'scripts/syncrypt_daemon',
     ],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
