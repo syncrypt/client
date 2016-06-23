@@ -315,7 +315,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def changes(self, since_rev, to_rev, queue):
         logger.info('Getting a list of changes for %s (%s to %s)',
-                self.storage.vault, to_rev or 'latest', since_rev or 'earliest')
+                self.storage.vault, since_rev or 'earliest', to_rev or 'latest')
 
         # upload key and file
         yield from self.write_term('changes', since_rev, to_rev)
