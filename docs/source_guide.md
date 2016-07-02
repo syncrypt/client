@@ -1,5 +1,5 @@
 A guide through the Syncrypt client source code
-================================================
+===============================================
 
 This is a quick writeup of the Syncrypt client internals, so that you
 can quickly get a grip on how it works. It is not complicated. We will start

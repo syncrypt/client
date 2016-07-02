@@ -50,8 +50,14 @@ After you've set up the directory, you can push all of its contents by typing:
 
     syncrypt push
 
-For a more detailed description of syncrypt commands, please see the [client
+For an extensive description of syncrypt commands, please see the [client
 manual](docs/manual.md).
+
+## Further Information
+
+ * [Syncrypt Encryption](docs/encryption.md)
+ * [Syncrypt CLI Manual](docs/manual.md)
+ * [A guide through the Syncrypt client source code](docs/source_guide.md)
 
 ## Tests
 
