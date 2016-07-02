@@ -55,6 +55,7 @@ manual](docs/manual.md).
 
 ## Further Information
 
+ * [Syncrypt Alpha Signup](https://syncrypt.space/)
  * [Syncrypt Encryption](docs/encryption.md)
  * [Syncrypt CLI Manual](docs/manual.md)
  * [A guide through the Syncrypt client source code](docs/source_guide.md)
