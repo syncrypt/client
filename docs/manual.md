@@ -1,10 +1,28 @@
-# Syncrypt Client Manual
+# Syncrypt CLI Manual
+
+This document describes the basic operations that are available for the
+Syncrypt CLI client.
+
+## Login
+
+You can login to the Syncrypt server via:
+
+    syncrypt login
+
+This step is optional, but we recommened you to run it. Otherwise you would
+need to give your login credentials everyi time you run a syncrypt command.
+The above command will retrieve an auth token which will be used by any
+subsequent command.
 
 ## Basics
 
 Initialize current directory as a vault:
 
     syncrypt init
+
+This will register a new vault with your Syncrypt account. A vault has a unique
+ID and a RSA keypair. When running the above command, a private key for this
+new vault will be generated and will only be stored on your computer.
 
 Encrypt and push all files in this directory to the server:
 

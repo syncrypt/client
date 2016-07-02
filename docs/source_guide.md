@@ -53,14 +53,24 @@ about how an encrypted stream is constructed:
 Vaults
 ------
 
-...
+The Vault class represents a single folder and has functionality to manage its
+config, identity and bundles.
 
 
 Storage backend
 ---------------
 
-...
+Currently there only exists a single storage backend implementation.
+This can be found in the file ``backends/binary.py`` and is the implementation
+of the binary Syncrypt client/server communication protocol. We won't go into
+details here as they can be discovered by reading the source code, but the
+basic principle of this communication protocol is that the client sends a
+serialized command and the server response with a serialized response as well.
 
+The serialization format that is currently used is [BERT (Binary ERlang Term)](http://bert-rpc.org/).
+
+Note that you can turn on the ``BINARY_DEBUG`` flag in order to see the whole
+serialized and unserialized communication if you are interested.
 
 SyncryptApp
 -----------

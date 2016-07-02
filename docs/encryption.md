@@ -69,4 +69,35 @@ public key cryptography that secures your vault in the first place.
 Example
 -------
 
-...
+In this section you can find a description of all files that are created by the
+Syncrypt client and what they are used for.
+
+Lets say you've created a vault and also pushed some files. To see all files that
+Syncrypt uses for this vault, simply type
+
+    find .vault
+
+in the vault's directory. It should give you a list of files like this:
+
+    .vault
+    .vault/metadata
+    .vault/metadata/ac
+    .vault/metadata/ac/7599eb8787664eb1c45b915539f7d3eb2dd796eecf24b919ce9b5b80d930ed
+    .vault/metadata/36
+    .vault/metadata/36/65d65394f4f58a56a256ad6dd8621c68118d90fe56a19387e251c19cec2d2e
+    .vault/metadata/7d
+    .vault/metadata/7d/72b25977fd4b48208b8242906a307d477d7d5b26b655cd2c80fb6f12cf7e5f
+    .vault/config
+    .vault/id_rsa
+    .vault/id_rsa.pub
+
+If you are familiar with SSH keys, you should recognise the keypair ``id_rsa``
+and ``id_rsa.pub``. These files are the private and public key to this vault,
+respectively. The ``config`` file contains such information as the vault's name,
+ID and files to ignore.
+
+In the folder ``.vault/metadata`` the metadata of all files is stored. As
+mentioned above, we will identify a file by the SHA-256 hash of its file name. This
+hash is also the filename in the metadata folder. In this metadata, you can find
+the AES key and the actual filename of the file.
+
