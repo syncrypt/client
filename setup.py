@@ -110,6 +110,7 @@ setup(
         'aiofiles',
         'aiohttp',
         'umsgpack',
+        'msgpack-python>=0.4.0',
         'colorlog',
         'hachiko',
         'python-snappy',
