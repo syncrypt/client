@@ -1,6 +1,7 @@
 import logging
 import re
 import ssl
+import sys
 import struct
 import time
 from getpass import getpass
@@ -209,6 +210,11 @@ class BinaryStorageConnection(object):
         finally:
             if self.writer:
                 self.writer.close()
+
+                # Add a little delay so that the connection socket is actually
+                # closed. This is not needed in Python 3.5+, but somehow in 3.4.
+                if sys.version_info < (3, 5): yield from asyncio.sleep(0.1)
+
                 self.writer = None
             self.connected = False
             self.connecting = False
