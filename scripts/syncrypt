@@ -48,6 +48,7 @@ class SyncryptCmd():
         self.app = SyncryptApp(self.app_config, auth_provider=CLIAuthenticationProvider())
 
     def shutdown(self):
+        self.loop.run_until_complete(self.app.close())
         self.loop.close()
 
     def run(self):
