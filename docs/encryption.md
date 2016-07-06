@@ -1,10 +1,11 @@
 Syncrypt Encryption
 ===================
 
-In this document you will find a detailed description on how Syncrypt encrypts
+In this document you will find a detailed description of how Syncrypt encrypts
 your files, interacts with the server and handles your cryptographic keys.
-Remember that you don't have to take our word for it, you can verify the
-described scheme with our [GPLv3-licensed client](https://github.com/syncrypt/client).
+Remember that you don't have to take our word for it. You can verify the
+described scheme in the code of our
+[GPLv3-licensed client](https://github.com/syncrypt/client).
 
 You should understand the basics of symmetric as well as public key cryptography.
 
@@ -14,7 +15,7 @@ Vaults
 
 Syncrypt employs both symmetric and asymmetric encryption to secure your files.
 Asymmetric encryption on the level of the vault means that you hold the private
-key to the vault and the server will never see it. That keypair will be used to
+key to the vault and the server will never see it. That key pair will be used to
 encrypt *file* metadata and *vault* metadata.
 
 Currently, the vault metadata protected by the vault key solely consists of
@@ -26,7 +27,7 @@ By default, Syncrypt uses 4096 bit RSA keys.
 File encryption
 ---------------
 
-For the actual encryption of the contents of a file, Syncrypt uses AES, a symmetric
+For the actual encryption of the contents of a file Syncrypt uses AES, a symmetric
 encryption algorithm. The AES key is part of the file metadata and is protected
 by the vault key.
 
@@ -35,11 +36,12 @@ What is sent to the server when a file is uploaded?
  * SHA-256 Hash of the file path
  * Message Authentication Code (MAC), see *Authenticated Encryption* below
  * File metadata (which is also protected by the *vault* key):
-   * file name and path
+   * File name and path
    * AES key
  * Encrypted file contents
 
-Prior to the encryption, the file content is compressed using [snappy](http://google.github.io/snappy/).
+Prior to the encryption, the file content is compressed using
+[snappy](http://google.github.io/snappy/).
 
 Authenticated Encryption
 ------------------------
@@ -62,7 +64,7 @@ transmitted to the new device. This can either be done either
  * by letting Syncrypt encrypt those key with the public key of the target user or device.
 
 In the latter case, Syncrypt will transmit those encrypted keys over the Syncrypt
-server. Note that this step is fully optional and secured by the same strong
+server. Note that this step is *fully optional* and secured by the same strong
 public key cryptography that secures your vault in the first place.
 
 
@@ -100,4 +102,3 @@ In the folder ``.vault/metadata`` the metadata of all files is stored. As
 mentioned above, we will identify a file by the SHA-256 hash of its file name. This
 hash is also the filename in the metadata folder. In this metadata, you can find
 the AES key and the actual filename of the file.
-
