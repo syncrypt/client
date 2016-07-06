@@ -93,7 +93,7 @@ in the vault's directory. It should give you a list of files like this:
     .vault/id_rsa
     .vault/id_rsa.pub
 
-If you are familiar with SSH keys, you should recognise the keypair ``id_rsa``
+If you are familiar with SSH keys, you should recognize the key pair ``id_rsa``
 and ``id_rsa.pub``. These files are the private and public key to this vault,
 respectively. The ``config`` file contains such information as the vault's name,
 ID and files to ignore.
