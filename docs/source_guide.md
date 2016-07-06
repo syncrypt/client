@@ -14,7 +14,7 @@ Pipes
 
 At the heart of the Syncrypt client is a tiny abstraction dubbed
 *Pipes*. Pipes can be seen as operators or functions on streams and operate
-asynchronously thanks to the asyncio framework from Python 3.
+asynchronously thanks to the ``asyncio`` framework from Python 3.
 
 There are Pipes for various functions, for example IO (reading and writing
 files), cryptographic functions (symmetric and asymmetric encryption and
@@ -53,7 +53,7 @@ about how an encrypted stream is constructed:
 Vaults
 ------
 
-The Vault class represents a single folder and has functionality to manage its
+The ``Vault`` class represents a single folder and has functionality to manage its
 config, identity and bundles.
 
 
@@ -65,9 +65,10 @@ This can be found in the file ``backends/binary.py`` and is the implementation
 of the binary Syncrypt client/server communication protocol. We won't go into
 details here as they can be discovered by reading the source code, but the
 basic principle of this communication protocol is that the client sends a
-serialized command and the server response with a serialized response as well.
+serialized command and the server responds with a serialized response.
 
-The serialization format that is currently used is [BERT (Binary ERlang Term)](http://bert-rpc.org/).
+The serialization format that is currently used is
+[BERT (Binary ERlang Term)](http://bert-rpc.org/).
 
 Note that you can turn on the ``BINARY_DEBUG`` flag in order to see the whole
 serialized and unserialized communication if you are interested.
@@ -75,6 +76,5 @@ serialized and unserialized communication if you are interested.
 SyncryptApp
 -----------
 
-Finally, the SyncryptApp object is the outer shell of the Syncrypt client.
+Finally, the ``SyncryptApp`` object is the outer shell of the Syncrypt client.
 It basically calls the backend and ties together the different models.
-
