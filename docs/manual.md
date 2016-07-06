@@ -1,6 +1,6 @@
 # Syncrypt CLI Manual
 
-This document describes the basic operations that are available for the
+This document describes the basic operations that are available in the
 Syncrypt CLI client.
 
 ## Login
@@ -9,19 +9,19 @@ You can login to the Syncrypt server via:
 
     syncrypt login
 
-This step is optional, but we recommened you to run it. Otherwise you would
-need to give your login credentials everyi time you run a syncrypt command.
+This step is optional, but we recommend you to run it. Otherwise you will
+need to provide your login credentials every time you run a syncrypt command.
 The above command will retrieve an auth token which will be used by any
 subsequent command.
 
 ## Basics
 
-Initialize current directory as a vault:
+Initialize the current directory as a vault:
 
     syncrypt init
 
 This will register a new vault with your Syncrypt account. A vault has a unique
-ID and a RSA keypair. When running the above command, a private key for this
+ID and a RSA key pair. When running the above command, a private key for this
 new vault will be generated and will only be stored on your computer.
 
 Encrypt and push all files in this directory to the server:
@@ -73,15 +73,15 @@ disk failure. We can't give you your keys back if you lose them, since we never
 store them on our servers. This is deliberate and to protect your data against
 theft and unauthorized access.
 
-You can create a ZIP file with all necessary information to decrypt a Vault by
-typing:
+You can create a ZIP file with all the necessary information to decrypt a Vault
+by typing:
 
     syncrypt export -o vault-backup.zip
 
 We recommend to save this file on a USB stick or a similar disconnected
 storage and keep it in a safe place.
 
-In order to restore a backup or download your vault on another machine, copy
+In order to restore a backup or download your vault to another machine, copy
 this file into an empty folder, and type:
 
     unzip vault-backup.zip
@@ -90,7 +90,7 @@ this file into an empty folder, and type:
 
 ## Advanced Usage
 
-Watch current directory (this is like a daemon running the foreground as it
+Watch current directory (this is like a daemon running in the foreground as it
 also provides the HTTP interface):
 
     syncrypt watch
