@@ -584,9 +584,9 @@ class BinaryStorageBackend(StorageBackend):
                 self.vault.write_config()
                 self.invalid_auth = False
                 logger.info('Successfully logged in and stored auth token')
-        except StorageBackendInvalidAuth as e:
-            logger.error('Invalid auth')
+        except StorageBackendInvalidAuth:
             self.invalid_auth = True
+            raise
 
     @asyncio.coroutine
     def open(self):
