@@ -95,6 +95,7 @@ setup(
 
     scripts=[
         'scripts/syncrypt',
+        'scripts/syncrypt_daemon',
     ],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
