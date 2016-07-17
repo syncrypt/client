@@ -385,15 +385,6 @@ class SyncryptApp(object):
         yield from self.wait()
 
     @asyncio.coroutine
-    def push(self):
-        for vault in self.vaults:
-            yield from vault.backend.open()
-            yield from vault.backend.set_vault_metadata()
-            for bundle in vault.walk_disk():
-                yield from self.push_bundle(bundle)
-        yield from self.wait()
-
-    @asyncio.coroutine
     def get_remote_size_for_vault(self, vault):
         yield from vault.backend.open()
         return (yield from vault.backend.vault_size(vault))
@@ -404,12 +395,46 @@ class SyncryptApp(object):
         return (yield from vault.backend.vault_metadata())
 
     @asyncio.coroutine
-    def pull(self):
+    def push(self):
+        '''
+        Push all vaults
+
+        High level command that will catch exceptions and log errors
+        '''
         for vault in self.vaults:
-            yield from self.pull_vault(vault)
+            try:
+                yield from self.push_vault(vault)
+            except Exception as e:
+                logger.exception(e)
+                continue
+        yield from self.wait()
+
+    @asyncio.coroutine
+    def pull(self):
+        '''
+        Pull all vaults
+
+        High level command that will catch exceptions and log errors
+        '''
+        for vault in self.vaults:
+            try:
+                yield from self.pull_vault(vault)
+            except Exception as e:
+                logger.exception(e)
+                continue
+        yield from self.wait()
+
+    @asyncio.coroutine
+    def push_vault(self, vault):
+        logger.info('Pushing %s', vault)
+        yield from vault.backend.open()
+        yield from vault.backend.set_vault_metadata()
+        for bundle in vault.walk_disk():
+            yield from self.push_bundle(bundle)
 
     @asyncio.coroutine
     def pull_vault(self, vault):
+        logger.info('Pulling %s', vault)
         # TODO: do a change detection (.vault/metadata store vs filesystem)
         yield from self.open_or_init(vault)
         if vault.revision:
