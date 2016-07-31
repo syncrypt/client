@@ -92,7 +92,7 @@ class SyncryptApp(object):
         self.update_handles[bundle] = loop.call_later(1.0, self.update_and_upload, bundle)
 
     @asyncio.coroutine
-    def init(self, vault=None):
+    def init(self, vault=None, host=None):
         for vault in (self.vaults if vault is None else [vault]):
             try:
                 yield from vault.backend.open()
@@ -104,6 +104,8 @@ class SyncryptApp(object):
                 pass
             logger.info("Initializing %s", vault)
             vault.identity.init()
+            if host:
+                vault.config.set('remote.host', host)
             username, password = yield from self.auth_provider.get_auth(vault.backend)
             vault.set_auth(username, password)
             try:

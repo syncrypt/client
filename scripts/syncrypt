@@ -164,8 +164,12 @@ class Init(SingleVaultCmd):
     command = 'init'
     description = 'register the directory as a Syncrypt vault'
 
+    def configure_parser(self, parser):
+        super(Init, self).configure_parser(parser)
+        parser.add_argument('--host', help='remote host (default: storage.syncrypt.space)')
+
     def run(self):
-        self.loop.run_until_complete(self.app.init())
+        self.loop.run_until_complete(self.app.init(host=self.config.host))
 
 class Info(MultipleVaultCmd):
     command = 'info'
