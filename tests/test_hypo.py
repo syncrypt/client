@@ -25,6 +25,10 @@ class HypoBinaryTestCase(asynctest.TestCase):
 
     @settings(timeout=30, perform_health_check=False)
     @given(files(), files())
+
+    # The following example will test "unicode surrogates" in filename and content
+    @example([{'filename': 'surrogate\udcfc', 'content': b'surrogate\udcfccontent'}], [])
+
     def test_initial_and_added(self, initial_files, added_files):
         app = SyncryptApp(AppConfig())
 

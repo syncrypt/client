@@ -19,7 +19,7 @@ class Bundle(MetadataHolder):
     encrypt_semaphore = asyncio.Semaphore(value=8)
     decrypt_semaphore = asyncio.Semaphore(value=8)
 
-    __slots__ = ('path', 'vault', 'file_size', 'file_size_crypt',
+    __slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
             'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
             'key', 'bytes_written')
 
@@ -30,10 +30,12 @@ class Bundle(MetadataHolder):
         self.remote_crypt_hash = None
         self.key = None
         self.bytes_written = 0
+        self.relpath = None
 
         if self.path is not None:
+            self.relpath = os.path.relpath(self.path, self.vault.folder)
             h = hashlib.new(self.vault.config.hash_algo)
-            h.update(self.relpath.encode(self.vault.config.encoding))
+            h.update(self.relpath.encode(self.vault.config.encoding, 'surrogateescape'))
             self.store_hash = h.hexdigest()
         if store_hash is not None:
             self.store_hash = store_hash
@@ -41,7 +43,7 @@ class Bundle(MetadataHolder):
     @property
     def metadata(self):
         return {
-            'filename': os.path.relpath(self.path, self.vault.folder),
+            'filename': self.relpath.encode(self.vault.config.encoding, 'surrogateescape'),
             'key': self.key,
             'hash': b'\0' * 32,
             'key_size': self.key_size
@@ -67,10 +69,12 @@ class Bundle(MetadataHolder):
             metadata_contents = yield from metadata_file.read()
             metadata = umsgpack.loads(metadata_contents)
             self.key = metadata[b'key']
+            filename = metadata[b'filename'].decode(self.vault.config.encoding, 'surrogateescape')
             if self.path is None:
-                self.path = os.path.join(self.vault.folder, metadata[b'filename'].decode())
+                self.path = os.path.join(self.vault.folder, filename)
+                self.relpath = os.path.relpath(self.path, self.vault.folder)
             else:
-                assert self.path == os.path.join(self.vault.folder, metadata[b'filename'].decode())
+                assert self.relpath == filename
             assert len(self.key) == self.key_size
         finally:
             yield from metadata_file.close()
@@ -191,10 +195,6 @@ class Bundle(MetadataHolder):
         return "<Bundle: {0.relpath}>".format(self)
 
     @property
-    def relpath(self):
-        return os.path.relpath(self.path, self.vault.folder)
-
-    @property
     def path_metadata(self):
         return os.path.join(self.vault.bundle_metadata_path, \
                 self.store_hash[:2], self.store_hash[2:])
@@ -214,7 +214,8 @@ class VirtualBundle(Bundle):
     def __set_metadata(self, metadata):
         self._metadata = metadata
         if 'filename' in metadata:
-            self.path = metadata['filename']
+            self.path = os.path.join(self.vault.folder, metadata['filename'])
+            self.relpath = metadata['filename']
 
     metadata = property(__get_metadata, __set_metadata)
 
