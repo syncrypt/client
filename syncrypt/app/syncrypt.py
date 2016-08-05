@@ -364,7 +364,11 @@ class SyncryptApp(object):
     def print_log(self, verbose=False):
         local_tz = get_localzone()
         for vault in self.vaults:
-            yield from vault.backend.open()
+            try:
+                yield from vault.backend.open()
+            except VaultNotInitialized:
+                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+                continue
             queue = yield from vault.backend.changes(None, None)
             while True:
                 item = yield from queue.get()
@@ -406,6 +410,9 @@ class SyncryptApp(object):
         for vault in self.vaults:
             try:
                 yield from self.push_vault(vault)
+            except VaultNotInitialized:
+                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+                continue
             except Exception as e:
                 logger.exception(e)
                 continue
@@ -421,6 +428,9 @@ class SyncryptApp(object):
         for vault in self.vaults:
             try:
                 yield from self.pull_vault(vault)
+            except VaultNotInitialized:
+                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+                continue
             except Exception as e:
                 logger.exception(e)
                 continue
