@@ -319,12 +319,15 @@ class BinaryStorageConnection(object):
         yield from self.read_response()
 
     @asyncio.coroutine
-    def changes(self, since_rev, to_rev, queue):
+    def changes(self, since_rev, to_rev, queue, verbose=False):
         logger.info('Getting a list of changes for %s (%s to %s)',
                 self.storage.vault, since_rev or 'earliest', to_rev or 'latest')
 
         # upload key and file
-        yield from self.write_term('changes', since_rev, to_rev)
+        if verbose:
+            yield from self.write_term('changes_with_email', since_rev, to_rev)
+        else:
+            yield from self.write_term('changes', since_rev, to_rev)
 
         response = yield from self.read_response()
 
@@ -348,6 +351,7 @@ class BinaryStorageConnection(object):
             for server_info in response:
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
+                user_email = server_info['email'].decode()
                 if metadata == Atom('nil'):
                     logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
@@ -622,10 +626,10 @@ class BinaryStorageBackend(StorageBackend):
             return queue
 
     @asyncio.coroutine
-    def changes(self, since_rev, to_rev):
+    def changes(self, since_rev, to_rev, verbose=False):
         with (yield from self.manager.acquire_connection()) as conn:
             queue = asyncio.Queue()
-            asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue))
+            asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
             return queue
 
     @asyncio.coroutine

@@ -369,7 +369,7 @@ class SyncryptApp(object):
             except VaultNotInitialized:
                 logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
                 continue
-            queue = yield from vault.backend.changes(None, None)
+            queue = yield from vault.backend.changes(None, None, verbose=verbose)
             while True:
                 item = yield from queue.get()
                 if item is None:
@@ -383,7 +383,8 @@ class SyncryptApp(object):
                         .strftime('%x %X')
                 operation = server_info['operation'].decode(vault.config.encoding)
                 if verbose:
-                    print("%s | %s | %-9s %s" % (created_at, rev_id,
+                    user_email = server_info['email'].decode(vault.config.encoding)
+                    print("%s | %s | %s | %-9s %s" % (created_at, rev_id, user_email,
                         operation, bundle.relpath))
                 else:
                     print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
