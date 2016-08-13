@@ -1,6 +1,6 @@
 import logging
-import socket
 import os.path
+import socket
 import sys
 from io import StringIO
 
@@ -106,13 +106,20 @@ class SyncryptApp(object):
             vault.identity.init()
             if host:
                 vault.config.set('remote.host', host)
-            username, password = yield from self.auth_provider.get_auth(vault.backend)
-            vault.set_auth(username, password)
+            global_auth = self.config.remote.get('auth')
+            if global_auth:
+                logger.debug('Using user auth token to initialize vault.')
+                vault.set_global_auth(global_auth)
             try:
                 yield from vault.backend.init()
             except StorageBackendInvalidAuth:
-                logger.error('Invalid authentification')
-                continue
+                username, password = yield from self.auth_provider.get_auth(vault.backend)
+                vault.set_auth(username, password)
+                try:
+                    yield from vault.backend.init()
+                except StorageBackendInvalidAuth:
+                    logger.error('Invalid authentification')
+                    continue
             yield from vault.backend.upload_identity(self.identity)
 
     @asyncio.coroutine

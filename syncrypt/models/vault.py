@@ -159,6 +159,9 @@ class Vault(MetadataHolder):
         self.backend.username = username
         self.backend.password = password
 
+    def set_global_auth(self, global_auth):
+        self.backend.global_auth = global_auth
+
     def clear_bundle_cache(self):
         self._bundle_cache = {}
 

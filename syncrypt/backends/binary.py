@@ -137,14 +137,17 @@ class BinaryStorageConnection(object):
                 raise StorageBackendInvalidAuth(response)
         else:
             # we don't have auth token yet
-            if self.storage.username is None or self.storage.username == '':
+            if not self.storage.global_auth and (self.storage.username is None or self.storage.username == ''):
                 yield from self.disconnect()
-                raise StorageBackendInvalidAuth('no username/email given')
+                raise StorageBackendInvalidAuth('No username/email or auth token provided')
 
             vault = self.storage.vault
             if vault is None:
-                yield from self.write_term('login', self.storage.username,
-                        self.storage.password)
+                if self.storage.global_auth:
+                    yield from self.write_term('auth', self.storage.global_auth)
+                else:
+                    yield from self.write_term('login', self.storage.username,
+                            self.storage.password)
 
                 response = yield from self.read_term(assert_ok=False)
 
@@ -155,8 +158,11 @@ class BinaryStorageConnection(object):
                 self.storage.auth = response[1].decode()
 
             elif vault.config.id is None:
-                yield from self.write_term('login', self.storage.username,
-                        self.storage.password)
+                if self.storage.global_auth:
+                    yield from self.write_term('auth', self.storage.global_auth)
+                else:
+                    yield from self.write_term('login', self.storage.username,
+                            self.storage.password)
 
                 response = yield from self.read_term(assert_ok=False)
 
@@ -570,9 +576,15 @@ class BinaryStorageBackend(StorageBackend):
         self.port = port
         self.ssl = ssl
         self.vault = vault
+
+        # Vault specific login information
+        self.auth = auth
+
+        # Global user auth information
+        self.global_auth = None
         self.username = username
         self.password = password
-        self.auth = auth
+
         self.buf_size = 10 * 1024
         self.concurrency = int(concurrency)
         self.manager = BinaryStorageManager(self, self.concurrency)
