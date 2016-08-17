@@ -86,96 +86,103 @@ class CommonTestsMixin(object):
         app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
         yield from app.start()
+        try:
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 1) # only one vault
+            yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
-        c = yield from r.json()
-        self.assertEqual(len(c), 1) # only one vault
-        yield from r.release()
+            vault_uri = c[0]['resource_uri']
 
-        vault_uri = c[0]['resource_uri']
+            r = yield from aiohttp.get('http://127.0.0.1:28080%s' % vault_uri)
+            yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080%s' % vault_uri)
-        yield from r.release()
+            # get a list of bundles
+            bundle_list_uri = 'http://127.0.0.1:28080%sbundle/' % vault_uri
 
-        # get a list of bundles
-        bundle_list_uri = 'http://127.0.0.1:28080%sbundle/' % vault_uri
-
-        r = yield from aiohttp.get(bundle_list_uri)
-        c = yield from r.json()
-        self.assertEqual(len(c), 8)
-        #from pprint import pprint; pprint(c)
-        yield from r.release()
-
-        yield from app.stop()
+            r = yield from aiohttp.get(bundle_list_uri)
+            c = yield from r.json()
+            self.assertEqual(len(c), 8)
+            #from pprint import pprint; pprint(c)
+            yield from r.release()
+        finally:
+            yield from app.stop()
 
     def test_app_start_without_vaults(self):
         app = SyncryptApp(AppConfig())
         yield from app.start()
 
-        yield from asyncio.sleep(0.1)
+        try:
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
-        c = yield from r.json()
-        self.assertEqual(len(c), 0) # no vault
-        yield from r.release()
+            yield from asyncio.sleep(0.1)
 
-        r = yield from aiohttp.put('http://127.0.0.1:28080/v1/vault/', data=self.vault.folder)
-        c = yield from r.json()
-        self.assertGreater(len(c['resource_uri']), 5)
-        yield from r.release()
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 0) # no vault
+            yield from r.release()
 
-        teh_vault = c['resource_uri']
+            r = yield from aiohttp.put('http://127.0.0.1:28080/v1/vault/', data=self.vault.folder)
+            c = yield from r.json()
+            self.assertGreater(len(c['resource_uri']), 5)
+            yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
-        c = yield from r.json()
-        self.assertEqual(len(c), 1) # one vault
-        yield from r.release()
+            teh_vault = c['resource_uri']
 
-        r = yield from aiohttp.delete('http://127.0.0.1:28080' + teh_vault)
-        yield from r.release()
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 1) # one vault
+            yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
-        c = yield from r.json()
-        self.assertEqual(len(c), 0) # no vault
-        yield from r.release()
+            r = yield from aiohttp.delete('http://127.0.0.1:28080' + teh_vault)
+            yield from r.release()
 
-        # TODO actually we need to wait for backend future here
-        yield from asyncio.sleep(1.0)
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 0) # no vault
+            yield from r.release()
 
-        yield from app.stop()
+            # TODO actually we need to wait for backend future here
+            yield from asyncio.sleep(1.0)
+
+        finally:
+            yield from app.stop()
 
     def test_app_watchdog(self):
         app = SyncryptApp(AppConfig())
         app.add_vault(self.vault)
         yield from app.start()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
-        c = yield from r.json()
-        self.assertEqual(len(c), 1) # only one vault
-        yield from r.release()
+        try:
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
-        c = yield from r.json()
-        self.assertEqual(c['stats']['downloads'], 0)
-        self.assertEqual(c['stats']['uploads'], 8)
-        self.assertEqual(c['stats']['stats'], 8)
-        yield from r.release()
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 1) # only one vault
+            yield from r.release()
 
-        yield from app.push()
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
+            c = yield from r.json()
+            self.assertEqual(c['stats']['downloads'], 0)
+            self.assertEqual(c['stats']['uploads'], 8)
+            self.assertEqual(c['stats']['stats'], 8)
+            yield from r.release()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
-        c = yield from r.json()
-        self.assertEqual(c['stats']['downloads'], 0)
-        self.assertEqual(c['stats']['uploads'], 8)
-        self.assertEqual(c['stats']['stats'], 16)
-        yield from r.release()
+            yield from app.push()
 
-        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/config')
-        c = yield from r.json()
-        self.assertIn('api', c.keys())
-        yield from r.release()
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
+            c = yield from r.json()
+            self.assertEqual(c['stats']['downloads'], 0)
+            self.assertEqual(c['stats']['uploads'], 8)
+            self.assertEqual(c['stats']['stats'], 16)
+            yield from r.release()
 
-        yield from app.stop()
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/config')
+            c = yield from r.json()
+            self.assertIn('api', c.keys())
+            yield from r.release()
+
+        finally:
+            yield from app.stop()
+
 
     def test_vault_metadata(self):
         backend = self.vault.backend
