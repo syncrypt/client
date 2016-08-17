@@ -3,7 +3,7 @@ import json
 import asyncio
 import logging
 
-from .resources import VaultResource, JSONResponse
+from .resources import VaultResource, BundleResource, JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ class SyncryptAPI(object):
         self.web_app = web.Application(loop=loop)
 
         VaultResource(self.app).add_routes(self.web_app.router)
+        BundleResource(self.app).add_routes(self.web_app.router)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)

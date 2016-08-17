@@ -81,6 +81,33 @@ class CommonTestsMixin(object):
         yield from app.push_bundle(bundle)
         yield from app.wait()
 
+    def test_api_bundle(self):
+        'try to get a list of files via API'
+        app = SyncryptApp(AppConfig())
+        app.add_vault(self.vault)
+        yield from app.start()
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
+        c = yield from r.json()
+        self.assertEqual(len(c), 1) # only one vault
+        yield from r.release()
+
+        vault_uri = c[0]['resource_uri']
+
+        r = yield from aiohttp.get('http://127.0.0.1:28080%s' % vault_uri)
+        yield from r.release()
+
+        # get a list of bundles
+        bundle_list_uri = 'http://127.0.0.1:28080%sbundle/' % vault_uri
+
+        r = yield from aiohttp.get(bundle_list_uri)
+        c = yield from r.json()
+        self.assertEqual(len(c), 8)
+        #from pprint import pprint; pprint(c)
+        yield from r.release()
+
+        yield from app.stop()
+
     def test_app_start_without_vaults(self):
         app = SyncryptApp(AppConfig())
         yield from app.start()
