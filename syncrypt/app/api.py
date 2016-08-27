@@ -79,7 +79,7 @@ class SyncryptAPI():
             return JSONResponse({
                 'status': 'error',
                 'text': 'Invalid authentification'
-            })
+            }, status=500)
 
     @asyncio.coroutine
     def get_logout(self, request):
