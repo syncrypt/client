@@ -81,6 +81,20 @@ class CommonTestsMixin(object):
         yield from app.push_bundle(bundle)
         yield from app.wait()
 
+    def test_api_login(self):
+        'try to get a list of files via API'
+        app = SyncryptApp(AppConfig())
+        yield from app.start()
+        try:
+            login_data = json.dumps({
+                'email': 'test@syncrypt.space',
+                'password': 'test!password'
+            })
+            r = yield from aiohttp.post('http://127.0.0.1:28080/v1/login/', data=login_data)
+            yield from r.release()
+        finally:
+            yield from app.stop()
+
     def test_api_bundle(self):
         'try to get a list of files via API'
         app = SyncryptApp(AppConfig())

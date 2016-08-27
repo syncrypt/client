@@ -270,27 +270,30 @@ class SyncryptApp(object):
             vault.write_config()
 
     @asyncio.coroutine
-    def open_backend(self, always_ask_for_creds=False):
+    def open_backend(self, always_ask_for_creds=False, auth_provider=None, num_tries=3):
         'open a backend connection that will be independent from any vault'
 
         cfg = self.config
+        auth_provider = auth_provider or self.auth_provider
         backend = cfg.backend_cls(**cfg.backend_kwargs)
-        for try_num in range(3):
+        for try_num in range(num_tries):
             if always_ask_for_creds or try_num >= 1:
-                username, password = yield from self.auth_provider.get_auth(backend)
+                username, password = yield from auth_provider.get_auth(backend)
                 backend.username = username
                 backend.password = password
                 backend.auth = None
             try:
                 yield from backend.open()
-                if backend.auth and not 'auth' in cfg.remote:
+                if backend.auth:
                     cfg.update('remote', {'auth': backend.auth})
                     cfg.write(cfg.config_file)
+                return backend
             except StorageBackendInvalidAuth:
                 logger.error('Invalid login')
-                continue
-            break
-        return backend
+                if (try_num + 1) < num_tries:
+                    continue
+                else:
+                    raise
 
     @asyncio.coroutine
     def clone(self, vault_id, local_directory):
