@@ -139,6 +139,9 @@ class SyncryptApp(object):
             # retry after logging in & getting auth token
             yield from self.init(vault)
             yield from vault.backend.open()
+        except VaultNotInitialized:
+            yield from self.init(vault)
+            yield from vault.backend.open()
 
     @asyncio.coroutine
     def start(self):

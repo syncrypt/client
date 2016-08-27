@@ -8,6 +8,8 @@ import itertools
 import asyncio
 from aiohttp import web
 
+logger = logging.getLogger(__name__)
+
 
 class JSONResponse(web.Response):
     def __init__(self, obj, **kwargs):
@@ -25,7 +27,8 @@ class Resource(object):
 
     def add_routes(self, router):
         opts = {'version': self.version, 'name': self.resource_name}
-        router.add_route('PUT', '/{version}/{name}/'.format(**opts), self.dispatch_put)
+        router.add_route('POST', '/{version}/{name}/'.format(**opts), self.dispatch_post)
+        router.add_route('PUT', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_put)
         router.add_route('GET', '/{version}/{name}/'.format(**opts), self.dispatch_list)
         router.add_route('GET', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_get)
         router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_delete)
@@ -57,6 +60,10 @@ class Resource(object):
     def dispatch_put(self, request):
         obj = yield from self.put_obj(request)
         return JSONResponse(self.dehydrate(obj))
+
+    @asyncio.coroutine
+    def dispatch_post(self, request):
+        raise NotImplementedError
 
     @asyncio.coroutine
     def get_obj_list(self, request):
@@ -106,15 +113,16 @@ class VaultResource(Resource):
         self.app.remove_vault(obj)
 
     @asyncio.coroutine
-    def put_obj(self, request):
-        vault_path = (yield from request.content.read()).decode()
-        vault = self.app.add_vault_by_path(vault_path)
+    def dispatch_post(self, request):
+        content = yield from request.content.read()
+        request_dict = json.loads(content.decode())
+        vault = self.app.add_vault_by_path(request_dict['folder'])
         task = asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
-        def cb(_task):
-            if task.exception():
-                logger.warn("%s", task.exception())
-        task.add_done_callback(cb)
-        return vault
+        #def cb(_task):
+        #    if task.exception():
+        #        logger.warn("%s", task.exception())
+        #task.add_done_callback(cb)
+        return JSONResponse({}) # return 200 without data
 
 
 class BundleResource(Resource):
@@ -169,8 +177,8 @@ class BundleResource(Resource):
         vault_path = (yield from request.content.read()).decode()
         vault = self.app.add_vault_by_path(vault_path)
         task = asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
-        def cb(_task):
-            if task.exception():
-                logger.warn("%s", task.exception())
-        task.add_done_callback(cb)
+        #def cb(_task):
+        #    if task.exception():
+        #        logger.warn("%s", task.exception())
+        #task.add_done_callback(cb)
         return vault
