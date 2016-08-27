@@ -23,5 +23,9 @@ def setup_logging(loglevel):
                 'handlers': ['stream'],
                 'level': loglevel
             },
+            'aiohttp': {
+                'handlers': ['stream'],
+                'level': loglevel
+            },
         },
     })
