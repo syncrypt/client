@@ -81,9 +81,13 @@ class CommonTestsMixin(object):
         yield from app.push_bundle(bundle)
         yield from app.wait()
 
+    # Move to test_api.py
+
     def test_api_login(self):
         'try to get a list of files via API'
-        app = SyncryptApp(AppConfig())
+        test_config = AppConfig()
+        test_config.set('remote.host', 'localhost')
+        app = SyncryptApp(test_config)
         yield from app.start()
         try:
             login_data = json.dumps({

@@ -103,7 +103,7 @@ class BinaryStorageConnection(object):
     def connect(self):
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            if self.storage.host == '127.0.0.1':
+            if self.storage.host in ('127.0.0.1', 'localhost'):
                 sc.check_hostname = False
                 sc.verify_mode = ssl.CERT_NONE
         else:
