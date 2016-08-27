@@ -33,3 +33,35 @@ exe = EXE(pyz,
           strip=True,
           upx=True,
           console=True )
+
+b = Analysis(['scripts/syncrypt_daemon'],
+             pathex=[os.path.abspath('.')],
+             binaries=None,
+             datas=None,
+             hiddenimports=[
+                 'six',
+                 'packaging',
+                 'packaging.version',
+                 'packaging.specifiers',
+                 'packaging.requirements',
+             ],
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher)
+pyz = PYZ(b.pure, b.zipped_data,
+             cipher=block_cipher)
+exe = EXE(pyz,
+          b.scripts,
+          b.binaries,
+          b.zipfiles,
+          b.datas,
+          name='syncrypt_daemon',
+          debug=False,
+          strip=True,
+          upx=True,
+          console=True )
+
+MERGE((a, 'syncrypt', 'syncrypt'), (b, 'syncrypt_daemon', 'syncrypt_daemon'))
