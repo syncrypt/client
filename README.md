@@ -17,7 +17,8 @@ Option 1: Install from PyPI (requires Python 3)
 
 This requires the ``snappy-c`` library in order to build the
 [python-snappy](https://github.com/andrix/python-snappy) dependency. In Ubuntu,
-you can install it with the APT package ``libsnappy-dev``.
+you can install it with the APT package ``libsnappy-dev``. In OS X, you can
+install it with ```brew install snappy```.
 
 Option 2: Download one of the distribution packages:
 
