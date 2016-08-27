@@ -130,7 +130,9 @@ setup(
             'pyqt-distutils'
         ],
         'dist': [
-            'pyinstaller'
+            'pyinstaller==3.1',
+            'six',
+            'packaging'
         ],
         'test': [
             'pytest-runner',
