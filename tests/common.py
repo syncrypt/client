@@ -95,7 +95,7 @@ class CommonTestsMixin(object):
                 'email': 'test@syncrypt.space',
                 'password': 'test!password'
             })
-            r = yield from aiohttp.post('http://127.0.0.1:28080/v1/login/', data=login_data)
+            r = yield from aiohttp.post('http://127.0.0.1:28080/v1/auth/login/', data=login_data)
             yield from r.release()
 
             r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/check/')

@@ -60,7 +60,7 @@ class SyncryptAPI():
         return JSONResponse(self.app.config.as_dict())
 
     @asyncio.coroutine
-    def post_login(self, request):
+    def post_auth_login(self, request):
         content = yield from request.content.read()
         credentials = json.loads(content.decode())
         logger.info('Login requested with email: %s', credentials['email'])
@@ -117,7 +117,7 @@ class SyncryptAPI():
         VaultResource(self.app).add_routes(self.web_app.router)
         BundleResource(self.app).add_routes(self.web_app.router)
 
-        self.web_app.router.add_route('POST', '/v1/login/', self.post_login)
+        self.web_app.router.add_route('POST', '/v1/auth/login/', self.post_auth_login)
         self.web_app.router.add_route('GET', '/v1/auth/check/', self.get_auth_check)
         self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
 
