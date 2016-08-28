@@ -240,6 +240,10 @@ class BinaryStorageConnection(object):
 
         response = yield from self.read_term()
 
+        if isinstance(response[1], (tuple, list)) and response[1][0] == Atom('not_found'):
+            logger.info('File not found: %s', bundle.store_hash)
+            return None
+
         dct = rewrite_atoms_dict(response[1])
         dct.update(**rewrite_atoms_dict(response[2]))
         return dct
