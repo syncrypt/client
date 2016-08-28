@@ -382,6 +382,17 @@ class BinaryStorageConnection(object):
         return list(map(rewrite_atoms_dict, response[1]))
 
     @asyncio.coroutine
+    def list_vault_users(self):
+
+        logger.info('Getting a list of vault users')
+
+        # upload key and file
+        yield from self.write_term('list_vault_users')
+        response = yield from self.read_term()
+
+        return [email.decode() for email in response[1]]
+
+    @asyncio.coroutine
     def list_files(self, queue):
 
         logger.info('Getting a list of files for vault %s', self.storage.vault)

@@ -88,6 +88,12 @@ class Resource(object):
 class VaultResource(Resource):
     resource_name = 'vault'
 
+    def add_routes(self, router):
+        super(VaultResource, self).add_routes(router)
+        opts = {'version': self.version, 'name': self.resource_name}
+        router.add_route('GET', '/{version}/{name}/{{id}}/users/'.format(**opts), self.dispatch_get_users)
+        #router.add_route('POST', '/{version}/{name}/users/'.format(**opts), self.dispatch_post_users)
+
     def get_id(self, v):
         hash = hashlib.new('md5')
         hash.update(os.path.abspath(v.folder.encode()))
@@ -111,6 +117,13 @@ class VaultResource(Resource):
     @asyncio.coroutine
     def delete_obj(self, obj):
         self.app.remove_vault(obj)
+
+    @asyncio.coroutine
+    def dispatch_get_users(self, request):
+        vault = yield from self.get_obj(request)
+        yield from vault.backend.open()
+        user_list = yield from vault.backend.list_vault_users()
+        return JSONResponse(user_list)
 
     @asyncio.coroutine
     def dispatch_post(self, request):

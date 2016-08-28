@@ -155,7 +155,8 @@ class CommonTestsMixin(object):
             self.assertEqual(len(c), 0) # no vault
             yield from r.release()
 
-            r = yield from aiohttp.put('http://127.0.0.1:28080/v1/vault/', data=self.vault.folder)
+            r = yield from aiohttp.post('http://127.0.0.1:28080/v1/vault/',
+                    data=json.dumps({ 'folder': self.vault.folder }))
             c = yield from r.json()
             self.assertGreater(len(c['resource_uri']), 5)
             yield from r.release()
@@ -165,6 +166,12 @@ class CommonTestsMixin(object):
             r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
             c = yield from r.json()
             self.assertEqual(len(c), 1) # one vault
+            yield from r.release()
+
+            r = yield from aiohttp.get('http://127.0.0.1:28080' + teh_vault + 'users/')
+            c = yield from r.json()
+
+            self.assertEqual(len(c), 1) # one user
             yield from r.release()
 
             r = yield from aiohttp.delete('http://127.0.0.1:28080' + teh_vault)
