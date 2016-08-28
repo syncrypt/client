@@ -135,7 +135,7 @@ class VaultResource(Resource):
         #    if task.exception():
         #        logger.warn("%s", task.exception())
         #task.add_done_callback(cb)
-        return JSONResponse({}) # return 200 without data
+        return JSONResponse(self.dehydrate(vault))
 
 
 class BundleResource(Resource):
