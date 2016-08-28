@@ -88,6 +88,7 @@ class CommonTestsMixin(object):
         test_config = AppConfig()
         test_config.set('remote.host', 'localhost')
         app = SyncryptApp(test_config)
+
         yield from app.start()
         try:
             login_data = json.dumps({
@@ -96,6 +97,21 @@ class CommonTestsMixin(object):
             })
             r = yield from aiohttp.post('http://127.0.0.1:28080/v1/login/', data=login_data)
             yield from r.release()
+
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/check/')
+            c = yield from r.json()
+            yield from r.release()
+            self.assertEqual(c['connected'], True)
+
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/logout/')
+            c = yield from r.json()
+            yield from r.release()
+
+            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/check/')
+            c = yield from r.json()
+            yield from r.release()
+            self.assertEqual(c['connected'], False)
+
         finally:
             yield from app.stop()
 

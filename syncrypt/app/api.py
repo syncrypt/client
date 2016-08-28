@@ -82,8 +82,32 @@ class SyncryptAPI():
             }, status=500)
 
     @asyncio.coroutine
-    def get_logout(self, request):
-        return JSONResponse()
+    def get_auth_check(self, request):
+        logger.info('Login check')
+        cfg = self.app.config
+        backend = cfg.backend_cls(**cfg.backend_kwargs)
+        connected = False
+        try:
+            yield from backend.open()
+            yield from backend.close()
+            connected = True
+        except StorageBackendInvalidAuth:
+            pass
+        return JSONResponse({
+                'status': 'ok',
+                'connected': connected
+            })
+
+    @asyncio.coroutine
+    def get_auth_logout(self, request):
+        '''
+        Logging out the user simply works by removing the global auth
+        token.
+        '''
+        cfg = self.app.config
+        cfg.update('remote', {'auth': ''})
+        cfg.write(cfg.config_file)
+        return JSONResponse({'status': 'ok'})
 
     @asyncio.coroutine
     def start(self):
@@ -94,7 +118,8 @@ class SyncryptAPI():
         BundleResource(self.app).add_routes(self.web_app.router)
 
         self.web_app.router.add_route('POST', '/v1/login/', self.post_login)
-        self.web_app.router.add_route('GET', '/v1/logout/', self.get_logout)
+        self.web_app.router.add_route('GET', '/v1/auth/check/', self.get_auth_check)
+        self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
