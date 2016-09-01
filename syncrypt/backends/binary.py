@@ -638,12 +638,9 @@ class BinaryStorageBackend(StorageBackend):
     def stat(self, bundle):
         with (yield from self.manager.acquire_connection()) as conn:
             bundle.remote_crypt_hash = None
-            try:
-                stat_info = yield from conn.stat(bundle)
-                if 'content_hash' in stat_info:
-                    bundle.remote_crypt_hash = stat_info['content_hash'].decode()
-            except UnsuccessfulResponse:
-                pass
+            stat_info = yield from conn.stat(bundle)
+            if stat_info and 'content_hash' in stat_info:
+                bundle.remote_crypt_hash = stat_info['content_hash'].decode()
 
     @asyncio.coroutine
     def list_files(self):
