@@ -214,8 +214,11 @@ class VirtualBundle(Bundle):
     def __set_metadata(self, metadata):
         self._metadata = metadata
         if 'filename' in metadata:
-            self.path = os.path.join(self.vault.folder, metadata['filename'])
-            self.relpath = metadata['filename']
+            if isinstance(metadata['filename'], bytes):
+                self.relpath = metadata['filename'].decode(self.vault.config.encoding, 'surrogateescape')
+            else:
+                self.relpath = metadata['filename']
+            self.path = os.path.join(self.vault.folder, self.relpath)
 
     metadata = property(__get_metadata, __set_metadata)
 
