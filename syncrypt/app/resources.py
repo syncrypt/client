@@ -91,6 +91,7 @@ class VaultResource(Resource):
     def add_routes(self, router):
         super(VaultResource, self).add_routes(router)
         opts = {'version': self.version, 'name': self.resource_name}
+        router.add_route('GET', '/{version}/{name}/{{id}}/users/{{email}}/keys/'.format(**opts), self.dispatch_get_user_keys)
         router.add_route('GET', '/{version}/{name}/{{id}}/users/'.format(**opts), self.dispatch_get_users)
         router.add_route('GET', '/{version}/{name}/{{id}}/add_user/'.format(**opts), self.dispatch_add_user)
 
@@ -133,7 +134,12 @@ class VaultResource(Resource):
         yield from vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
         yield from vault.backend.add_vault_user(email)
+        return JSONResponse({})
 
+    @asyncio.coroutine
+    def dispatch_get_user_keys(self, request):
+        vault = yield from self.get_obj(request)
+        email = request.match_info['email']
         key_list = yield from vault.backend.list_keys(email)
         return JSONResponse([{
             'description': key['description'],

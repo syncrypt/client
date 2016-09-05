@@ -117,9 +117,13 @@ class APITests(VaultTestCase):
             # add_user will make sure that the email is added as a user to the vault.
             # it will then return all the keys.
             # For testing purpose, we will add ourselves again
-            r = yield from aiohttp.get('http://127.0.0.1:28080' + teh_vault + 'add_user/?email=' + c[0]['email'])
+            me = c[0]['email']
+            r = yield from aiohttp.get('http://127.0.0.1:28080' + teh_vault + 'add_user/?email=' + me)
             c = yield from r.json()
+            yield from r.release()
 
+            r = yield from aiohttp.get('http://127.0.0.1:28080' + teh_vault + 'users/' + me + '/keys/')
+            c = yield from r.json()
             self.assertGreater(len(c), 0) # at least one key
             yield from r.release()
 
