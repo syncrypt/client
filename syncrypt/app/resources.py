@@ -92,7 +92,7 @@ class VaultResource(Resource):
         super(VaultResource, self).add_routes(router)
         opts = {'version': self.version, 'name': self.resource_name}
         router.add_route('GET', '/{version}/{name}/{{id}}/users/'.format(**opts), self.dispatch_get_users)
-        #router.add_route('POST', '/{version}/{name}/users/'.format(**opts), self.dispatch_post_users)
+        router.add_route('GET', '/{version}/{name}/{{id}}/add_user/'.format(**opts), self.dispatch_add_user)
 
     def get_id(self, v):
         hash = hashlib.new('md5')
@@ -124,6 +124,23 @@ class VaultResource(Resource):
         yield from vault.backend.open()
         user_list = yield from vault.backend.list_vault_users()
         return JSONResponse(user_list)
+
+    @asyncio.coroutine
+    def dispatch_add_user(self, request):
+
+        vault = yield from self.get_obj(request)
+        email = request.GET.get('email')
+        yield from vault.backend.open()
+        logger.info('Adding user "%s" to %s', email, vault)
+        yield from vault.backend.add_vault_user(email)
+
+        key_list = yield from vault.backend.list_keys(email)
+        return JSONResponse([{
+            'description': key['description'],
+            'created_at': key['created_at'],
+            'fingerprint': key['fingerprint']
+        } for key in key_list])
+
 
     @asyncio.coroutine
     def dispatch_post(self, request):

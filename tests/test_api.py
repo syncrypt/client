@@ -114,6 +114,15 @@ class APITests(VaultTestCase):
             self.assertEqual(len(c), 1) # one user
             yield from r.release()
 
+            # add_user will make sure that the email is added as a user to the vault.
+            # it will then return all the keys.
+            # For testing purpose, we will add ourselves again
+            r = yield from aiohttp.get('http://127.0.0.1:28080' + teh_vault + 'add_user/?email=' + c[0]['email'])
+            c = yield from r.json()
+
+            self.assertGreater(len(c), 0) # at least one key
+            yield from r.release()
+
             r = yield from aiohttp.delete('http://127.0.0.1:28080' + teh_vault)
             yield from r.release()
 

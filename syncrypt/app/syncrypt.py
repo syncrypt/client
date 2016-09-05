@@ -226,7 +226,7 @@ class SyncryptApp(object):
     def print_key_list(self, key_list, with_art=False):
         for key in key_list:
             fingerprint = key['fingerprint']
-            description = key['description'].decode()
+            description = key['description']
             created_at = key['created_at']
             if with_art:
                 print(draw_art(None, '1', fingerprint))
