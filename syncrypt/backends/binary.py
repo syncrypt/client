@@ -70,6 +70,8 @@ class BinaryStorageConnection(object):
             if len(buf) == 0:
                 raise ConnectionResetException()
             packet += buf
+        if BINARY_DEBUG:
+            logger.debug('[READ] Serialized: %s', packet)
         decoded = bert.decode(packet)
         if BINARY_DEBUG:
             logger.debug('[READ] Unserialized: %s', decoded)
