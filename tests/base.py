@@ -8,7 +8,13 @@ import asynctest
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.models import Vault
+from syncrypt.config import AppConfig
 
+class TestAppConfig(AppConfig):
+    def __init__(self):
+        super(TestAppConfig, self).__init__()
+        self.set('remote.host', 'localhost')
+        self.config_file = os.path.abspath('./test_config')
 
 class VaultTestCase(asynctest.TestCase):
     folder = None

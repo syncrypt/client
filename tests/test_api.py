@@ -14,21 +14,15 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault
-from tests.base import VaultTestCase
+from tests.base import VaultTestCase, TestAppConfig
 
 
 class APITests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
 
-    def _test_app_config(self):
-        test_config = AppConfig()
-        #test_config = TemporaryAppConfig()
-        test_config.set('remote.host', 'localhost')
-        return test_config
-
     def test_api_login(self):
         'try to get a list of files via API'
-        app = SyncryptApp(self._test_app_config())
+        app = SyncryptApp(TestAppConfig())
         yield from app.start()
         try:
             login_data = json.dumps({
@@ -37,18 +31,22 @@ class APITests(VaultTestCase):
             })
             r = yield from aiohttp.post('http://127.0.0.1:28080/v1/auth/login/', data=login_data)
             yield from r.release()
+            self.assertEqual(r.status, 200)
 
             r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/check/')
             c = yield from r.json()
             yield from r.release()
+            self.assertEqual(r.status, 200)
             self.assertEqual(c['connected'], True)
 
             r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/logout/')
             c = yield from r.json()
+            self.assertEqual(r.status, 200)
             yield from r.release()
 
             r = yield from aiohttp.get('http://127.0.0.1:28080/v1/auth/check/')
             c = yield from r.json()
+            self.assertEqual(r.status, 200)
             yield from r.release()
             self.assertEqual(c['connected'], False)
 
@@ -57,7 +55,7 @@ class APITests(VaultTestCase):
 
     def test_api_bundle(self):
         'try to get a list of files via API'
-        app = SyncryptApp(self._test_app_config())
+        app = SyncryptApp(TestAppConfig())
         app.add_vault(self.vault)
         yield from app.start()
         try:
@@ -82,8 +80,8 @@ class APITests(VaultTestCase):
         finally:
             yield from app.stop()
 
-    def test_app_start_without_vaults(self):
-        app = SyncryptApp(self._test_app_config())
+    def test_api_add_user(self):
+        app = SyncryptApp(TestAppConfig())
         yield from app.start()
 
         try:
@@ -142,7 +140,7 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_app_watchdog(self):
-        app = SyncryptApp(AppConfig())
+        app = SyncryptApp(TestAppConfig())
         app.add_vault(self.vault)
         yield from app.start()
 
