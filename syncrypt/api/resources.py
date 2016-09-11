@@ -187,8 +187,8 @@ class VaultUserResource(Resource):
     @asyncio.coroutine
     def post_obj(self, request):
         vault = self.get_vault(request)
-        payload = yield from request.payload.read()
-        data = json.loads(payload.decode())
+        content = yield from request.content.read()
+        data = json.loads(content.decode())
         email = data['email']
         yield from vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
