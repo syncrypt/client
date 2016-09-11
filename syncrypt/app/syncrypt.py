@@ -17,7 +17,7 @@ from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
 from tzlocal import get_localzone
 
-from .api import SyncryptAPI
+from syncrypt.api import SyncryptAPI
 from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
