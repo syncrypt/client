@@ -390,7 +390,8 @@ class BinaryStorageConnection(object):
         yield from self.write_term('list_vault_users')
         response = yield from self.read_term()
 
-        return [{"email": email.decode()} for email in response[1]]
+        return [{k: v.decode() for k, v in user.items()}
+                for user in map(rewrite_atoms_dict, response[1])]
 
     @asyncio.coroutine
     def list_files(self, queue):

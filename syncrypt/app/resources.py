@@ -91,9 +91,6 @@ class VaultResource(Resource):
     def add_routes(self, router):
         super(VaultResource, self).add_routes(router)
         opts = {'version': self.version, 'name': self.resource_name}
-        router.add_route('GET', '/{version}/{name}/{{id}}/users/{{email}}/keys/'.format(**opts), self.dispatch_get_user_keys)
-        router.add_route('GET', '/{version}/{name}/{{id}}/users/'.format(**opts), self.dispatch_get_users)
-        router.add_route('GET', '/{version}/{name}/{{id}}/add_user/'.format(**opts), self.dispatch_add_user)
 
     def get_id(self, v):
         hash = hashlib.new('md5')
@@ -109,44 +106,18 @@ class VaultResource(Resource):
     def get_obj_list(self, request):
         return self.app.vaults
 
+    def find_vault_by_id(self, vault_id):
+        for v in self.app.vaults:
+            if self.get_id(v) == vault_id:
+                return v
+
     @asyncio.coroutine
     def get_obj(self, request):
-        for v in self.app.vaults:
-            if self.get_id(v) == request.match_info['id']:
-                return v
+        return find_vault_by_id(request.match_info['id'])
 
     @asyncio.coroutine
     def delete_obj(self, obj):
         self.app.remove_vault(obj)
-
-    @asyncio.coroutine
-    def dispatch_get_users(self, request):
-        vault = yield from self.get_obj(request)
-        yield from vault.backend.open()
-        user_list = yield from vault.backend.list_vault_users()
-        return JSONResponse(user_list)
-
-    @asyncio.coroutine
-    def dispatch_add_user(self, request):
-
-        vault = yield from self.get_obj(request)
-        email = request.GET.get('email')
-        yield from vault.backend.open()
-        logger.info('Adding user "%s" to %s', email, vault)
-        yield from vault.backend.add_vault_user(email)
-        return JSONResponse({})
-
-    @asyncio.coroutine
-    def dispatch_get_user_keys(self, request):
-        vault = yield from self.get_obj(request)
-        email = request.match_info['email']
-        key_list = yield from vault.backend.list_keys(email)
-        return JSONResponse([{
-            'description': key['description'],
-            'created_at': key['created_at'],
-            'fingerprint': key['fingerprint']
-        } for key in key_list])
-
 
     @asyncio.coroutine
     def dispatch_post(self, request):
@@ -160,6 +131,68 @@ class VaultResource(Resource):
         #task.add_done_callback(cb)
         return JSONResponse(self.dehydrate(vault))
 
+class VaultUserResource(Resource):
+    resource_name = 'users'
+
+    def add_routes(self, router):
+        opts = {'version': self.version, 'name': self.resource_name}
+        router.add_route('PUT',
+                '/{version}/vault/{{vault_id}}/{name}/'.format(**opts),
+                self.dispatch_put)
+        router.add_route('GET',
+                '/{version}/vault/{{vault_id}}/{name}/'.format(**opts),
+                self.dispatch_list)
+        router.add_route('GET',
+                '/{version}/vault/{{vault_id}}/{name}/{{email}}'.format(**opts),
+                self.dispatch_get)
+        router.add_route('DELETE',
+                '/{version}/vault/{{vault_id}}/{name}/{{email}}'.format(**opts),
+                self.dispatch_delete)
+        router.add_route('GET',
+                '/{version}/vault/{{vault_id}}/{{name}}/{{email}}/keys/'.format(**opts),
+                self.dispatch_keys)
+
+
+    def get_vault(self, request):
+        vault_res = VaultResource(self.app)
+        vault = vault_res.find_vault_by_id(request.match_info['vault_id'])
+        if vault is None:
+            raise ValueError('Vault not found')
+        return vault
+
+    def get_id(self, obj):
+        return obj['email']
+
+    def dehydrate(self, obj):
+        return dict(obj, resource_uri=self.get_resource_uri(obj))
+
+    @asyncio.coroutine
+    def dispatch_keys(self, request):
+        vault = self.get_vault(request)
+        email = request.match_info['email']
+        key_list = yield from vault.backend.list_keys(email)
+        return JSONResponse([{
+            'description': key['description'],
+            'created_at': key['created_at'],
+            'fingerprint': key['fingerprint']
+        } for key in key_list])
+
+    @asyncio.coroutine
+    def get_obj_list(self, request):
+        vault = self.get_vault(request)
+        yield from vault.backend.open()
+        return (yield from vault.backend.list_vault_users())
+
+    @asyncio.coroutine
+    def put_obj(self, request):
+        vault = self.get_vault(request)
+        payload = yield from request.payload.read()
+        data = json.loads(payload.decode())
+        email = data['email']
+        yield from vault.backend.open()
+        logger.info('Adding user "%s" to %s', email, vault)
+        yield from vault.backend.add_vault_user(email)
+        return {'email': email}
 
 class BundleResource(Resource):
     resource_name = 'bundle'
@@ -188,16 +221,9 @@ class BundleResource(Resource):
     @asyncio.coroutine
     def get_obj_list(self, request):
         vault_res = VaultResource(self.app)
-
-        vault = None
-        for v in self.app.vaults:
-            if vault_res.get_id(v) == request.match_info['vault_id']:
-                vault = v
-                break
-
+        vault = vault_res.find_vault_by_id(request.match_info['vault_id'])
         if vault is None:
             raise ValueError('Vault not found')
-
         return itertools.islice(vault.walk_disk(), 0, 20)
 
     @asyncio.coroutine
