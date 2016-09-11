@@ -17,6 +17,8 @@ LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
 parser.add_argument('-d,--detach', action='store_true',
         dest='detach', help='Detach from console')
+parser.add_argument('-c,--config', action='store', type=str,
+        dest='config', help='Config file')
 parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
         dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
 
@@ -24,7 +26,7 @@ config = parser.parse_args()
 
 setup_logging(config.loglevel)
 
-app_config = MaterializedAppConfig()
+app_config = MaterializedAppConfig(config.config)
 app = SyncryptApp(app_config)
 
 def run_syncrypt():

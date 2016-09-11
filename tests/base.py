@@ -12,9 +12,8 @@ from syncrypt.config import AppConfig
 
 class TestAppConfig(AppConfig):
     def __init__(self):
-        super(TestAppConfig, self).__init__()
+        super(TestAppConfig, self).__init__(os.path.abspath('./test_config'))
         self.set('remote.host', 'localhost')
-        self.config_file = os.path.abspath('./test_config')
 
 class VaultTestCase(asynctest.TestCase):
     folder = None

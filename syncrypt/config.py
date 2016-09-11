@@ -132,9 +132,9 @@ class AppConfig(Config, BackendConfigMixin):
         'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }
 
-    def __init__(self):
+    def __init__(self, config_file=None):
         super(AppConfig, self).__init__()
-        self.config_file = os.path.join(self.config_dir, 'config')
+        self.config_file = config_file or os.path.join(self.config_dir, 'config')
 
     def read_config_file(self):
         logger.debug('Reading application config from %s', self.config_file)
@@ -162,8 +162,8 @@ class MaterializedAppConfig(AppConfig):
     An AppConfig that will read and sync the settings from disk.
     '''
 
-    def __init__(self, syncrypt_config_dir=None):
-        super(MaterializedAppConfig, self).__init__()
+    def __init__(self, config_file=None):
+        super(MaterializedAppConfig, self).__init__(config_file)
         self.read_config_file()
         logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
 
