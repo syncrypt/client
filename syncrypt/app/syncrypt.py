@@ -94,18 +94,16 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def init(self, vault=None, host=None):
         for vault in (self.vaults if vault is None else [vault]):
+            if host:
+                vault.config.set('remote.host', host)
             try:
                 yield from vault.backend.open()
                 logger.warn('Vault %s already initialized', vault.folder)
                 continue
-            except StorageBackendInvalidAuth:
-                pass
-            except VaultNotInitialized:
+            except (StorageBackendInvalidAuth, VaultNotInitialized):
                 pass
             logger.info("Initializing %s", vault)
             vault.identity.init()
-            if host:
-                vault.config.set('remote.host', host)
             global_auth = self.config.remote.get('auth')
             if global_auth:
                 logger.debug('Using user auth token to initialize vault.')
@@ -135,12 +133,10 @@ class SyncryptApp(object):
     def open_or_init(self, vault):
         try:
             yield from vault.backend.open()
-        except StorageBackendInvalidAuth:
+        except (StorageBackendInvalidAuth, VaultNotInitialized):
             # retry after logging in & getting auth token
-            yield from self.init(vault)
-            yield from vault.backend.open()
-        except VaultNotInitialized:
-            yield from self.init(vault)
+            # use the host from the app config
+            yield from self.init(vault, host=self.config.remote.get('host'))
             yield from vault.backend.open()
 
     @asyncio.coroutine
