@@ -63,7 +63,8 @@ class Resource(object):
 
     @asyncio.coroutine
     def dispatch_post(self, request):
-        raise NotImplementedError
+        obj = yield from self.post_obj(request)
+        return JSONResponse(self.dehydrate(obj))
 
     @asyncio.coroutine
     def get_obj_list(self, request):
@@ -120,7 +121,7 @@ class VaultResource(Resource):
         self.app.remove_vault(obj)
 
     @asyncio.coroutine
-    def dispatch_post(self, request):
+    def post_obj(self, request):
         content = yield from request.content.read()
         request_dict = json.loads(content.decode())
         vault = self.app.add_vault_by_path(request_dict['folder'])
@@ -129,16 +130,16 @@ class VaultResource(Resource):
         #    if task.exception():
         #        logger.warn("%s", task.exception())
         #task.add_done_callback(cb)
-        return JSONResponse(self.dehydrate(vault))
+        return vault
 
 class VaultUserResource(Resource):
     resource_name = 'users'
 
     def add_routes(self, router):
         opts = {'version': self.version, 'name': self.resource_name}
-        router.add_route('PUT',
+        router.add_route('POST',
                 '/{version}/vault/{{vault_id}}/{name}/'.format(**opts),
-                self.dispatch_put)
+                self.dispatch_post)
         router.add_route('GET',
                 '/{version}/vault/{{vault_id}}/{name}/'.format(**opts),
                 self.dispatch_list)
@@ -184,7 +185,7 @@ class VaultUserResource(Resource):
         return (yield from vault.backend.list_vault_users())
 
     @asyncio.coroutine
-    def put_obj(self, request):
+    def post_obj(self, request):
         vault = self.get_vault(request)
         payload = yield from request.payload.read()
         data = json.loads(payload.decode())

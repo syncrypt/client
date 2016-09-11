@@ -116,7 +116,7 @@ class APITests(VaultTestCase):
             # it will then return all the keys.
             # For testing purpose, we will add ourselves again
             me = c[0]['email']
-            r = yield from aiohttp.put('http://127.0.0.1:28080' + teh_vault + 'users/',
+            r = yield from aiohttp.post('http://127.0.0.1:28080' + teh_vault + 'users/',
                 data=json.dumps({'email': me}))
             c = yield from r.json()
             yield from r.release()
