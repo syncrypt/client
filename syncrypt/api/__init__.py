@@ -7,7 +7,7 @@ from syncrypt.app.auth import AuthenticationProvider
 from syncrypt.backends.base import StorageBackendInvalidAuth
 
 from .resources import (BundleResource, JSONResponse, VaultResource,
-                        VaultUserResource)
+                        VaultUserResource, UserResource)
 
 
 class DummyAuthenticationProvider(AuthenticationProvider):
@@ -116,6 +116,7 @@ class SyncryptAPI():
 
         VaultResource(self.app).add_routes(self.web_app.router)
         BundleResource(self.app).add_routes(self.web_app.router)
+        UserResource(self.app).add_routes(self.web_app.router)
         VaultUserResource(self.app).add_routes(self.web_app.router)
 
         self.web_app.router.add_route('POST', '/v1/auth/login/', self.post_auth_login)

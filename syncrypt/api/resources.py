@@ -89,10 +89,6 @@ class Resource(object):
 class VaultResource(Resource):
     resource_name = 'vault'
 
-    def add_routes(self, router):
-        super(VaultResource, self).add_routes(router)
-        opts = {'version': self.version, 'name': self.resource_name}
-
     def get_id(self, v):
         hash = hashlib.new('md5')
         hash.update(os.path.abspath(v.folder.encode()))
@@ -131,6 +127,26 @@ class VaultResource(Resource):
         #        logger.warn("%s", task.exception())
         #task.add_done_callback(cb)
         return vault
+
+class UserResource(Resource):
+    resource_name = 'user'
+
+    def add_routes(self, router):
+        opts = {'version': self.version, 'name': self.resource_name}
+        router.add_route('GET', '/{version}/{name}/{{id}}/keys/'.format(**opts), self.dispatch_keys)
+
+    @asyncio.coroutine
+    def dispatch_keys(self, request):
+        email = request.match_info['id']
+        backend = yield from self.app.open_backend()
+        key_list = yield from backend.list_keys(email)
+        response = JSONResponse([{
+            'description': key['description'],
+            'created_at': key['created_at'],
+            'fingerprint': key['fingerprint']
+        } for key in key_list])
+        yield from backend.close()
+        return response
 
 class VaultUserResource(Resource):
     resource_name = 'users'
