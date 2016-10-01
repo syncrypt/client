@@ -66,7 +66,7 @@ manual](docs/manual.md).
 Run tests:
 
     bin/pip install -e '.[test]'
-    bin/python setup.py test
+    bin/py.test
 
 ## Develop
 
