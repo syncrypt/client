@@ -128,6 +128,29 @@ class VaultResource(Resource):
         #task.add_done_callback(cb)
         return vault
 
+class FlyingVaultResource(Resource):
+    """
+    A Flying Vault represents a Vault that the user has access to but is not
+    yet cloned to the local machine.
+    """
+    resource_name = 'flying-vault'
+
+    def get_id(self, obj):
+        return obj['id']
+
+    @asyncio.coroutine
+    def get_obj_list(self, request):
+        vaults = []
+        backend = yield from self.app.open_backend()
+        for v in (yield from backend.list_vaults()):
+            vaults.append(dict(v, id=v['id'].decode('utf-8')))
+        yield from backend.close()
+        return vaults
+
+    @asyncio.coroutine
+    def get_obj(self, request):
+        return find_vault_by_id(request.match_info['id'])
+
 class UserResource(Resource):
     resource_name = 'user'
 

@@ -209,6 +209,7 @@ class SyncryptApp(object):
     def list_vaults(self):
         backend = yield from self.open_backend()
         for vault in (yield from backend.list_vaults()):
+            logger.debug("Received vault: %s", vault)
             print("{0}".format(vault['id'].decode('utf-8')))
         yield from backend.close()
 
