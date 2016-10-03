@@ -209,6 +209,15 @@ class VaultUserResource(Resource):
         yield from vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
         yield from vault.backend.add_vault_user(email)
+        if 'fingerprints' in data:
+            key_list = yield from vault.backend.list_keys(email)
+            key_list = [key for key in key_list if key['fingerprint'] in data['fingerprints']]
+            for key in key_list:
+                # retrieve key and verify fingerrint
+                fingerprint = key['fingerprint']
+                public_key = key['public_key']
+                yield from self.app.add_user_vault_key(vault, email, fingerprint, public_key)
+
         return {'email': email}
 
 class BundleResource(Resource):

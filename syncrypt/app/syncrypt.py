@@ -355,19 +355,24 @@ class SyncryptApp(object):
             for key in key_list:
                 # retrieve key and verify fingerrint
                 fingerprint = key['fingerprint']
-                identity = Identity.from_public_key(key['public_key'], vault.config)
-                assert identity.get_fingerprint() == fingerprint
+                public_key = key['public_key']
+                yield from self.add_user_vault_key(vault, email, fingerprint, public_key)
 
-                # construct and encrypt package
-                export_pipe = vault.package_info() \
-                    >> EncryptRSA_PKCS1_OAEP(identity.public_key)
-                content = yield from export_pipe.readall()
+    @asyncio.coroutine
+    def add_user_vault_key(self, vault, email, fingerprint, public_key):
+        identity = Identity.from_public_key(public_key, vault.config)
+        assert identity.get_fingerprint() == fingerprint
 
-                logger.info('Uploading vault package for %s/%s', email,
-                        format_fingerprint(fingerprint))
-                logger.debug('Package length is: %d', len(content))
+        # construct and encrypt package
+        export_pipe = vault.package_info() \
+            >> EncryptRSA_PKCS1_OAEP(identity.public_key)
+        content = yield from export_pipe.readall()
 
-                yield from vault.backend.add_user_vault_key(email, fingerprint, content)
+        logger.info('Uploading vault package for %s/%s', email,
+                format_fingerprint(fingerprint))
+        logger.debug('Package length is: %d', len(content))
+
+        yield from vault.backend.add_user_vault_key(email, fingerprint, content)
 
     @asyncio.coroutine
     def print_log(self, verbose=False):
