@@ -38,6 +38,7 @@ class SyncryptCmd():
         self.config = None
         self.app_config = AppConfig()
         self.app_config.read_config_file()
+        self.vault_dirs = []
 
     def parse(self, args):
         self.config = self.parser.parse_args(args)
@@ -45,7 +46,9 @@ class SyncryptCmd():
     def setup(self):
         setup_logging(self.config.loglevel)
         self.loop = asyncio.get_event_loop()
-        self.app = SyncryptApp(self.app_config, auth_provider=CLIAuthenticationProvider())
+        self.app = SyncryptApp(self.app_config,
+                auth_provider=CLIAuthenticationProvider(),
+                vault_dirs=self.vault_dirs)
 
     def shutdown(self):
         self.loop.run_until_complete(self.app.close())
@@ -57,17 +60,27 @@ class SyncryptCmd():
 class SingleVaultCmd(SyncryptCmd):
     '''command that supports only a single vault directory'''
 
+    def __init__(self):
+        super(SingleVaultCmd, self).__init__()
+        # By default, we operate in the current directory
+        self.vault_dirs = ['.']
+
     def configure_parser(self, parser):
         super(SingleVaultCmd, self).configure_parser(parser)
         parser.add_argument('-d', metavar='DIRECTORY', type=str,
                 default='.', dest='directory', help='directory (default: .)')
 
     def setup(self):
-        self.app_config.add_vault_dir(self.config.directory)
+        self.vault_dirs = [self.config.directory]
         super(SingleVaultCmd, self).setup()
 
 class MultipleVaultCmd(SyncryptCmd):
     '''command that supports multiple vault directories'''
+
+    def __init__(self):
+        super(MultipleVaultCmd, self).__init__()
+        # By default, we operate in the current directory
+        self.vault_dirs = ['.']
 
     def configure_parser(self, parser):
         super(MultipleVaultCmd, self).configure_parser(parser)
@@ -77,13 +90,15 @@ class MultipleVaultCmd(SyncryptCmd):
     def setup(self):
         # For now, each command will work on a default AppConfig object. When
         # you want app-level configuration, use ``syncrypt_daemon``.
-        DIRECTORIES = (['.'] if self.config.directory is None else self.config.directory)
-        for directory in DIRECTORIES:
-            self.app_config.add_vault_dir(directory)
-
+        if self.config.directory: # not None and not empty
+            self.vault_dirs = self.config.directory
         super(MultipleVaultCmd, self).setup()
 
-class Clone(SyncryptCmd):
+class NoVaultCmd(SyncryptCmd):
+    '''command that operates without a vault'''
+    pass
+
+class Clone(NoVaultCmd):
     command = 'clone'
     description = 'clone a remote vault to a local directory'
 
@@ -114,14 +129,14 @@ class AddUser(SingleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.add_user(self.config.email))
 
-class Vaults(SyncryptCmd):
+class Vaults(NoVaultCmd):
     command = 'vaults'
     description = 'list vaults'
 
     def run(self):
         self.loop.run_until_complete(self.app.list_vaults())
 
-class Keys(SingleVaultCmd):
+class Keys(NoVaultCmd):
     command = 'keys'
     description = 'list keys'
 
@@ -215,7 +230,7 @@ class Log(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.print_log(self.config.verbose))
 
-class Login(SyncryptCmd):
+class Login(NoVaultCmd):
     command = 'login'
     description = 'login to server and store auth token'
 

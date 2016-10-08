@@ -28,7 +28,7 @@ class SyncryptApp(object):
     multiple vaults and report status via a HTTP interface.
     '''
 
-    def __init__(self, config, auth_provider=None):
+    def __init__(self, config, auth_provider=None, vault_dirs=None):
         self.auth_provider = auth_provider
         self.vaults = []
 
@@ -57,7 +57,9 @@ class SyncryptApp(object):
         self.identity.init()
 
         # register vault objects
-        for vault_dir in self.config.vault_dirs:
+        if vault_dirs is None:
+            vault_dirs = self.config.vault_dirs
+        for vault_dir in vault_dirs:
             self.vaults.append(Vault(vault_dir))
 
         super(SyncryptApp, self).__init__()
