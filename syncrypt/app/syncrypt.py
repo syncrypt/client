@@ -7,7 +7,7 @@ from io import StringIO
 import asyncio
 import iso8601
 from syncrypt.backends.base import StorageBackendInvalidAuth
-from syncrypt.backends.binary import BinaryStorageBackend
+from syncrypt.backends.binary import BinaryStorageBackend, ServerError
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
@@ -96,8 +96,14 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def init(self, vault=None, host=None):
         for vault in (self.vaults if vault is None else [vault]):
+
             if host:
+                # If host was explicitly given, use it
                 vault.config.set('remote.host', host)
+            else:
+                # otherwise, use host from global config
+                vault.config.set('remote.host', self.config.get('remote.host'))
+
             try:
                 yield from vault.backend.open()
                 logger.warn('Vault %s already initialized', vault.folder)

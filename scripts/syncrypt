@@ -28,6 +28,8 @@ class SyncryptCmd():
         parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
                 dest='loglevel', choices=LOGLEVELS,
                 help='log level: ' + ', '.join(LOGLEVELS)+ ' (default: INFO)')
+        parser.add_argument('-c', metavar='CONFIG', type=str, default=None,
+                dest='config', help='work with another config file')
 
     def __init__(self):
         self.parser = argparse.ArgumentParser(
@@ -36,14 +38,14 @@ class SyncryptCmd():
             )
         self.configure_parser(self.parser)
         self.config = None
-        self.app_config = AppConfig()
-        self.app_config.read_config_file()
         self.vault_dirs = []
 
     def parse(self, args):
         self.config = self.parser.parse_args(args)
 
     def setup(self):
+        self.app_config = AppConfig(self.config.config)
+        self.app_config.read_config_file()
         setup_logging(self.config.loglevel)
         self.loop = asyncio.get_event_loop()
         self.app = SyncryptApp(self.app_config,
