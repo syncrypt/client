@@ -40,6 +40,10 @@ class Config(object):
         with open(config_file, 'w') as f:
             self._config.write(f)
 
+    def get(self, setting):
+        realm, setting_ = setting.split('.')
+        return self._config[realm][setting_]
+
     def set(self, setting, value):
         realm, setting_ = setting.split('.')
         self._config[realm][setting_] = value
@@ -113,6 +117,7 @@ class VaultConfig(Config, BackendConfigMixin):
 
     @property
     def id(self):
+        # Maybe this should be removed to avoid confusion
         return self._config['vault'].get('id', None)
 
     @property

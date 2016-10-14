@@ -12,6 +12,7 @@ from syncrypt import __project__, __version__
 from syncrypt.pipes import Limit, Once, StreamReader
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
+from syncrypt.exceptions import VaultNotInitialized
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -625,6 +626,8 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def open(self):
+        if self.vault and not self.vault.config.get('vault.id'):
+            raise VaultNotInitialized()
         if self.manager.get_active_connection_count() == 0:
             with (yield from self.manager.acquire_connection()) as conn:
                 self.invalid_auth = False

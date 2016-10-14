@@ -44,7 +44,7 @@ class Vault(MetadataHolder):
                 logger.debug('Using config file: %s', self.config_path)
                 self._config.read(self.config_path)
             else:
-                raise VaultNotInitialized(self.folder)
+                logger.debug('Continuing without config file: %s', self.config_path)
             return self._config
 
     def __get_metadata(self):
