@@ -40,9 +40,9 @@ class Config(object):
         with open(config_file, 'w') as f:
             self._config.write(f)
 
-    def get(self, setting):
+    def get(self, setting, default=None):
         realm, setting_ = setting.split('.')
-        return self._config[realm][setting_]
+        return self._config[realm].get(setting_, default)
 
     def set(self, setting, value):
         realm, setting_ = setting.split('.')
