@@ -8,7 +8,7 @@ def setup_logging(loglevel):
             'colored': {
                 '()': colorlog.ColoredFormatter,
                 'format':
-                    '%(log_color)s%(levelname)s:%(name)s:%(message)s',
+                    '%(log_color)s[%(levelname)-8s] %(message)s',
             }
         },
         'handlers': {
