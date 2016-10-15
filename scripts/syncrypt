@@ -110,8 +110,9 @@ class Clone(NoVaultCmd):
         parser.add_argument('directory', nargs='?', help='local directory')
 
     def run(self):
-        self.loop.run_until_complete(self.app.clone(self.config.vault_id,
+        vault = self.loop.run_until_complete(self.app.clone(self.config.vault_id,
                 self.config.directory or self.config.vault_id))
+        self.loop.run_until_complete(self.app.pull_vault(vault))
 
 class Pull(MultipleVaultCmd):
     command = 'pull'

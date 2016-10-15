@@ -374,8 +374,7 @@ class SyncryptApp(object):
 
         yield from backend.close()
 
-        yield from self.pull_vault(vault)
-
+        return vault
 
     @asyncio.coroutine
     def export(self, filename):
