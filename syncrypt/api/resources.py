@@ -138,12 +138,36 @@ class FlyingVaultResource(Resource):
     def get_id(self, obj):
         return obj['id']
 
+    def dehydrate(self, obj):
+        deh_obj = super(FlyingVaultResource, self).dehydrate(obj)
+        if obj.get('metadata'):
+            deh_obj['metadata'] = obj['metadata']
+        ignored = set(obj.keys()) - set(deh_obj.keys())
+        if len(ignored) > 0:
+            logger.debug('Ignored vault keys: %s', ignored)
+        return deh_obj
+
     @asyncio.coroutine
     def get_obj_list(self, request):
         vaults = []
         backend = yield from self.app.open_backend()
-        for v in (yield from backend.list_vaults()):
-            vaults.append(dict(v, id=v['id'].decode('utf-8')))
+
+        my_fingerprint = self.app.identity.get_fingerprint()
+
+        for (vault, user_vault_key, encrypted_metadata) in \
+                (yield from backend.list_vaults_by_fingerprint(my_fingerprint)):
+
+            vault_id = vault['id'].decode('utf-8')
+
+            logger.debug("Received vault: %s (with%s metadata)", vault_id, '' if encrypted_metadata else 'out')
+
+            if encrypted_metadata:
+                metadata = yield from self.app._decrypt_metadata(encrypted_metadata, user_vault_key)
+            else:
+                metadata = None
+
+            vaults.append(dict(vault, id=vault_id, metadata=metadata))
+
         yield from backend.close()
         return vaults
 
