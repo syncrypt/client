@@ -55,7 +55,7 @@ class Resource(object):
     @asyncio.coroutine
     def dispatch_delete(self, request):
         obj = yield from self.get_obj(request)
-        yield from self.delete_obj(obj)
+        yield from self.delete_obj(request, obj)
         return JSONResponse({}) # return 200 without data
 
     @asyncio.coroutine
@@ -81,7 +81,7 @@ class Resource(object):
         raise NotImplementedError
 
     @asyncio.coroutine
-    def delete_obj(self, obj):
+    def delete_obj(self, request, obj):
         raise NotImplementedError
 
     def get_resource_uri(self, obj):
@@ -113,7 +113,8 @@ class VaultResource(Resource):
         return self.find_vault_by_id(request.match_info['id'])
 
     @asyncio.coroutine
-    def delete_obj(self, obj):
+    def delete_obj(self, request, obj):
+        logger.warn('Removing vault: %s', obj)
         self.app.remove_vault(obj)
 
     @asyncio.coroutine
@@ -277,6 +278,7 @@ class VaultUserResource(Resource):
                 yield from self.app.add_user_vault_key(vault, email, fingerprint, public_key)
 
         return {'email': email}
+
 
 class BundleResource(Resource):
     resource_name = 'bundle'
