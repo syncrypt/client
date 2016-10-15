@@ -230,9 +230,12 @@ class Vault(MetadataHolder):
     @staticmethod
     def from_package_info(package_info, local_directory, auth_token=None):
 
+        logger.info("Trying to create vault from package in %s", local_directory)
+
         try:
             os.makedirs(local_directory)
         except FileExistsError:
+            logger.debug("Directory exists, checking if empty")
             entities = os.listdir(local_directory)
             for entity in entities:
                 if os.path.isfile(entity) or os.path.isdir(entity):
