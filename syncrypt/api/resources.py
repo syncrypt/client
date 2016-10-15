@@ -29,9 +29,12 @@ class Resource(object):
         opts = {'version': self.version, 'name': self.resource_name}
         router.add_route('POST', '/{version}/{name}/'.format(**opts), self.dispatch_post)
         router.add_route('PUT', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_put)
+        router.add_route('PUT', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_put)
         router.add_route('GET', '/{version}/{name}/'.format(**opts), self.dispatch_list)
         router.add_route('GET', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_get)
+        router.add_route('GET', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_get)
         router.add_route('DELETE', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_delete)
+        router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_delete)
 
     def dehydrate(self, obj):
         'obj -> serializable dict'
