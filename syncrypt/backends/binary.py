@@ -562,6 +562,15 @@ class BinaryStorageConnection(object):
         yield from self.read_term()
 
     @asyncio.coroutine
+    def delete_vault(self):
+        vault = self.storage.vault
+        logger.warn('Wiping vault: %s', vault.config.id)
+
+        # download key and file
+        yield from self.write_term('delete_vault', vault.config.id)
+        yield from self.read_response()
+
+    @asyncio.coroutine
     def version(self):
         return self.server_version
 

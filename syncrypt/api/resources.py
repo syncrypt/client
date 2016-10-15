@@ -114,8 +114,12 @@ class VaultResource(Resource):
 
     @asyncio.coroutine
     def delete_obj(self, request, obj):
-        logger.warn('Removing vault: %s', obj)
-        self.app.remove_vault(obj)
+        if request.GET.get('wipe') == '1':
+            logger.warn('Deleting/wiping vault: %s', obj)
+            yield from self.app.delete_vault(obj)
+        else:
+            logger.warn('Removing vault: %s', obj)
+            yield from self.app.remove_vault(obj)
 
     @asyncio.coroutine
     def post_obj(self, request):
