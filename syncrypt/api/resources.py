@@ -28,10 +28,10 @@ class Resource(object):
     def add_routes(self, router):
         opts = {'version': self.version, 'name': self.resource_name}
         router.add_route('POST', '/{version}/{name}/'.format(**opts), self.dispatch_post)
-        router.add_route('PUT', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_put)
+        router.add_route('PUT', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_put)
         router.add_route('GET', '/{version}/{name}/'.format(**opts), self.dispatch_list)
-        router.add_route('GET', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_get)
-        router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_delete)
+        router.add_route('GET', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_get)
+        router.add_route('DELETE', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_delete)
 
     def dehydrate(self, obj):
         'obj -> serializable dict'
@@ -110,7 +110,7 @@ class VaultResource(Resource):
 
     @asyncio.coroutine
     def get_obj(self, request):
-        return find_vault_by_id(request.match_info['id'])
+        return self.find_vault_by_id(request.match_info['id'])
 
     @asyncio.coroutine
     def delete_obj(self, obj):
@@ -126,6 +126,17 @@ class VaultResource(Resource):
         #    if task.exception():
         #        logger.warn("%s", task.exception())
         #task.add_done_callback(cb)
+        return vault
+
+    @asyncio.coroutine
+    def put_obj(self, request):
+        content = yield from request.content.read()
+        request_dict = json.loads(content.decode())
+        vault = self.find_vault_by_id(request.match_info['id'])
+        if 'metadata' in request_dict:
+            vault.metadata = request_dict['metadata']
+            yield from vault.backend.open()
+            yield from vault.backend.set_vault_metadata()
         return vault
 
 class FlyingVaultResource(Resource):
