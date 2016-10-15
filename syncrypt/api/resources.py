@@ -120,12 +120,12 @@ class VaultResource(Resource):
     def post_obj(self, request):
         content = yield from request.content.read()
         request_dict = json.loads(content.decode())
-        vault = self.app.add_vault_by_path(request_dict['folder'])
-        task = asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
-        #def cb(_task):
-        #    if task.exception():
-        #        logger.warn("%s", task.exception())
-        #task.add_done_callback(cb)
+        if 'id' in request_dict:
+            vault = yield from self.app.clone(request_dict['id'], request_dict['folder'])
+            task = asyncio.get_event_loop().create_task(self.app.pull_vault(vault))
+        else:
+            vault = self.app.add_vault_by_path(request_dict['folder'])
+            task = asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
         return vault
 
     @asyncio.coroutine
