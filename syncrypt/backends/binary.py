@@ -385,6 +385,18 @@ class BinaryStorageConnection(object):
         return list(map(rewrite_atoms_dict, response[1]))
 
     @asyncio.coroutine
+    def list_vaults_by_fingerprint(self, fingerprint):
+
+        logger.info('Getting a list of vaults by fingerprint: %s', fingerprint)
+
+        # upload key and file
+        yield from self.write_term('list_vaults_by_fingerprint', str(fingerprint))
+        response = yield from self.read_term()
+
+        # return [(vault, user_vault_key, metadata)]
+        return ((rewrite_atoms_dict(r[0]), r[1]['encrypted_content'], r[2]) for r in response[1])
+
+    @asyncio.coroutine
     def list_vault_users(self):
 
         logger.info('Getting a list of vault users')

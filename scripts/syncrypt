@@ -135,8 +135,16 @@ class Vaults(NoVaultCmd):
     command = 'vaults'
     description = 'list vaults'
 
+    def configure_parser(self, parser):
+        super(Vaults, self).configure_parser(parser)
+        parser.add_argument('-a', '--all', dest='all', action='store_true',
+                help='also list vaults without key')
+
     def run(self):
-        self.loop.run_until_complete(self.app.list_vaults())
+        if self.config.all:
+            self.loop.run_until_complete(self.app.list_all_vaults())
+        else:
+            self.loop.run_until_complete(self.app.list_vaults())
 
 class Keys(NoVaultCmd):
     command = 'keys'

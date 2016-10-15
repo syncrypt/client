@@ -214,12 +214,62 @@ class SyncryptApp(object):
         yield from self.pull()
 
     @asyncio.coroutine
-    def list_vaults(self):
+    def list_all_vaults(self):
         backend = yield from self.open_backend()
         for vault in (yield from backend.list_vaults()):
             logger.debug("Received vault: %s", vault)
             print("{0}".format(vault['id'].decode('utf-8')))
         yield from backend.close()
+
+    @asyncio.coroutine
+    def list_vaults(self):
+        backend = yield from self.open_backend()
+        my_fingerprint = self.identity.get_fingerprint()
+
+        for (vault, user_vault_key, encrypted_metadata) in \
+                    (yield from backend.list_vaults_by_fingerprint(my_fingerprint)):
+
+            vault_id = vault['id'].decode('utf-8')
+
+            logger.debug("Received vault: %s (with%s metadata)", vault_id, '' if encrypted_metadata else 'out')
+
+            name = ""
+            if encrypted_metadata:
+                metadata = yield from self._decrypt_metadata(encrypted_metadata, user_vault_key)
+                if 'name' in metadata:
+                    name = metadata['name']
+
+            print("{0} {1}".format(vault_id, name))
+
+        yield from backend.close()
+
+    @asyncio.coroutine
+    def _decrypt_metadata(self, encrypted_metadata, user_vault_key):
+        import zipfile
+        from io import BytesIO
+        from syncrypt.pipes import SnappyDecompress
+        import umsgpack
+
+        # decrypt package
+        export_pipe = Once(user_vault_key) \
+            >> DecryptRSA_PKCS1_OAEP(self.identity.private_key)
+
+        package_info = yield from export_pipe.readall()
+
+
+        zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
+
+        vault_public_key = zipf.read('.vault/id_rsa.pub')
+        vault_key = zipf.read('.vault/id_rsa')
+
+        vault_identity = Identity.from_key(vault_public_key, self.config, private_key=vault_key)
+
+        sink = Once(encrypted_metadata) \
+                >> DecryptRSA_PKCS1_OAEP(vault_identity.private_key) \
+                >> SnappyDecompress()
+
+        serialized_metadata = metadata = yield from sink.readall()
+        return umsgpack.unpackb(serialized_metadata)
 
     @asyncio.coroutine
     def list_keys(self, user=None, with_art=False):
@@ -369,7 +419,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def add_user_vault_key(self, vault, email, fingerprint, public_key):
-        identity = Identity.from_public_key(public_key, vault.config)
+        identity = Identity.from_key(public_key, vault.config)
         assert identity.get_fingerprint() == fingerprint
 
         # construct and encrypt package

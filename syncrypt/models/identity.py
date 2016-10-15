@@ -17,9 +17,9 @@ class Identity(object):
         self.config = config
 
     @classmethod
-    def from_public_key(cls, key, config):
+    def from_key(cls, key, config, private_key=None):
         identity = cls(None, None, config)
-        identity._keypair = (RSA.importKey(key), None)
+        identity._keypair = (RSA.importKey(key), RSA.importKey(private_key) if private_key else None)
         return identity
 
     @property
