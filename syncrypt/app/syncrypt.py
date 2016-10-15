@@ -362,6 +362,8 @@ class SyncryptApp(object):
         auth_token, package_info = yield from \
                 backend.get_user_vault_key(self.identity.get_fingerprint(), vault_id)
 
+        yield from backend.close()
+
         # decrypt package
         export_pipe = Once(package_info) \
             >> DecryptRSA_PKCS1_OAEP(self.identity.private_key)
@@ -372,7 +374,7 @@ class SyncryptApp(object):
 
         self.add_vault(vault)
 
-        yield from backend.close()
+        yield from self.retrieve_metadata(vault)
 
         return vault
 
@@ -520,6 +522,9 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def pull_vault(self, vault):
         logger.info('Pulling %s', vault)
+
+        yield from self.retrieve_metadata(vault)
+
         # TODO: do a change detection (.vault/metadata store vs filesystem)
         yield from self.open_or_init(vault)
         if vault.revision:
