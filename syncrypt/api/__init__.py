@@ -110,6 +110,17 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @asyncio.coroutine
+    def get_user_info(self, request):
+        '''
+        Logging out the user simply works by removing the global auth
+        token.
+        '''
+        backend = yield from self.app.open_backend()
+        user_info = yield from backend.user_info()
+        yield from backend.close()
+        return JSONResponse(user_info)
+
+    @asyncio.coroutine
     def start(self):
         loop = asyncio.get_event_loop()
         self.web_app = web.Application(loop=loop)
@@ -123,6 +134,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('POST', '/v1/auth/login/', self.post_auth_login)
         self.web_app.router.add_route('GET', '/v1/auth/check/', self.get_auth_check)
         self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
+        self.web_app.router.add_route('GET', '/v1/auth/user/', self.get_user_info)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)

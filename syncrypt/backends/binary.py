@@ -317,6 +317,20 @@ class BinaryStorageConnection(object):
             logger.warn('Empty metadata for %s', self.storage.vault)
 
     @asyncio.coroutine
+    def user_info(self):
+        logger.debug('Retrieving user information from server')
+        yield from self.write_term('user_info')
+        user_info = yield from self.read_response()
+        user_info = rewrite_atoms_dict(user_info)
+        if 'first_name' in user_info:
+            user_info['first_name'] = user_info['first_name'].decode()
+        if 'last_name' in user_info:
+            user_info['last_name'] = user_info['last_name'].decode()
+        if 'email' in user_info:
+            user_info['email'] = user_info['email'].decode()
+        return user_info
+
+    @asyncio.coroutine
     def set_vault_metadata(self):
 
         vault = self.storage.vault
