@@ -236,7 +236,7 @@ class Vault(MetadataHolder):
             entities = os.listdir(local_directory)
             for entity in entities:
                 if os.path.isfile(entity) or os.path.isdir(entity):
-                    if os.path.basename(entity) in IGNORE_EMPTY_FILES:
+                    if not os.path.basename(entity) in IGNORE_EMPTY_FILES:
                         raise IOError('Directory "%s" already exists and is not empty.' % local_directory)
 
         zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
