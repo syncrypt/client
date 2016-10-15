@@ -21,6 +21,8 @@ from .identity import Identity
 
 logger = logging.getLogger(__name__)
 
+IGNORE_EMPTY_FILES = ['.DS_Store']
+
 class Vault(MetadataHolder):
     def __init__(self, folder):
         self.folder = folder
@@ -233,9 +235,9 @@ class Vault(MetadataHolder):
         except FileExistsError:
             entities = os.listdir(local_directory)
             for entity in entities:
-                if os.path.isfile(entity) or os.path.isdir(entity):
-                    raise IOError('Directory "%s" already exists and is not empty.' % local_directory)
-
+                if (os.path.isfile(entity) or os.path.isdir(entity)):
+                    if os.path.basename(entity) in IGNORE_EMPTY_FILES:
+                        raise IOError('Directory "%s" already exists and is not empty.' % local_directory)
 
         zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
         zipf.extractall(path=local_directory)
