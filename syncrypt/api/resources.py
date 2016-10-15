@@ -1,5 +1,4 @@
 # tastypie-like asyncio-aware resources
-import hashlib
 import json
 import logging
 import os.path
@@ -93,9 +92,7 @@ class VaultResource(Resource):
     resource_name = 'vault'
 
     def get_id(self, v):
-        hash = hashlib.new('md5')
-        hash.update(os.path.abspath(v.folder.encode()))
-        return hash.hexdigest()
+        return str(v.config.get('vault.id'))
 
     def dehydrate(self, v):
         dct = super(VaultResource, self).dehydrate(v)
