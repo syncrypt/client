@@ -219,10 +219,10 @@ class VaultUserResource(Resource):
                 '/{version}/vault/{{vault_id}}/{name}/'.format(**opts),
                 self.dispatch_list)
         router.add_route('GET',
-                '/{version}/vault/{{vault_id}}/{name}/{{email}}'.format(**opts),
+                '/{version}/vault/{{vault_id}}/{name}/{{email}}/'.format(**opts),
                 self.dispatch_get)
         router.add_route('DELETE',
-                '/{version}/vault/{{vault_id}}/{name}/{{email}}'.format(**opts),
+                '/{version}/vault/{{vault_id}}/{name}/{{email}}/'.format(**opts),
                 self.dispatch_delete)
         router.add_route('GET',
                 '/{version}/vault/{{vault_id}}/{{name}}/{{email}}/keys/'.format(**opts),
@@ -235,6 +235,10 @@ class VaultUserResource(Resource):
         if vault is None:
             raise ValueError('Vault not found')
         return vault
+
+    @asyncio.coroutine
+    def get_obj(self, request):
+        return {'email': request.match_info['email']}
 
     def get_id(self, obj):
         return obj['email']
@@ -258,6 +262,14 @@ class VaultUserResource(Resource):
         vault = self.get_vault(request)
         yield from vault.backend.open()
         return (yield from vault.backend.list_vault_users())
+
+    @asyncio.coroutine
+    def delete_obj(self, request, obj):
+        vault = self.get_vault(request)
+        yield from vault.backend.open()
+        email = obj['email']
+        logger.info('Removing user "%s" from %s', email, vault)
+        yield from vault.backend.remove_vault_user(email)
 
     @asyncio.coroutine
     def post_obj(self, request):
@@ -316,17 +328,3 @@ class BundleResource(Resource):
     def get_obj(self, request):
         raise NotImplementedError
 
-    @asyncio.coroutine
-    def delete_obj(self, obj):
-        self.app.remove_vault(obj)
-
-    @asyncio.coroutine
-    def put_obj(self, request):
-        vault_path = (yield from request.content.read()).decode()
-        vault = self.app.add_vault_by_path(vault_path)
-        task = asyncio.get_event_loop().create_task(self.app.open_or_init(vault))
-        #def cb(_task):
-        #    if task.exception():
-        #        logger.warn("%s", task.exception())
-        #task.add_done_callback(cb)
-        return vault

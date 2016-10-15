@@ -557,6 +557,11 @@ class BinaryStorageConnection(object):
         yield from self.read_term()
 
     @asyncio.coroutine
+    def remove_vault_user(self, email):
+        yield from self.write_term('remove_vault_user', email)
+        yield from self.read_term()
+
+    @asyncio.coroutine
     def version(self):
         return self.server_version
 
