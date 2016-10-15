@@ -227,10 +227,15 @@ class Vault(MetadataHolder):
 
     @staticmethod
     def from_package_info(package_info, local_directory, auth_token=None):
+
         try:
             os.makedirs(local_directory)
         except FileExistsError:
-            raise IOError('Directory "%s" already exists.' % local_directory)
+            entities = os.listdir(local_directory)
+            for entity in entities:
+                if os.path.isfile(entity) or os.path.isdir(entity):
+                    raise IOError('Directory "%s" already exists and is not empty.' % local_directory)
+
 
         zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
         zipf.extractall(path=local_directory)
