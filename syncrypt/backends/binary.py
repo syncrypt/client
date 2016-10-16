@@ -691,17 +691,27 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def list_files(self):
-        with (yield from self.manager.acquire_connection()) as conn:
-            queue = asyncio.Queue()
-            asyncio.get_event_loop().create_task(conn.list_files(queue))
-            return queue
+        conn = yield from self.manager.acquire_connection()
+        queue = asyncio.Queue()
+        task = asyncio.get_event_loop().create_task(conn.list_files(queue))
+
+        def free_conn(result):
+            conn.available.set()
+
+        task.add_done_callback(free_conn)
+        return queue
 
     @asyncio.coroutine
     def changes(self, since_rev, to_rev, verbose=False):
-        with (yield from self.manager.acquire_connection()) as conn:
-            queue = asyncio.Queue()
-            asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
-            return queue
+        conn = yield from self.manager.acquire_connection()
+        queue = asyncio.Queue()
+        task = asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
+
+        def free_conn(result):
+            conn.available.set()
+
+        task.add_done_callback(free_conn)
+        return queue
 
     @asyncio.coroutine
     def upload(self, bundle):
