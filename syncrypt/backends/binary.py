@@ -18,7 +18,7 @@ from .base import StorageBackend, StorageBackendInvalidAuth
 
 logger = logging.getLogger(__name__)
 
-BINARY_DEBUG = False
+BINARY_DEBUG = True
 
 class BinaryStorageException(Exception):
     pass
