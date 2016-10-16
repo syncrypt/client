@@ -133,6 +133,9 @@ class SyncryptApp(object):
                 except StorageBackendInvalidAuth:
                     logger.error('Invalid authentification')
                     continue
+            vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
+            vault.write_config()
+            yield from vault.backend.set_vault_metadata()
             yield from vault.backend.upload_identity(self.identity)
 
     @asyncio.coroutine
