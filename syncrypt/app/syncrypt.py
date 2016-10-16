@@ -163,6 +163,7 @@ class SyncryptApp(object):
         yield from self.push()
         for vault in self.vaults:
             yield from self.watch(vault)
+            yield from self.autopull_vault(vault)
 
     @asyncio.coroutine
     def watch(self, vault):
@@ -171,6 +172,11 @@ class SyncryptApp(object):
         logger.info('Watching %s', folder)
         self.watchdogs[folder] = create_watchdog(self, vault)
         self.watchdogs[folder].start()
+
+    @asyncio.coroutine
+    def autopull_vault(self, vault):
+        folder = os.path.abspath(vault.folder)
+        logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
         self.pull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
 
     @asyncio.coroutine
@@ -181,6 +187,11 @@ class SyncryptApp(object):
         if folder in self.watchdogs:
             self.watchdogs[folder].stop()
             del self.watchdogs[folder]
+
+    @asyncio.coroutine
+    def unautopull_vault(self, vault):
+        folder = os.path.abspath(vault.folder)
+        logger.info('Disable auto-pull on %s', os.path.abspath(folder))
         if folder in self.pull_tasks:
             self.pull_tasks[folder].cancel()
             del self.pull_tasks[folder]
@@ -189,6 +200,7 @@ class SyncryptApp(object):
     def stop(self):
         for vault in self.vaults:
             yield from self.unwatch_vault(vault)
+            yield from self.unautopull_vault(vault)
         yield from self.api.stop()
 
     @asyncio.coroutine
@@ -547,10 +559,12 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def pull_vault_periodically(self, vault):
-        logger.info('Auto-pulling %s every %d seconds', vault, int(vault.config.get('vault.pull_interval')))
         while True:
             yield from asyncio.sleep(int(vault.config.get('vault.pull_interval')))
+            # Disable watch during periodic pulls
+            yield from self.unwatch_vault(vault)
             yield from self.pull_vault(vault)
+            yield from self.watch(vault)
 
     @asyncio.coroutine
     def pull_vault(self, vault):
