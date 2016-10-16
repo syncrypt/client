@@ -139,6 +139,8 @@ class VaultResource(Resource):
         content = yield from request.content.read()
         request_dict = json.loads(content.decode())
         vault = self.find_vault_by_id(request.match_info['id'])
+        if vault is None:
+            raise ValueError() # this should return 404
         if 'metadata' in request_dict:
             vault.metadata = request_dict['metadata']
             yield from vault.backend.open()
