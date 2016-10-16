@@ -110,7 +110,8 @@ class VaultConfig(Config, BackendConfigMixin):
         'vault': {
             # File patterns to ignore (comma separated list)
             'ignore': '.*',
-            'name': ''
+            'name': '',
+            'pull_interval': 300
         },
         'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }

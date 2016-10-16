@@ -116,9 +116,11 @@ class VaultResource(Resource):
     def delete_obj(self, request, obj):
         if request.GET.get('wipe') == '1':
             logger.warn('Deleting/wiping vault: %s', obj)
+            yield from self.app.unwatch_vault(obj)
             yield from self.app.delete_vault(obj)
         else:
             logger.warn('Removing vault: %s', obj)
+            yield from self.app.unwatch_vault(obj)
             yield from self.app.remove_vault(obj)
 
     @asyncio.coroutine
@@ -127,11 +129,21 @@ class VaultResource(Resource):
         request_dict = json.loads(content.decode())
         if 'id' in request_dict:
             vault = yield from self.app.clone(request_dict['id'], request_dict['folder'])
-            task = asyncio.get_event_loop().create_task(self.app.pull_vault(vault))
+
+            @asyncio.coroutine
+            def pull_and_watch(vault):
+                yield from self.app.pull_vault(vault)
+                yield from self.app.watch(vault)
+            asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
             yield from self.app.open_or_init(vault)
-            task = asyncio.get_event_loop().create_task(self.app.push_vault(vault))
+
+            @asyncio.coroutine
+            def push_and_watch(vault):
+                yield from self.app.push_vault(vault)
+                yield from self.app.watch(vault)
+            asyncio.get_event_loop().create_task(push_and_watch(vault))
         return vault
 
     @asyncio.coroutine

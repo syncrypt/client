@@ -39,6 +39,7 @@ class SyncryptApp(object):
         self.concurrency = int(self.config.app['concurrency'])
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
         self.watchdogs = {}
+        self.pull_tasks = {}
         self.api = SyncryptAPI(self)
         self.stats = {
             'uploads': 0,
@@ -74,7 +75,6 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def remove_vault(self, vault):
-        # TODO: close open connections etc
         self.config.remove_vault_dir(os.path.abspath(vault.folder))
         self.vaults.remove(vault)
 
@@ -162,14 +162,33 @@ class SyncryptApp(object):
         yield from self.api.start()
         yield from self.push()
         for vault in self.vaults:
-            logger.info('Watching %s', os.path.abspath(vault.folder))
-            self.watchdogs[vault.folder] = create_watchdog(self, vault)
-            self.watchdogs[vault.folder].start()
+            yield from self.watch(vault)
+
+    @asyncio.coroutine
+    def watch(self, vault):
+        'Install a watchdog and auto-pull for vault'
+        folder = os.path.abspath(vault.folder)
+        logger.info('Watching %s', folder)
+        self.watchdogs[folder] = create_watchdog(self, vault)
+        self.watchdogs[folder].start()
+        self.pull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
+
+    @asyncio.coroutine
+    def unwatch_vault(self, vault):
+        'Remove watchdog and auto-pulls'
+        folder = os.path.abspath(vault.folder)
+        logger.info('Unwatching %s', os.path.abspath(folder))
+        if folder in self.watchdogs:
+            self.watchdogs[folder].stop()
+            del self.watchdogs[folder]
+        if folder in self.pull_tasks:
+            self.pull_tasks[folder].cancel()
+            del self.pull_tasks[folder]
 
     @asyncio.coroutine
     def stop(self):
-        for watchdog in self.watchdogs.values():
-            watchdog.stop()
+        for vault in self.vaults:
+            yield from self.unwatch_vault(vault)
         yield from self.api.stop()
 
     @asyncio.coroutine
@@ -525,6 +544,13 @@ class SyncryptApp(object):
         yield from vault.backend.set_vault_metadata()
         for bundle in vault.walk_disk():
             yield from self.push_bundle(bundle)
+
+    @asyncio.coroutine
+    def pull_vault_periodically(self, vault):
+        logger.info('Auto-pulling %s every %d seconds', vault, int(vault.config.get('vault.pull_interval')))
+        while True:
+            yield from asyncio.sleep(int(vault.config.get('vault.pull_interval')))
+            yield from self.pull_vault(vault)
 
     @asyncio.coroutine
     def pull_vault(self, vault):
