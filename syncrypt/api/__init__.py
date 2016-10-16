@@ -32,9 +32,11 @@ class SyncryptAPI():
 
     @asyncio.coroutine
     def get_stats(self, request):
+        vault_resource = VaultResource(self.app)
+        vault_states = {vault_resource.get_resource_uri(v): v.state for v in self.app.vaults}
         return JSONResponse({
             'stats': self.app.stats,
-            'states': self.app.get_vault_states()
+            'states': vault_states
         })
 
     @asyncio.coroutine

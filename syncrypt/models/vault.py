@@ -84,6 +84,7 @@ class Vault(MetadataHolder):
 
     @property
     def active(self):
+        #logger.debug('Sema count: %s', [sema.count for sema in self.semaphores.values()])
         return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
@@ -107,12 +108,7 @@ class Vault(MetadataHolder):
 
     @property
     def state(self):
-        if self.backend.connected:
-            return 'syncing' if self.active else 'synced'
-        elif self.backend.invalid_auth:
-            return 'auth-needed'
-        else:
-            return 'connecting'
+        return 'syncing' if self.active else 'synced'
 
     def write_config(self, config_path=None):
         if config_path is None:

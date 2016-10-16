@@ -319,9 +319,6 @@ class SyncryptApp(object):
             print()
         print("="*78)
 
-    def get_vault_states(self):
-        return {v.folder: v.state for v in self.vaults}
-
     @asyncio.coroutine
     def set(self, setting, value):
         for vault in self.vaults:
