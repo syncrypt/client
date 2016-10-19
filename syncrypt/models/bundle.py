@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import posixpath
 
 import aiofiles
 import asyncio
@@ -10,6 +11,7 @@ from syncrypt.pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, Encrypt
                     EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
                     PadAES, UnpadAES, SnappyCompress, SnappyDecompress, Count)
 from .base import MetadataHolder
+from syncrypt.utils.filesystem import splitpath
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ class Bundle(MetadataHolder):
         if self.path is not None:
             self.relpath = os.path.relpath(self.path, self.vault.folder)
             h = hashlib.new(self.vault.config.hash_algo)
-            h.update(self.relpath.encode(self.vault.config.encoding, 'surrogateescape'))
+            h.update(self.encode_path(self.relpath))
             self.store_hash = h.hexdigest()
         if store_hash is not None:
             self.store_hash = store_hash
@@ -43,7 +45,7 @@ class Bundle(MetadataHolder):
     @property
     def metadata(self):
         return {
-            'filename': self.relpath.encode(self.vault.config.encoding, 'surrogateescape'),
+            'filename': self.encode_path(self.relpath),
             'key': self.key,
             'hash': b'\0' * 32,
             'key_size': self.key_size
@@ -57,6 +59,18 @@ class Bundle(MetadataHolder):
     def identity(self):
         return self.vault.identity
 
+    def encode_path(self, relpath):
+        "Encodes a relative path into POSIX path bytes"
+        # TODO: on POSIX systems, the path conversion could be skipped for performance
+        relpath = posixpath.join(*splitpath(relpath))
+        return relpath.encode(self.vault.config.encoding, 'surrogateescape')
+
+    def decode_path(self, relpath):
+        "Decodes a POSIX path in bytes into a relative path"
+        # TODO: on POSIX systems, the path conversion could be skipped for performance
+        relpath = relpath.decode(self.vault.config.encoding, 'surrogateescape')
+        return os.path.join(*splitpath(relpath, pathmod=posixpath))
+
     @property
     def remote_hash_differs(self):
         return self.remote_crypt_hash is None or \
@@ -69,7 +83,7 @@ class Bundle(MetadataHolder):
             metadata_contents = yield from metadata_file.read()
             metadata = umsgpack.loads(metadata_contents)
             self.key = metadata[b'key']
-            filename = metadata[b'filename'].decode(self.vault.config.encoding, 'surrogateescape')
+            filename = self.decode_path(metadata[b'filename'])
             if self.path is None:
                 self.path = os.path.join(self.vault.folder, filename)
                 self.relpath = os.path.relpath(self.path, self.vault.folder)
@@ -88,6 +102,7 @@ class Bundle(MetadataHolder):
 
         sink = Once(self.serialized_metadata) >> FileWriter(self.path_metadata)
         yield from sink.consume()
+
 
     def read_encrypted_stream(self):
         assert not self.key is None
@@ -214,10 +229,8 @@ class VirtualBundle(Bundle):
     def __set_metadata(self, metadata):
         self._metadata = metadata
         if 'filename' in metadata:
-            if isinstance(metadata['filename'], bytes):
-                self.relpath = metadata['filename'].decode(self.vault.config.encoding, 'surrogateescape')
-            else:
-                self.relpath = metadata['filename']
+            assert isinstance(metadata['filename'], bytes)
+            self.relpath = self.decode_path(metadata['filename'])
             self.path = os.path.join(self.vault.folder, self.relpath)
 
     metadata = property(__get_metadata, __set_metadata)
