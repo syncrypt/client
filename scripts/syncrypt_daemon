@@ -8,7 +8,7 @@ import sys
 import asyncio
 from syncrypt.models import Vault
 from syncrypt.app import SyncryptApp
-from syncrypt.config import MaterializedAppConfig
+from syncrypt.config import MaterializedAppConfig, Config
 from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
 
@@ -24,7 +24,11 @@ parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
 
 config = parser.parse_args()
 
-setup_logging(config.loglevel)
+log_dir = os.path.join(Config().config_dir, 'logs')
+
+os.makedirs(log_dir, exist_ok=True)
+
+setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
 app_config = MaterializedAppConfig(config.config)
 app = SyncryptApp(app_config)
