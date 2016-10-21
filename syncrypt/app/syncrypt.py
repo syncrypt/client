@@ -263,9 +263,11 @@ class SyncryptApp(object):
         yield from backend.close()
 
     @asyncio.coroutine
-    def list_vaults(self):
+    def _list_vaults_with_name(self):
+        logger.debug('Retrieving vault list...')
         backend = yield from self.open_backend()
         my_fingerprint = self.identity.get_fingerprint()
+        vaults = []
 
         for (vault, user_vault_key, encrypted_metadata) in \
                     (yield from backend.list_vaults_by_fingerprint(my_fingerprint)):
@@ -280,9 +282,16 @@ class SyncryptApp(object):
                 if 'name' in metadata:
                     name = metadata['name']
 
-            print("{0} {1}".format(vault_id, name))
+            vaults.append((vault_id, name))
 
         yield from backend.close()
+
+        return vaults
+
+    @asyncio.coroutine
+    def list_vaults(self):
+        for (vault_id, name) in (yield from self._list_vaults_with_name()):
+            print("{0} {1}".format(vault_id, name))
 
     @asyncio.coroutine
     def _decrypt_metadata(self, encrypted_metadata, user_vault_key):
@@ -415,6 +424,26 @@ class SyncryptApp(object):
         yield from self.retrieve_metadata(vault)
 
         return vault
+
+    @asyncio.coroutine
+    def clone_by_name(self, vault_name, local_directory):
+
+        logger.info('Trying to find vault with name "%s"...', vault_name)
+        vault_id = None
+        for (vid, name) in (yield from self._list_vaults_with_name()):
+            vault_id = vid
+            if name == vault_name:
+                break
+            vault_id = None
+
+        if vault_id:
+            vault = yield from self.clone(vault_id, local_directory)
+        else:
+            logger.error('No vault found with name "%s"', vault_name)
+            vault = None
+
+        return vault
+
 
     @asyncio.coroutine
     def export(self, filename):
