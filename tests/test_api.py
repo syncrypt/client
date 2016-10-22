@@ -18,6 +18,7 @@ from tests.base import VaultTestCase, TestAppConfig
 
 TEST_API_ENDPOINT = 'http://127.0.0.1:28080'
 
+
 class APITests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
 
@@ -86,6 +87,13 @@ class APITests(VaultTestCase):
         yield from app.start()
 
         try:
+            login_data = json.dumps({
+                'email': 'test@syncrypt.space',
+                'password': 'test!password'
+            })
+            r = yield from aiohttp.post(TEST_API_ENDPOINT + '/v1/auth/login/', data=login_data)
+            yield from r.release()
+            self.assertEqual(r.status, 200)
 
             yield from asyncio.sleep(0.1)
 
@@ -135,15 +143,36 @@ class APITests(VaultTestCase):
             self.assertEqual(len(c), 0) # no vault
             yield from r.release()
 
+            post_data = json.dumps({
+                'folder': os.path.join(self.vault.folder, '..', 'cloned'),
+                'id': self.vault.config.id
+            })
+
+            # now lets try to clone the vault
+            if False:
+                r = yield from aiohttp.post(TEST_API_ENDPOINT + '/v1/vault/', data=post_data)
+                self.assertEqual(r.status, 200)
+                c = yield from r.json()
+                yield from r.release()
+
+                r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/vault/')
+                self.assertEqual(r.status, 200)
+                c = yield from r.json()
+                yield from r.release()
+                self.assertEqual(len(c), 1)
+
             # TODO actually we need to wait for backend future here
             yield from asyncio.sleep(1.0)
 
         finally:
             yield from app.stop()
 
-    def test_app_watchdog(self):
+    def test_api_watchdog(self):
         app = SyncryptApp(TestAppConfig())
+
         app.add_vault(self.vault)
+
+        yield from app.init(self.vault)
         yield from app.start()
 
         try:
@@ -162,6 +191,7 @@ class APITests(VaultTestCase):
 
             yield from app.push()
 
+
             r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/stats')
             c = yield from r.json()
             self.assertEqual(c['stats']['downloads'], 0)
@@ -173,6 +203,49 @@ class APITests(VaultTestCase):
             c = yield from r.json()
             self.assertIn('api', c.keys())
             yield from r.release()
+
+        finally:
+            yield from app.stop()
+
+    def test_api_metadata(self):
+        app = SyncryptApp(TestAppConfig())
+
+        app.add_vault(self.vault)
+
+        yield from app.init(self.vault)
+        yield from app.start()
+
+        try:
+
+            r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/vault/')
+            self.assertEqual(r.status, 200)
+            c = yield from r.json()
+            yield from r.release()
+
+            self.assertEqual(len(c), 1) # only one vault
+
+            vault_uri = c[0]['resource_uri']
+
+            r = yield from aiohttp.get(TEST_API_ENDPOINT + '%s' % vault_uri)
+            self.assertEqual(r.status, 200)
+            c = yield from r.json()
+            yield from r.release()
+
+            self.assertEqual(c['metadata'].get('name'), 'testvault')
+
+            patch_data = json.dumps({
+                'metadata': dict(c['metadata'], name='newname')
+            })
+            r = yield from aiohttp.put(TEST_API_ENDPOINT + '%s' % vault_uri, data=patch_data)
+            self.assertEqual(r.status, 200)
+            yield from r.release()
+
+            r = yield from aiohttp.get(TEST_API_ENDPOINT + '%s' % vault_uri)
+            self.assertEqual(r.status, 200)
+            c = yield from r.json()
+            yield from r.release()
+
+            self.assertEqual(c['metadata'].get('name'), 'newname')
 
         finally:
             yield from app.stop()
