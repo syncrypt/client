@@ -132,8 +132,13 @@ class Pull(MultipleVaultCmd):
     command = 'pull'
     description = 'pull all files from the latest revision'
 
+    def configure_parser(self, parser):
+        super(Pull, self).configure_parser(parser)
+        parser.add_argument('-f', '--full', action='store_true',
+                help='retrieve complete history instead of changes')
+
     def run(self):
-        self.loop.run_until_complete(self.app.pull())
+        self.loop.run_until_complete(self.app.pull(full=self.config.full))
 
 class AddUser(SingleVaultCmd):
     command = 'add-user'

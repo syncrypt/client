@@ -561,7 +561,7 @@ class SyncryptApp(object):
         yield from self.wait()
 
     @asyncio.coroutine
-    def pull(self):
+    def pull(self, full=False):
         '''
         Pull all vaults
 
@@ -569,7 +569,7 @@ class SyncryptApp(object):
         '''
         for vault in self.vaults:
             try:
-                yield from self.pull_vault(vault)
+                yield from self.pull_vault(vault, full=full)
             except VaultNotInitialized:
                 logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
                 continue
@@ -596,17 +596,17 @@ class SyncryptApp(object):
             yield from self.watch(vault)
 
     @asyncio.coroutine
-    def pull_vault(self, vault):
+    def pull_vault(self, vault, full=False):
         logger.info('Pulling %s', vault)
 
         yield from self.retrieve_metadata(vault)
 
         # TODO: do a change detection (.vault/metadata store vs filesystem)
         yield from self.open_or_init(vault)
-        if vault.revision:
-            queue = yield from vault.backend.changes(vault.revision, None)
-        else:
+        if not vault.revision or full:
             queue = yield from vault.backend.list_files()
+        else:
+            queue = yield from vault.backend.changes(vault.revision, None)
         while True:
             item = yield from queue.get()
             if item is None:
