@@ -303,7 +303,7 @@ class VaultUserResource(Resource):
             key_list = yield from vault.backend.list_keys(email)
             key_list = [key for key in key_list if key['fingerprint'] in data['fingerprints']]
             for key in key_list:
-                # retrieve key and verify fingerrint
+                # retrieve key and verify fingerprint
                 fingerprint = key['fingerprint']
                 public_key = key['public_key']
                 yield from self.app.add_user_vault_key(vault, email, fingerprint, public_key)
