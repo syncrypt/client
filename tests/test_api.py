@@ -86,6 +86,10 @@ class APITests(VaultTestCase):
         app = SyncryptApp(TestAppConfig())
         yield from app.start()
 
+        clone_folder = os.path.join(self.working_dir, 'cloned')
+        if os.path.exists(clone_folder):
+            shutil.rmtree(clone_folder)
+
         try:
             login_data = json.dumps({
                 'email': 'test@syncrypt.space',
@@ -120,13 +124,23 @@ class APITests(VaultTestCase):
 
             self.assertEqual(len(c), 1) # one user
             yield from r.release()
+            me = c[0]
 
             # add_user will make sure that the email is added as a user to the vault.
             # it will then return all the keys.
             # For testing purpose, we will add ourselves again
-            me = c[0]
+
+            r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/user/' + me['email'] + '/keys/')
+            c = yield from r.json()
+            self.assertGreater(len(c), 0) # at least one key
+            yield from r.release()
+            fingerprint = c[0]['fingerprint']
+
             r = yield from aiohttp.post(TEST_API_ENDPOINT + teh_vault + 'users/',
-                data=json.dumps({'email': me['email']}))
+                data=json.dumps({
+                    'email': me['email'],
+                    'fingerprints': [fingerprint]
+                }))
             c = yield from r.json()
             yield from r.release()
 
@@ -143,23 +157,25 @@ class APITests(VaultTestCase):
             self.assertEqual(len(c), 0) # no vault
             yield from r.release()
 
+            # now lets try to clone the vault
+
             post_data = json.dumps({
-                'folder': os.path.join(self.vault.folder, '..', 'cloned'),
+                'folder': clone_folder,
                 'id': self.vault.config.id
             })
 
-            # now lets try to clone the vault
-            if False:
-                r = yield from aiohttp.post(TEST_API_ENDPOINT + '/v1/vault/', data=post_data)
-                self.assertEqual(r.status, 200)
-                c = yield from r.json()
-                yield from r.release()
+            r = yield from aiohttp.post(TEST_API_ENDPOINT + '/v1/vault/', data=post_data)
+            self.assertEqual(r.status, 200)
+            c = yield from r.json()
+            yield from r.release()
 
-                r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/vault/')
-                self.assertEqual(r.status, 200)
-                c = yield from r.json()
-                yield from r.release()
-                self.assertEqual(len(c), 1)
+            r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/vault/')
+            self.assertEqual(r.status, 200)
+            c = yield from r.json()
+            yield from r.release()
+            self.assertEqual(len(c), 1)
+
+            self.assertEqual(c[0]['metadata'].get('name'), 'testvault')
 
             # TODO actually we need to wait for backend future here
             yield from asyncio.sleep(1.0)
