@@ -448,8 +448,6 @@ class BinaryStorageConnection(object):
                         len(metadata))
                 yield from queue.put((store_hash, metadata, server_info))
             yield from queue.put(None)
-            if revision_id and revision_id != Atom('no_revision'):
-                self.storage.vault.update_revision(revision_id)
 
     @asyncio.coroutine
     def add_user_vault_key(self, email, fingerprint, content):

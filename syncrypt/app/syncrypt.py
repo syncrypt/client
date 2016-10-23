@@ -228,6 +228,7 @@ class SyncryptApp(object):
                         format_tb(ex.__traceback__))
             asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
         task.add_done_callback(cb)
+        return task
 
     @asyncio.coroutine
     def clone_local(self, clone_target):
@@ -598,6 +599,13 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def pull_vault(self, vault, full=False):
         logger.info('Pulling %s', vault)
+        latest_revision = None
+        total = 0
+        successful = []
+
+        def cb(_task):
+            if not _task.exception():
+                successful.append(_task)
 
         yield from self.retrieve_metadata(vault)
 
@@ -611,12 +619,26 @@ class SyncryptApp(object):
             item = yield from queue.get()
             if item is None:
                 break
+            total += 1
             store_hash, metadata, server_info = item
             bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
-            yield from self.pull_bundle(bundle)
-            if 'id' in server_info:
-                vault.update_revision(server_info['id'])
+            task = yield from self.pull_bundle(bundle)
+            task.add_done_callback(cb)
+            latest_revision = server_info.get('id') or latest_revision
         yield from self.wait()
+
+        success = len(successful) == total
+
+        if success:
+            if total == 0:
+                logger.info('No changes in %s', vault)
+            else:
+                logger.info('Successfully pulled %d revisions for %s', total, vault)
+                if latest_revision:
+                    vault.update_revision(latest_revision)
+        else:
+            logger.error('%s failures occured while pulling %d revisions for %s',
+                    total - len(successful), total, vault)
 
     @asyncio.coroutine
     def wait(self):
