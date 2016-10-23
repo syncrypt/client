@@ -70,12 +70,14 @@ class SyncryptApp(object):
 
     def add_vault(self, vault):
         self.vaults.append(vault)
-        self.config.add_vault_dir(os.path.abspath(vault.folder))
+        with self.config.update_context():
+            self.config.add_vault_dir(os.path.abspath(vault.folder))
         return vault
 
     @asyncio.coroutine
     def remove_vault(self, vault):
-        self.config.remove_vault_dir(os.path.abspath(vault.folder))
+        with self.config.update_context():
+            self.config.remove_vault_dir(os.path.abspath(vault.folder))
         self.vaults.remove(vault)
 
     @asyncio.coroutine
@@ -133,8 +135,8 @@ class SyncryptApp(object):
                 except StorageBackendInvalidAuth:
                     logger.error('Invalid authentification')
                     continue
-            vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
-            vault.write_config()
+            with vault.config.update_context():
+                vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
             yield from vault.backend.set_vault_metadata()
             yield from vault.backend.upload_identity(self.identity)
 
@@ -366,14 +368,14 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def set(self, setting, value):
         for vault in self.vaults:
-            vault.config.set(setting, value)
-            vault.write_config()
+            with vault.config.update_context():
+                vault.config.set(setting, value)
 
     @asyncio.coroutine
     def unset(self, setting):
         for vault in self.vaults:
-            vault.config.unset(setting)
-            vault.write_config()
+            with vault.config.update_context():
+                vault.config.unset(setting)
 
     @asyncio.coroutine
     def open_backend(self, always_ask_for_creds=False, auth_provider=None, num_tries=3):
@@ -391,8 +393,8 @@ class SyncryptApp(object):
             try:
                 yield from backend.open()
                 if backend.auth:
-                    cfg.update('remote', {'auth': backend.auth})
-                    cfg.write(cfg.config_file)
+                    with cfg.update_context():
+                        cfg.update('remote', {'auth': backend.auth})
                 return backend
             except StorageBackendInvalidAuth:
                 logger.error('Invalid login')

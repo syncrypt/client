@@ -11,9 +11,10 @@ from syncrypt.models import Vault
 from syncrypt.config import AppConfig
 
 class TestAppConfig(AppConfig):
-    def __init__(self):
-        super(TestAppConfig, self).__init__(os.path.abspath('./test_config'))
-        self.set('remote.host', 'localhost')
+    def __init__(self, config_file):
+        super(TestAppConfig, self).__init__(config_file)
+        with self.update_context():
+            self.set('remote.host', 'localhost')
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
@@ -30,3 +31,9 @@ class VaultTestCase(asynctest.TestCase):
             shutil.copytree(self.folder, vault_folder)
             self.vault = Vault(vault_folder)
 
+        app_config_file = os.path.join(self.working_dir, 'test_config')
+
+        if os.path.exists(app_config_file):
+            os.remove(app_config_file)
+
+        self.app_config = TestAppConfig(app_config_file)

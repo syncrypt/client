@@ -14,7 +14,7 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault
-from tests.base import VaultTestCase, TestAppConfig
+from tests.base import VaultTestCase
 
 TEST_API_ENDPOINT = 'http://127.0.0.1:28080'
 
@@ -24,7 +24,7 @@ class APITests(VaultTestCase):
 
     def test_api_login(self):
         'try to get a list of files via API'
-        app = SyncryptApp(TestAppConfig())
+        app = SyncryptApp(self.app_config)
         yield from app.start()
         try:
             login_data = json.dumps({
@@ -57,7 +57,7 @@ class APITests(VaultTestCase):
 
     def test_api_bundle(self):
         'try to get a list of files via API'
-        app = SyncryptApp(TestAppConfig())
+        app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
         yield from app.start()
         try:
@@ -83,7 +83,7 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_api_add_user(self):
-        app = SyncryptApp(TestAppConfig())
+        app = SyncryptApp(self.app_config)
         yield from app.start()
 
         clone_folder = os.path.join(self.working_dir, 'cloned')
@@ -150,6 +150,7 @@ class APITests(VaultTestCase):
             yield from r.release()
 
             r = yield from aiohttp.delete(TEST_API_ENDPOINT + teh_vault)
+            self.assertEqual(r.status, 200)
             yield from r.release()
 
             r = yield from aiohttp.get(TEST_API_ENDPOINT + '/v1/vault/')
@@ -184,7 +185,7 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_api_watchdog(self):
-        app = SyncryptApp(TestAppConfig())
+        app = SyncryptApp(self.app_config)
 
         app.add_vault(self.vault)
 
@@ -224,7 +225,7 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_api_metadata(self):
-        app = SyncryptApp(TestAppConfig())
+        app = SyncryptApp(self.app_config)
 
         app.add_vault(self.vault)
 

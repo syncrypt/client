@@ -45,7 +45,6 @@ class SyncryptCmd():
 
     def setup(self):
         self.app_config = AppConfig(self.config.config)
-        self.app_config.read_config_file()
         setup_logging(self.config.loglevel)
         self.loop = asyncio.get_event_loop()
         self.app = SyncryptApp(self.app_config,

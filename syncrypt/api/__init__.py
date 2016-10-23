@@ -107,8 +107,8 @@ class SyncryptAPI():
         token.
         '''
         cfg = self.app.config
-        cfg.update('remote', {'auth': ''})
-        cfg.write(cfg.config_file)
+        with cfg.update_context():
+            cfg.update('remote', {'auth': ''})
         return JSONResponse({'status': 'ok'})
 
     @asyncio.coroutine

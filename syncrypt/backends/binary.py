@@ -182,13 +182,13 @@ class BinaryStorageConnection(object):
                 if response[0] == Atom('ok'):
                     self.storage.auth = response[2].decode(self.storage.vault.config.encoding)
                     logger.info('Created vault %s', response[1])
-                    vault.config.update('remote', {
-                        'auth': self.storage.auth
-                    })
-                    vault.config.update('vault', {
-                        'id': response[1].decode(self.storage.vault.config.encoding)
-                    })
-                    vault.write_config()
+                    with vault.config.update_context():
+                        vault.config.update('remote', {
+                            'auth': self.storage.auth
+                        })
+                        vault.config.update('vault', {
+                            'id': response[1].decode(self.storage.vault.config.encoding)
+                        })
                 else:
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(response)
@@ -654,8 +654,8 @@ class BinaryStorageBackend(StorageBackend):
         try:
             with (yield from self.manager.acquire_connection()) as conn:
                 # after successful login, write back config
-                self.vault.config.update('remote', {'auth': self.auth})
-                self.vault.write_config()
+                with self.vault.config.update_context():
+                    self.vault.config.update('remote', {'auth': self.auth})
                 self.invalid_auth = False
                 logger.info('Successfully logged in and stored auth token')
         except StorageBackendInvalidAuth:

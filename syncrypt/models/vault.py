@@ -41,12 +41,7 @@ class Vault(MetadataHolder):
             return self._config
         except AttributeError:
             assert os.path.exists(self.folder)
-            self._config = VaultConfig()
-            if os.path.exists(self.config_path):
-                logger.debug('Using config file: %s', self.config_path)
-                self._config.read(self.config_path)
-            else:
-                logger.debug('Continuing without config file: %s', self.config_path)
+            self._config = VaultConfig(self.config_path)
             return self._config
 
     def __get_metadata(self):
@@ -57,8 +52,8 @@ class Vault(MetadataHolder):
     def __set_metadata(self, metadata):
         if 'name' in metadata:
             logger.debug('Setting vault\'s name to "%s"', metadata['name'])
-            self.config.vault['name'] = metadata['name']
-            self.write_config()
+            with self.config.update_context():
+                self.config.vault['name'] = metadata['name']
 
     metadata = property(__get_metadata, __set_metadata)
 
@@ -109,14 +104,6 @@ class Vault(MetadataHolder):
     @property
     def state(self):
         return 'syncing' if self.active else 'synced'
-
-    def write_config(self, config_path=None):
-        if config_path is None:
-            config_path = self.config_path
-        if not os.path.exists(os.path.dirname(config_path)):
-            os.makedirs(os.path.dirname(config_path))
-        logger.debug('Writing config to %s', config_path)
-        self.config.write(config_path)
 
     def get_local_size(self):
         return folder_size(self.folder)
@@ -188,8 +175,8 @@ class Vault(MetadataHolder):
         if isinstance(revision_id, bytes):
             revision_id = revision_id.decode(self.config.encoding)
         logger.debug('Update vault revision to "%s"', revision_id)
-        self.config.update('vault', {'revision': revision_id})
-        self.write_config()
+        with self.config.update_context():
+            self.config.update('vault', {'revision': revision_id})
 
     def package_info(self):
         '''
@@ -244,8 +231,8 @@ class Vault(MetadataHolder):
         vault = Vault(local_directory)
 
         if auth_token:
-            vault.config.update('remote', {'auth': auth_token})
-            vault.write_config()
+            with vault.config.update_context():
+                vault.config.update('remote', {'auth': auth_token})
 
         return vault
 

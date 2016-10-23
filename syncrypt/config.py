@@ -17,11 +17,13 @@ class Config(object):
 
     default_config = {}
 
-    def __init__(self):
+    def __init__(self, config_path):
         self._config = configparser.ConfigParser()
+        self._config_path = config_path
         # set defaults
         for k in self.default_config.keys():
             self._config[k] = deepcopy(self.default_config[k])
+        self.read()
 
     def as_dict(self):
         return {s:dict(self._config.items(s)) for s in self._config.sections()}
@@ -30,14 +32,24 @@ class Config(object):
         if item in self._config:
             return self._config[item]
 
-    def read(self, config_file):
-        self._config.read(config_file)
+    def update_context(self):
+        return self
 
-    def write(self, config_file):
-        cfg_dir = os.path.dirname(config_file)
+    def __enter__(self):
+        self.read()
+
+    def __exit__(self, ex_type, ex_val, tb):
+        self.write()
+
+    def read(self):
+        if os.path.exists(self._config_path):
+            self._config.read(self._config_path)
+
+    def write(self):
+        cfg_dir = os.path.dirname(self._config_path)
         if not os.path.exists(cfg_dir):
             os.makedirs(cfg_dir)
-        with open(config_file, 'w') as f:
+        with open(self._config_path, 'w') as f:
             self._config.write(f)
 
     def get(self, setting, default=None):
@@ -139,12 +151,8 @@ class AppConfig(Config, BackendConfigMixin):
     }
 
     def __init__(self, config_file=None):
-        super(AppConfig, self).__init__()
-        self.config_file = config_file or os.path.join(self.config_dir, 'config')
-
-    def read_config_file(self):
-        logger.debug('Reading application config from %s', self.config_file)
-        self.read(self.config_file)
+        super(AppConfig, self).__init__(config_file or os.path.join(self.config_dir, 'config'))
+        logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
 
     @property
     def vault_dirs(self):
@@ -163,20 +171,3 @@ class AppConfig(Config, BackendConfigMixin):
         a.remove(folder)
         self.vault_dirs = a
 
-class MaterializedAppConfig(AppConfig):
-    '''
-    An AppConfig that will read and sync the settings from disk.
-    '''
-
-    def __init__(self, config_file=None):
-        super(MaterializedAppConfig, self).__init__(config_file)
-        self.read_config_file()
-        logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
-
-    def add_vault_dir(self, folder):
-        super(MaterializedAppConfig, self).add_vault_dir(folder)
-        self.write(self.config_file)
-
-    def remove_vault_dir(self, folder):
-        super(MaterializedAppConfig, self).remove_vault_dir(folder)
-        self.write(self.config_file)
