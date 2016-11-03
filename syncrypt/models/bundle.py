@@ -68,7 +68,8 @@ class Bundle(MetadataHolder):
     def decode_path(self, relpath):
         "Decodes a POSIX path in bytes into a relative path"
         # TODO: on POSIX systems, the path conversion could be skipped for performance
-        relpath = relpath.decode(self.vault.config.encoding, 'surrogateescape')
+        if isinstance(relpath, bytes):
+            relpath = relpath.decode(self.vault.config.encoding, 'surrogateescape')
         return os.path.join(*splitpath(relpath, pathmod=posixpath))
 
     @property
@@ -229,7 +230,6 @@ class VirtualBundle(Bundle):
     def __set_metadata(self, metadata):
         self._metadata = metadata
         if 'filename' in metadata:
-            assert isinstance(metadata['filename'], bytes)
             self.relpath = self.decode_path(metadata['filename'])
             self.path = os.path.join(self.vault.folder, self.relpath)
 
