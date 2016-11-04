@@ -90,7 +90,8 @@ artifacts:
 #
 
 deploy:
-  release: Syncrypt-v$(appveyor_build_version)
+  tag: v0.3.1
+  release: Syncrypt-v0.3.1
   description: 'Windows $env:platform Build'
   provider: GitHub
   auth_token:
