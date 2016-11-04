@@ -81,6 +81,7 @@ class BackendConfigMixin():
         'host': 'storage.syncrypt.space',
         'port': 1337,
         'ssl': True,
+        'ssl_verify': True,
 
         # How many concurent uploads/downloads we want to
         # support

@@ -106,7 +106,8 @@ class BinaryStorageConnection(object):
     def connect(self):
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-            if self.storage.host in ('127.0.0.1', 'localhost'):
+            if not self.storage.ssl_verify or self.storage.host in ('127.0.0.1', 'localhost'):
+                logger.warn('Continuing without verifying SSL cert')
                 sc.check_hostname = False
                 sc.verify_mode = ssl.CERT_NONE
         else:
@@ -629,10 +630,12 @@ class BinaryStorageManager(object):
 class BinaryStorageBackend(StorageBackend):
 
     def __init__(self, vault=None, auth=None, host=None, port=None,
-            concurrency=None, username=None, password=None, ssl=False):
+            concurrency=None, username=None, password=None, ssl=True,
+            ssl_verify=True):
         self.host = host
         self.port = port
         self.ssl = ssl
+        self.ssl_verify = ssl_verify
         self.vault = vault
 
         # Vault specific login information
