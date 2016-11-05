@@ -20,13 +20,9 @@ This requires the ``snappy-c`` library in order to build the
 you can install it with the APT package ``libsnappy-dev``. In OS X, you can
 install it with ```brew install snappy```.
 
-Option 2: Download one of the distribution packages:
+Option 2: Download one of the packages on our [releases page](https://alpha.syncrypt.space/releases/).
 
-* OS X (*TBD*)
-* Linux (*TBD*)
-* Windows (*TBD*)
-
-Option 3: Install from source:
+Option 3: Install latest development version from source:
 
     pip install git+https://github.com/syncrypt/client
 
