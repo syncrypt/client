@@ -1,4 +1,6 @@
 import json
+import string
+import random
 import logging
 
 import asyncio
@@ -11,10 +13,20 @@ from .resources import (BundleResource, JSONResponse, VaultResource,
 
 logger = logging.getLogger(__name__)
 
+def random_string(length=6, chars=string.ascii_lowercase + \
+                                string.ascii_uppercase + string.digits):
+    return ''.join(random.choice(chars) for x in range(length))
+
+
 class SyncryptAPI():
     def __init__(self, app):
         self.app = app
         self.server = None
+
+        if not self.app.config.get('api.auth_token'):
+            logger.info('Generating API auth token...')
+            with self.app.config.update_context():
+                self.app.config.set('api.auth_token', random_string(32))
 
     @asyncio.coroutine
     def get_stats(self, request):

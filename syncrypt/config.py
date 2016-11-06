@@ -146,7 +146,8 @@ class AppConfig(Config, BackendConfigMixin):
         },
         'api': {
             'host': '127.0.0.1',
-            'port': '28080'
+            'port': '28080',
+            'auth_token': ''
         },
         'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }
