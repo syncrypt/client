@@ -6,6 +6,7 @@ import itertools
 
 import asyncio
 from aiohttp import web
+from .auth import require_auth_token
 
 logger = logging.getLogger(__name__)
 
@@ -43,27 +44,32 @@ class Resource(object):
         raise NotImplementedError
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_list(self, request):
         objs = yield from self.get_obj_list(request)
         return JSONResponse([self.dehydrate(obj) for obj in objs])
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_get(self, request):
         obj = yield from self.get_obj(request)
         return JSONResponse(self.dehydrate(obj))
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_delete(self, request):
         obj = yield from self.get_obj(request)
         yield from self.delete_obj(request, obj)
         return JSONResponse({}) # return 200 without data
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_put(self, request):
         obj = yield from self.put_obj(request)
         return JSONResponse(self.dehydrate(obj))
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_post(self, request):
         obj = yield from self.post_obj(request)
         return JSONResponse(self.dehydrate(obj))
@@ -214,6 +220,7 @@ class UserResource(Resource):
         router.add_route('GET', '/{version}/{name}/{{id}}/keys/'.format(**opts), self.dispatch_keys)
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_keys(self, request):
         email = request.match_info['id']
         backend = yield from self.app.open_backend()
@@ -266,6 +273,7 @@ class VaultUserResource(Resource):
         return dict(obj, resource_uri=self.get_resource_uri(obj))
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_keys(self, request):
         vault = self.get_vault(request)
         email = request.match_info['email']

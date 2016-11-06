@@ -1,6 +1,4 @@
 import json
-import string
-import random
 import logging
 
 import asyncio
@@ -10,13 +8,9 @@ from syncrypt.backends.base import StorageBackendInvalidAuth
 
 from .resources import (BundleResource, JSONResponse, VaultResource,
                         VaultUserResource, UserResource, FlyingVaultResource)
+from .auth import generate_api_auth_token, require_auth_token
 
 logger = logging.getLogger(__name__)
-
-def random_string(length=6, chars=string.ascii_lowercase + \
-                                string.ascii_uppercase + string.digits):
-    return ''.join(random.choice(chars) for x in range(length))
-
 
 class SyncryptAPI():
     def __init__(self, app):
@@ -26,9 +20,10 @@ class SyncryptAPI():
         if not self.app.config.get('api.auth_token'):
             logger.info('Generating API auth token...')
             with self.app.config.update_context():
-                self.app.config.set('api.auth_token', random_string(32))
+                self.app.config.set('api.auth_token', generate_api_auth_token())
 
     @asyncio.coroutine
+    @require_auth_token
     def get_stats(self, request):
         vault_resource = VaultResource(self.app)
         vault_states = {vault_resource.get_resource_uri(v): v.state for v in self.app.vaults}
@@ -38,6 +33,7 @@ class SyncryptAPI():
         })
 
     @asyncio.coroutine
+    @require_auth_token
     def get_push(self, request):
         task = asyncio.get_event_loop().create_task(self.app.push())
         def cb(_task):
@@ -47,6 +43,7 @@ class SyncryptAPI():
         return JSONResponse({})
 
     @asyncio.coroutine
+    @require_auth_token
     def get_pull(self, request):
         task = asyncio.get_event_loop().create_task(self.app.pull())
         def cb(_task):
@@ -56,10 +53,12 @@ class SyncryptAPI():
         return JSONResponse({})
 
     @asyncio.coroutine
+    @require_auth_token
     def get_config(self, request):
         return JSONResponse(self.app.config.as_dict())
 
     @asyncio.coroutine
+    @require_auth_token
     def post_auth_login(self, request):
         content = yield from request.content.read()
         credentials = json.loads(content.decode())
@@ -82,6 +81,7 @@ class SyncryptAPI():
             }, status=500)
 
     @asyncio.coroutine
+    @require_auth_token
     def get_auth_check(self, request):
         logger.info('Login check')
         cfg = self.app.config
@@ -99,6 +99,7 @@ class SyncryptAPI():
             })
 
     @asyncio.coroutine
+    @require_auth_token
     def get_auth_logout(self, request):
         '''
         Logging out the user simply works by removing the global auth
@@ -110,6 +111,7 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @asyncio.coroutine
+    @require_auth_token
     def get_user_info(self, request):
         '''
         Logging out the user simply works by removing the global auth
