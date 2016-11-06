@@ -3,25 +3,11 @@ import logging
 
 import asyncio
 from aiohttp import web
-from syncrypt.app.auth import AuthenticationProvider
+from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.base import StorageBackendInvalidAuth
 
 from .resources import (BundleResource, JSONResponse, VaultResource,
                         VaultUserResource, UserResource, FlyingVaultResource)
-
-
-class DummyAuthenticationProvider(AuthenticationProvider):
-
-    def __init__(self, username, password):
-        self._username = username
-        self._password = password
-
-    @asyncio.coroutine
-    def get_auth(self, backend):
-        logger.info('Logging in with %s', self._username)
-        return self._username, self._password
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +54,7 @@ class SyncryptAPI():
         logger.info('Login requested with email: %s', credentials['email'])
         try:
             backend = yield from self.app.open_backend(always_ask_for_creds=True,
-                    auth_provider=DummyAuthenticationProvider(
+                    auth_provider=CredentialsAuthenticationProvider(
                         credentials['email'], credentials['password']),
                     num_tries=1)
             logger.info('Successfully logged in and stored auth token.')

@@ -6,13 +6,13 @@ class AuthenticationProvider():
     def get_auth(self, backend):
         raise NotImplementedError
 
-
-class DummyAuthenticationProvider(AuthenticationProvider):
+class CredentialsAuthenticationProvider(AuthenticationProvider):
 
     def __init__(self, username, password):
-        self.username = username
-        self.password = password
+        self._username = username
+        self._password = password
 
     @asyncio.coroutine
     def get_auth(self, backend):
-        return self.username, self.password
+        return self._username, self._password
+
