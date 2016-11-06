@@ -8,7 +8,7 @@ import asyncio
 import iso8601
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
-from syncrypt.exceptions import VaultNotInitialized
+from syncrypt.exceptions import VaultNotInitialized, VaultFolderDoesNotExist
 from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
@@ -61,7 +61,12 @@ class SyncryptApp(object):
         if vault_dirs is None:
             vault_dirs = self.config.vault_dirs
         for vault_dir in vault_dirs:
-            self.vaults.append(Vault(vault_dir))
+            vault = Vault(vault_dir)
+            try:
+                vault.check_existence()
+                self.vaults.append(vault)
+            except VaultFolderDoesNotExist:
+                logger.warn('Ignoring %s, because its folder does not exist', vault)
 
         super(SyncryptApp, self).__init__()
 
@@ -164,12 +169,17 @@ class SyncryptApp(object):
         yield from self.api.start()
         yield from self.push()
         for vault in self.vaults:
-            yield from self.watch(vault)
-            yield from self.autopull_vault(vault)
+            try:
+                yield from self.watch(vault)
+                yield from self.autopull_vault(vault)
+            except VaultFolderDoesNotExist:
+                logger.error('%s does not exist, removing vault from list.' % vault)
+                yield from self.remove_vault(vault)
 
     @asyncio.coroutine
     def watch(self, vault):
         'Install a watchdog and auto-pull for vault'
+        vault.check_existence()
         folder = os.path.abspath(vault.folder)
         logger.info('Watching %s', folder)
         self.watchdogs[folder] = create_watchdog(self, vault)
@@ -177,6 +187,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def autopull_vault(self, vault):
+        vault.check_existence()
         folder = os.path.abspath(vault.folder)
         logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
         self.pull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
@@ -558,7 +569,12 @@ class SyncryptApp(object):
             except VaultNotInitialized:
                 logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
                 continue
+            except VaultFolderDoesNotExist:
+                logger.error('%s does not exist, removing vault from list.' % vault)
+                yield from self.remove_vault(vault)
+                continue
             except Exception as e:
+                import ipdb; ipdb.set_trace()
                 logger.exception(e)
                 continue
         yield from self.wait()
@@ -575,6 +591,10 @@ class SyncryptApp(object):
                 yield from self.pull_vault(vault, full=full)
             except VaultNotInitialized:
                 logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+                continue
+            except VaultFolderDoesNotExist:
+                logger.error('%s does not exist, removing vault from list.' % vault)
+                yield from this.remove_vault(vault)
                 continue
             except Exception as e:
                 logger.exception(e)

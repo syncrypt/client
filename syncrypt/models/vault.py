@@ -10,7 +10,7 @@ from io import BytesIO, StringIO
 
 import asyncio
 from syncrypt.config import VaultConfig
-from syncrypt.exceptions import SecurityError, VaultNotInitialized
+from syncrypt.exceptions import SecurityError, VaultNotInitialized, VaultFolderDoesNotExist
 from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
 from syncrypt.utils.semaphores import JoinableSetSemaphore
@@ -40,7 +40,7 @@ class Vault(MetadataHolder):
         try:
             return self._config
         except AttributeError:
-            assert os.path.exists(self.folder)
+            self.check_existence()
             self._config = VaultConfig(self.config_path)
             return self._config
 
@@ -84,6 +84,13 @@ class Vault(MetadataHolder):
 
     def __str__(self):
         return '<Vault: {0}>'.format(self.folder)
+
+    def __repr__(self):
+        return 'syncrypt.models.Vault(\'{0}\')'.format(self.folder)
+
+    def check_existence(self):
+        if not os.path.exists(self.folder):
+            raise VaultFolderDoesNotExist()
 
     @property
     def crypt_path(self):

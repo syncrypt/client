@@ -1,5 +1,11 @@
 class SecurityError(Exception):
     pass
 
-class VaultNotInitialized(Exception):
+class VaultException(Exception):
+    pass
+
+class VaultNotInitialized(VaultException):
+    pass
+
+class VaultFolderDoesNotExist(VaultException):
     pass
