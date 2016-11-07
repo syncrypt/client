@@ -14,7 +14,6 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.config import AppConfig
 from tests.base import VaultTestCase
-from tests.common import CommonTestsMixin
 from tests.strategies import files
 
 def count_files(folder):
