@@ -19,11 +19,10 @@ from tests.base import VaultTestCase
 from syncrypt.api.auth import AUTH_TOKEN_HEADER
 
 class APIClient:
-    def __init__(self, app):
-        self.app = app
-        self.host = app.config.get('api.host')
-        self.port = app.config.get('api.port')
-        self.auth_token = app.config.get('api.auth_token')
+    def __init__(self, app_config):
+        self.host = app_config.get('api.host')
+        self.port = app_config.get('api.port')
+        self.auth_token = app_config.get('api.auth_token')
 
     def __getattr__(self, http_method):
         @asyncio.coroutine
@@ -44,7 +43,7 @@ class APITests(VaultTestCase):
     def test_api_login(self):
         'try to get a list of files via API'
         app = SyncryptApp(self.app_config)
-        client = APIClient(app)
+        client = APIClient(self.app_config)
         yield from app.start()
         try:
             login_data = json.dumps({
@@ -79,7 +78,7 @@ class APITests(VaultTestCase):
         'try to get a list of files via API'
         app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
-        client = APIClient(app)
+        client = APIClient(self.app_config)
         yield from app.start()
         try:
             r = yield from client.get('/v1/vault/')
@@ -106,7 +105,7 @@ class APITests(VaultTestCase):
 
     def test_api_add_user(self):
         app = SyncryptApp(self.app_config)
-        client = APIClient(app)
+        client = APIClient(self.app_config)
         yield from app.start()
 
         clone_folder = os.path.join(self.working_dir, 'cloned')
@@ -210,7 +209,7 @@ class APITests(VaultTestCase):
 
     def test_api_watchdog(self):
         app = SyncryptApp(self.app_config)
-        client = APIClient(app)
+        client = APIClient(self.app_config)
 
         app.add_vault(self.vault)
 
@@ -251,7 +250,7 @@ class APITests(VaultTestCase):
 
     def test_api_metadata(self):
         app = SyncryptApp(self.app_config)
-        client = APIClient(app)
+        client = APIClient(self.app_config)
 
         app.add_vault(self.vault)
 
