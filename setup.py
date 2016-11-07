@@ -76,8 +76,8 @@ setup(
     url='https://github.com/syncrypt/client',
 
     # Author details
-    author='Hannes Gräuler',
-    author_email='hannes@syncrypt.space',
+    author='Syncrypt UG',
+    author_email='support@syncrypt.space',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
