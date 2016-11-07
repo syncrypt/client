@@ -90,14 +90,14 @@ artifacts:
 #
 
 deploy:
-  tag: v0.3.2
-  release: Syncrypt-v0.3.2
-  description: 'Windows $env:platform Build'
+  tag: v0.3.3
+  release: Syncrypt-v0.3.3
+  description: 'Windows Build'
   provider: GitHub
   auth_token:
     secure: cm6YGcbZ4btLnz/4ZdN9FsqObCDSK3QC9i5XIP2TmUcWVQ45sKjDSdBLGMgb0XVm
   artifact: /.*\.exe/            # upload all NuGet packages to release assets
-  draft: false
+  draft: true
   prerelease: false
   on:
     branch: master                 # release from master branch only

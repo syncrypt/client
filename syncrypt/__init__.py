@@ -1,7 +1,7 @@
 from pkg_resources import get_distribution, DistributionNotFound
 
 __project__ = 'syncrypt'
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 
 try:
     __version__ = get_distribution(__project__).version
