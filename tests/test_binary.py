@@ -1,4 +1,5 @@
 import logging
+from glob import glob
 import os
 import os.path
 import shutil
@@ -9,7 +10,6 @@ import asynctest
 from syncrypt.models import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
-from syncrypt.config import AppConfig
 from tests.base import VaultTestCase
 
 __all__ = ('BinaryServerTests',)
@@ -72,57 +72,21 @@ class BinaryServerTests(VaultTestCase):
             self.assertEqual(bundle.remote_hash_differs, False)
 
     def test_app_push(self):
-        app = SyncryptApp(AppConfig())
+        app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
         yield from app.push()
 
     def test_app_push1(self):
-        app = SyncryptApp(AppConfig())
+        app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
         yield from app.open_or_init(self.vault)
         bundle = list(self.vault.walk_disk())[0]
         yield from app.push_bundle(bundle)
         yield from app.wait()
 
-
-    def test_app_watchdog(self):
-        app = SyncryptApp(AppConfig())
-        app.add_vault(self.vault)
-        yield from app.start()
-
-        try:
-
-            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/vault/')
-            c = yield from r.json()
-            self.assertEqual(len(c), 1) # only one vault
-            yield from r.release()
-
-            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
-            c = yield from r.json()
-            self.assertEqual(c['stats']['downloads'], 0)
-            self.assertEqual(c['stats']['uploads'], 8)
-            self.assertEqual(c['stats']['stats'], 8)
-            yield from r.release()
-
-            yield from app.push()
-
-            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/stats')
-            c = yield from r.json()
-            self.assertEqual(c['stats']['downloads'], 0)
-            self.assertEqual(c['stats']['uploads'], 8)
-            self.assertEqual(c['stats']['stats'], 16)
-            yield from r.release()
-
-            r = yield from aiohttp.get('http://127.0.0.1:28080/v1/config')
-            c = yield from r.json()
-            self.assertIn('api', c.keys())
-            yield from r.release()
-
-        finally:
-            yield from app.stop()
-
-
     def test_vault_metadata(self):
+        app = SyncryptApp(self.app_config)
+        yield from app.open_or_init(self.vault)
         backend = self.vault.backend
         yield from backend.open()
 
@@ -137,6 +101,9 @@ class BinaryServerTests(VaultTestCase):
 
     def test_download(self):
         'for all files -> upload file, delete file, download file'
+        app = SyncryptApp(self.app_config)
+        yield from app.open_or_init(self.vault)
+
         backend = self.vault.backend
 
         yield from backend.open()
@@ -191,7 +158,7 @@ class BinaryServerTests(VaultTestCase):
         if os.path.exists(other_vault_path):
             shutil.rmtree(other_vault_path)
 
-        app = SyncryptApp(AppConfig())
+        app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
 
         #yield from app.init() # init all vaults
@@ -216,8 +183,9 @@ class BinaryServerTests(VaultTestCase):
 
 
     def test_revision_increase_after_push(self):
-        app = SyncryptApp(AppConfig())
+        app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
+        yield from app.open_or_init(self.vault)
         prev_rev = self.vault.revision
         yield from app.push()
         post_rev = self.vault.revision
@@ -227,8 +195,9 @@ class BinaryServerTests(VaultTestCase):
     def test_take_only_one_connection(self):
         vault = self.vault
 
-        app = SyncryptApp(AppConfig())
+        app = SyncryptApp(self.app_config)
         app.add_vault(vault)
+        yield from app.open_or_init(self.vault)
         yield from app.retrieve_metadata(vault)
         yield from app.get_remote_size_for_vault(vault)
         yield from app.retrieve_metadata(vault)
@@ -236,32 +205,6 @@ class BinaryServerTests(VaultTestCase):
         yield from app.get_remote_size_for_vault(vault)
 
         self.assertEqual(vault.backend.manager.get_active_connection_count(), 1)
-
-    @asynctest.ignore_loop
-    def test_rsa_pipe_pkcs1_v15(self):
-        bundle = self.vault.bundle_for('hello.txt')
-        for i in (2, 10, 1242):
-            input = b'a' * i + b'b' * int(i / 2)
-            pipe = Once(input) \
-                >> EncryptRSA(bundle.vault.identity.public_key)
-            intermediate = yield from pipe.readall()
-            pipe = Once(intermediate) \
-                >> DecryptRSA(bundle.vault.identity.private_key)
-            output = yield from pipe.readall()
-            self.assertEqual(input, output)
-
-    @asynctest.ignore_loop
-    def test_rsa_pipe_pkcs1_oaep(self):
-        bundle = self.vault.bundle_for('hello.txt')
-        for i in (2, 10, 1242):
-            input = b'a' * i + b'b' * int(i / 2)
-            pipe = Once(input) \
-                >> EncryptRSA_PKCS1_OAEP(bundle.vault.identity.public_key)
-            intermediate = yield from pipe.readall()
-            pipe = Once(intermediate) \
-                >> DecryptRSA_PKCS1_OAEP(bundle.vault.identity.private_key)
-            output = yield from pipe.readall()
-            self.assertEqual(input, output)
 
 if __name__ == '__main__':
     from syncrypt.utils.logging import setup_logging
