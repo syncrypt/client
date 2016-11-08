@@ -302,7 +302,6 @@ class BinaryStorageConnection(object):
     def vault_metadata(self):
         logger.debug('Getting metadata for %s', self.storage.vault)
 
-        # upload key and file
         yield from self.write_term('vault_metadata')
 
         metadata = yield from self.read_response()
@@ -351,7 +350,6 @@ class BinaryStorageConnection(object):
         logger.info('Getting a list of changes for %s (%s to %s)',
                 self.storage.vault, since_rev or 'earliest', to_rev or 'latest')
 
-        # upload key and file
         if verbose:
             yield from self.write_term('changes_with_email', since_rev, to_rev)
         else:
@@ -393,7 +391,6 @@ class BinaryStorageConnection(object):
 
         logger.info('Getting a list of vaults')
 
-        # upload key and file
         yield from self.write_term('list_vaults')
         response = yield from self.read_term()
 
@@ -404,7 +401,6 @@ class BinaryStorageConnection(object):
 
         logger.info('Getting a list of vaults by fingerprint: %s', fingerprint)
 
-        # upload key and file
         yield from self.write_term('list_vaults_by_fingerprint', str(fingerprint))
         response = yield from self.read_term()
 
@@ -416,7 +412,6 @@ class BinaryStorageConnection(object):
 
         logger.info('Getting a list of vault users')
 
-        # upload key and file
         yield from self.write_term('list_vault_users')
         response = yield from self.read_term()
 
@@ -428,7 +423,6 @@ class BinaryStorageConnection(object):
 
         logger.info('Getting a list of files for vault %s', self.storage.vault)
 
-        # upload key and file
         yield from self.write_term('list_files')
 
         response = yield from self.read_response()
