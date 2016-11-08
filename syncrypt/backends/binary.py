@@ -35,11 +35,18 @@ class ConnectionResetException(BinaryStorageException):
 class UnexpectedResponseException(BinaryStorageException):
     pass
 
+def bert_val(bert_term):
+    # Convert a nil atom to None
+    if bert_term == Atom('nil'):
+        return None
+    else:
+        return bert_term
+
 def rewrite_atoms_dict(bert_dict):
     # Convert a dict with Atom keys to a list of str keys
     # In the future, generalize this to a complete BERT Atom->str
     # rewriter
-    return {str(k): v for (k, v) in bert_dict.items()}
+    return {str(k): bert_val(v) for (k, v) in bert_dict.items()}
 
 class BinaryStorageConnection(object):
     def __init__(self, storage):
