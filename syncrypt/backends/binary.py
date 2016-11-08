@@ -388,7 +388,6 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def list_vaults(self):
-
         logger.info('Getting a list of vaults')
 
         yield from self.write_term('list_vaults')
