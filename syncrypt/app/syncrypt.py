@@ -273,7 +273,13 @@ class SyncryptApp(object):
         backend = yield from self.open_backend()
         for vault in (yield from backend.list_vaults()):
             logger.debug("Received vault: %s", vault)
-            print("{0}".format(vault['id'].decode('utf-8')))
+            fmt_str = "{0} | Users: {1:3} | Files: {2:4} | Revisions: {3:4}".format(
+                vault['id'].decode('utf-8'),
+                vault['user_count'],
+                vault['file_count'],
+                vault['revision_count']
+            )
+            print(fmt_str)
         yield from backend.close()
 
     @asyncio.coroutine

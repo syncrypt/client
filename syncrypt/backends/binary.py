@@ -390,7 +390,7 @@ class BinaryStorageConnection(object):
     def list_vaults(self):
         logger.info('Getting a list of vaults')
 
-        yield from self.write_term('list_vaults')
+        yield from self.write_term('list_vaults_with_metadata')
         response = yield from self.read_term()
 
         return list(map(rewrite_atoms_dict, response[1]))
