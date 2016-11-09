@@ -3,7 +3,7 @@ import os.path
 
 import asynctest
 from syncrypt.models import Identity
-from syncrypt.config import Config
+from syncrypt.config import AppConfig
 from .base import VaultTestCase
 
 __all__ = ('IdentityTests',)
@@ -13,7 +13,7 @@ class IdentityTests(VaultTestCase):
     @asynctest.ignore_loop
     def test_creation(self):
 
-        config = Config()
+        config = AppConfig()
 
         identity = Identity(os.path.join(self.working_dir, 'id_rsa'),
             os.path.join(self.working_dir, 'id_rsa.pub'),
