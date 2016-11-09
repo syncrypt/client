@@ -9,6 +9,14 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.models import Vault
 from syncrypt.config import AppConfig
+from syncrypt.app.auth import CredentialsAuthenticationProvider
+
+class TestAuthenticationProvider(CredentialsAuthenticationProvider):
+    def __init__(self):
+        super(TestAuthenticationProvider, self).__init__(
+            'test@syncrypt.space',
+            'test!password'
+        )
 
 class TestAppConfig(AppConfig):
     def __init__(self, config_file):
@@ -37,3 +45,5 @@ class VaultTestCase(asynctest.TestCase):
             os.remove(app_config_file)
 
         self.app_config = TestAppConfig(app_config_file)
+        self.app = SyncryptApp(self.app_config, auth_provider=TestAuthenticationProvider())
+

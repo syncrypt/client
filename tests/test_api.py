@@ -42,7 +42,7 @@ class APITests(VaultTestCase):
 
     def test_api_login(self):
         'try to get a list of files via API'
-        app = SyncryptApp(self.app_config)
+        app = self.app
         client = APIClient(self.app_config)
         yield from app.start()
         try:
@@ -76,10 +76,13 @@ class APITests(VaultTestCase):
 
     def test_api_bundle(self):
         'try to get a list of files via API'
-        app = SyncryptApp(self.app_config)
+        app = self.app
         app.add_vault(self.vault)
         client = APIClient(self.app_config)
+
+        yield from app.init(self.vault)
         yield from app.start()
+
         try:
             r = yield from client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
@@ -104,8 +107,10 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_api_add_user(self):
-        app = SyncryptApp(self.app_config)
+        app = self.app
         client = APIClient(self.app_config)
+
+        yield from app.init(self.vault)
         yield from app.start()
 
         clone_folder = os.path.join(self.working_dir, 'cloned')
@@ -208,7 +213,7 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_api_watchdog(self):
-        app = SyncryptApp(self.app_config)
+        app = self.app
         client = APIClient(self.app_config)
 
         app.add_vault(self.vault)
@@ -249,7 +254,7 @@ class APITests(VaultTestCase):
             yield from app.stop()
 
     def test_api_metadata(self):
-        app = SyncryptApp(self.app_config)
+        app = self.app
         client = APIClient(self.app_config)
 
         app.add_vault(self.vault)
