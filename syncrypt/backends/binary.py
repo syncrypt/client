@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 BINARY_DEBUG = False
 
+NIL = Atom('nil')
+
 class BinaryStorageException(Exception):
     pass
 
@@ -37,13 +39,13 @@ class UnexpectedResponseException(BinaryStorageException):
 
 def bert_val(bert_term):
     # Convert a nil atom to None
-    if bert_term == Atom('nil'):
+    if bert_term == NIL:
         return None
     else:
         return bert_term
 
 def rewrite_atoms_dict(bert_dict):
-    # Convert a dict with Atom keys to a list of str keys
+    # Convert a dict with Atom keys to a str keys
     # In the future, generalize this to a complete BERT Atom->str
     # rewriter
     return {str(k): bert_val(v) for (k, v) in bert_dict.items()}
@@ -373,7 +375,7 @@ class BinaryStorageConnection(object):
                 server_info = rewrite_atoms_dict(server_info)
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
-                if metadata == Atom('nil'):
+                if metadata is None:
                     logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
@@ -382,10 +384,11 @@ class BinaryStorageConnection(object):
             yield from queue.put(None)
         else:
             for server_info in response:
+                server_info = rewrite_atoms_dict(server_info)
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
                 user_email = server_info['email'].decode()
-                if metadata == Atom('nil'):
+                if metadata is None:
                     logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
@@ -440,9 +443,10 @@ class BinaryStorageConnection(object):
             assert isinstance(file_count, int)
             for n in range(file_count):
                 server_info = yield from self.read_term(assert_ok=False)
+                server_info = rewrite_atoms_dict(server_info)
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
-                if metadata == Atom('nil'):
+                if metadata is None:
                     logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
                 logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
