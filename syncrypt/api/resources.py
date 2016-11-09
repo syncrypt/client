@@ -100,9 +100,13 @@ class VaultResource(Resource):
     def get_id(self, v):
         return str(v.config.get('vault.id'))
 
-    def dehydrate(self, v):
+    def dehydrate(self, v, vault_info={}):
         dct = super(VaultResource, self).dehydrate(v)
-        dct.update(folder=v.folder, status='ready', user_count=1, state=v.state, metadata=v.metadata)
+        dct.update(folder=v.folder, status='ready', state=v.state, metadata=v.metadata)
+        # Annotate each obj with information from the server
+        dct.update(user_count=vault_info.get('user_count', 0),
+                file_count=vault_info.get('file_count', 0),
+                revision_count=vault_info.get('revision_count', 0))
         return dct
 
     @asyncio.coroutine
@@ -128,6 +132,17 @@ class VaultResource(Resource):
             logger.warn('Removing vault: %s', obj)
             yield from self.app.unwatch_vault(obj)
             yield from self.app.remove_vault(obj)
+
+    @asyncio.coroutine
+    def dispatch_list(self, request):
+        objs = yield from self.get_obj_list(request)
+        backend = yield from self.app.open_backend()
+
+        # Make a map from vault id -> vault info
+        v_info = {v['id'].decode(): v for v in (yield from backend.list_vaults())}
+
+        yield from backend.close()
+        return JSONResponse([self.dehydrate(obj, v_info.get(obj.config.get('vault.id'), {})) for obj in objs])
 
     @asyncio.coroutine
     def post_obj(self, request):
@@ -177,8 +192,10 @@ class FlyingVaultResource(Resource):
 
     def dehydrate(self, obj):
         deh_obj = super(FlyingVaultResource, self).dehydrate(obj)
-        if obj.get('metadata'):
-            deh_obj['metadata'] = obj['metadata']
+        deh_obj['metadata'] = obj.get('metadata', {})
+        deh_obj['user_count'] = obj.get('user_count')
+        deh_obj['file_count'] = obj.get('file_count')
+        deh_obj['revision_count'] = obj.get('revision_count')
         ignored = set(obj.keys()) - set(deh_obj.keys())
         if len(ignored) > 0:
             logger.debug('Ignored vault keys: %s', ignored)
@@ -188,6 +205,9 @@ class FlyingVaultResource(Resource):
     def get_obj_list(self, request):
         vaults = []
         backend = yield from self.app.open_backend()
+
+        # Make a map from vault id -> vault info
+        v_info = {v['id'].decode(): v for v in (yield from backend.list_vaults())}
 
         my_fingerprint = self.app.identity.get_fingerprint()
 
@@ -203,7 +223,11 @@ class FlyingVaultResource(Resource):
             else:
                 metadata = None
 
-            vaults.append(dict(vault, id=vault_id, metadata=metadata))
+            vault_info = v_info.get(vault_id, {})
+            vaults.append(dict(vault, id=vault_id, metadata=metadata,
+                user_count=vault_info.get('user_count', 0),
+                file_count=vault_info.get('file_count', 0),
+                revision_count=vault_info.get('revision_count', 0)))
 
         yield from backend.close()
         return vaults
