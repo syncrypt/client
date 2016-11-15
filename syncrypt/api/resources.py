@@ -198,6 +198,7 @@ class FlyingVaultResource(Resource):
     def dehydrate(self, obj):
         deh_obj = super(FlyingVaultResource, self).dehydrate(obj)
         deh_obj['metadata'] = obj.get('metadata', {})
+        deh_obj['size'] = format_size(obj.get('byte_size'))
         deh_obj['user_count'] = obj.get('user_count')
         deh_obj['file_count'] = obj.get('file_count')
         deh_obj['revision_count'] = obj.get('revision_count')

@@ -8,6 +8,8 @@ def format_fingerprint(fingerprint, sep=':'):
 SIZE_UNITS = [('bytes', 0), ('kB', 0), ('MB', 2), ('GB', 2), ('TB', 2), ('PB', 2)]
 
 def format_size(size):
+    if size is None:
+        return None
     if size == 0:
         return '0 bytes'
     if size == 1:
@@ -20,6 +22,8 @@ def format_size(size):
         return format_string.format(quotient, unit)
 
 def size_with_unit(size):
+    if size is None:
+        return None
     if size == 0:
         return (0, 'bytes')
     if size == 1:
