@@ -15,6 +15,7 @@ from syncrypt.pipes import Limit, Once, StreamReader
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 from syncrypt.exceptions import VaultNotInitialized
+from syncrypt.ca import ROOT_CA_DATA
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -116,8 +117,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def connect(self):
         if self.storage.ssl:
-            cafile = os.path.join(os.path.dirname(syncrypt.__file__), 'ca/chain.pem')
-            sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=cafile)
+            sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cadata=ROOT_CA_DATA)
             if not self.storage.ssl_verify or self.storage.host in ('127.0.0.1', 'localhost'):
                 logger.warn('Continuing without verifying SSL cert')
                 sc.check_hostname = False
