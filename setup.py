@@ -79,6 +79,8 @@ setup(
     author='Syncrypt UG',
     author_email='support@syncrypt.space',
 
+    include_package_data=True,
+
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
