@@ -7,6 +7,7 @@ import itertools
 import asyncio
 from aiohttp import web
 from .auth import require_auth_token
+from syncrypt.utils.format import format_size
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +105,13 @@ class VaultResource(Resource):
         dct = super(VaultResource, self).dehydrate(v)
         dct.update(folder=v.folder, status='ready', state=v.state, metadata=v.metadata)
         # Annotate each obj with information from the server
-        dct.update(user_count=vault_info.get('user_count', 0),
-                file_count=vault_info.get('file_count', 0),
-                revision_count=vault_info.get('revision_count', 0))
+        vault_size = format_size(vault_info.get('byte_size', 0))
+        dct.update(
+            size=vault_size,
+            user_count=vault_info.get('user_count', 0),
+            file_count=vault_info.get('file_count', 0),
+            revision_count=vault_info.get('revision_count', 0)
+        )
         return dct
 
     @asyncio.coroutine
@@ -224,7 +229,9 @@ class FlyingVaultResource(Resource):
                 metadata = None
 
             vault_info = v_info.get(vault_id, {})
+            vault_size = format_size(vault_info.get('byte_size', 0))
             vaults.append(dict(vault, id=vault_id, metadata=metadata,
+                size=vault_size,
                 user_count=vault_info.get('user_count', 0),
                 file_count=vault_info.get('file_count', 0),
                 revision_count=vault_info.get('revision_count', 0)))
