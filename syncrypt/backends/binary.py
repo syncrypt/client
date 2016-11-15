@@ -22,6 +22,14 @@ BINARY_DEBUG = False
 
 NIL = Atom('nil')
 
+# additional vault fields
+V_BYTE_SIZE      = Atom('byte_size')
+V_FILE_COUNT     = Atom('file_count')
+V_REVISION_COUNT = Atom('revision_count')
+V_USER_COUNT     = Atom('user_count')
+
+ALL_VAULT_FIELDS = [V_BYTE_SIZE, V_FILE_COUNT, V_REVISION_COUNT, V_USER_COUNT]
+
 class BinaryStorageException(Exception):
     pass
 
@@ -400,7 +408,7 @@ class BinaryStorageConnection(object):
     def list_vaults(self):
         logger.info('Getting a list of vaults')
 
-        yield from self.write_term('list_vaults_with_metadata')
+        yield from self.write_term('list_vaults', ALL_VAULT_FIELDS)
         response = yield from self.read_term()
 
         return list(map(rewrite_atoms_dict, response[1]))

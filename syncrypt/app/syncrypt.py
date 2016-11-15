@@ -12,7 +12,7 @@ from syncrypt.exceptions import VaultNotInitialized, VaultFolderDoesNotExist
 from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
-from syncrypt.utils.format import format_fingerprint, format_size
+from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
 from tzlocal import get_localzone
@@ -273,11 +273,14 @@ class SyncryptApp(object):
         backend = yield from self.open_backend()
         for vault in (yield from backend.list_vaults()):
             logger.debug("Received vault: %s", vault)
-            fmt_str = "{0} | Users: {1:3} | Files: {2:4} | Revisions: {3:4}".format(
+            size, size_unit = size_with_unit(vault['byte_size'])
+            fmt_str = "{0} | Users: {1:2} | Files: {2:4} | Revisions: {3:4} | Size: {4:8} {5}".format(
                 vault['id'].decode('utf-8'),
                 vault['user_count'],
                 vault['file_count'],
-                vault['revision_count']
+                vault['revision_count'],
+                size,
+                size_unit
             )
             print(fmt_str)
         yield from backend.close()
