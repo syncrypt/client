@@ -133,7 +133,7 @@ class SyncryptAPI():
         feedback_text = params['feedback_text']
         logger.info('Sending user feedback: %d bytes', len(feedback_text))
         backend = yield from self.app.open_backend()
-        user_info = yield from backend.user_feedback(feedback_text)
+        user_info = yield from backend.user_feedback(feedback_text.encode('utf-8'))
         yield from backend.close()
         return JSONResponse({'status': 'ok'})
 
