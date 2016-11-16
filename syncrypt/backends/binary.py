@@ -581,6 +581,17 @@ class BinaryStorageConnection(object):
         yield from self.write_term('delete_vault', vault.config.id)
         yield from self.read_response()
 
+    def __getattr__(self, name):
+        '''
+        Generic API call
+        '''
+        @asyncio.coroutine
+        def myco(*args, **kwargs):
+            logger.info('Calling generic API %s/%d', name, len(args))
+            yield from self.write_term(name, *args)
+            return (yield from self.read_response())
+        return myco
+
     @asyncio.coroutine
     def version(self):
         return self.server_version
