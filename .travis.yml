@@ -30,3 +30,12 @@ install: |
 
 # command to build
 script: python setup.py dist
+
+deploy:
+  provider: releases
+  api_key: "GITHUB OAUTH TOKEN"
+  file:
+    - "dist/syncrypt-0.3.3.darwin-x86_64.zip"
+  skip_cleanup: true
+  on:
+    tags: true
