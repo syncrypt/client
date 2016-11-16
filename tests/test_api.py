@@ -24,6 +24,12 @@ class APIClient:
         self.port = app_config.get('api.port')
         self.auth_token = app_config.get('api.auth_token')
 
+    def login(self, **kwargs):
+        return self.post('/v1/auth/login/', data=json.dumps(kwargs))
+
+    def logout(self, **kwargs):
+        return self.get('/v1/auth/logout/')
+
     def __getattr__(self, http_method):
         @asyncio.coroutine
         def api_call(request_uri, *args, **kwargs):
@@ -39,6 +45,10 @@ class APIClient:
 
 class APITests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
+    login_data = {
+        'email': 'test@syncrypt.space',
+        'password': 'test!password'
+    }
 
     def test_api_login(self):
         'try to get a list of files via API'
@@ -46,11 +56,7 @@ class APITests(VaultTestCase):
         client = APIClient(self.app_config)
         yield from app.start()
         try:
-            login_data = json.dumps({
-                'email': 'test@syncrypt.space',
-                'password': 'test!password'
-            })
-            r = yield from client.post('/v1/auth/login/', data=login_data)
+            r = yield from client.login(**self.login_data)
             yield from r.release()
             self.assertEqual(r.status, 200)
 
@@ -60,7 +66,7 @@ class APITests(VaultTestCase):
             self.assertEqual(r.status, 200)
             self.assertEqual(c['connected'], True)
 
-            r = yield from client.get('/v1/auth/logout/')
+            r = yield from client.logout()
             c = yield from r.json()
             self.assertEqual(r.status, 200)
             yield from r.release()
@@ -122,7 +128,7 @@ class APITests(VaultTestCase):
                 'email': 'test@syncrypt.space',
                 'password': 'test!password'
             })
-            r = yield from client.post('/v1/auth/login/', data=login_data)
+            r = yield from client.login(**login_data)
             yield from r.release()
             self.assertEqual(r.status, 200)
 
