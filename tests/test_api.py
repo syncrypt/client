@@ -303,4 +303,23 @@ class APITests(VaultTestCase):
         finally:
             yield from app.stop()
 
+    def test_api_feedback(self):
+        'try to send some feedback over API'
+        app = self.app
+        client = APIClient(self.app_config)
+        yield from app.start()
+        try:
+            r = yield from client.login(**self.login_data)
+            yield from r.release()
+            self.assertEqual(r.status, 200)
+
+            r = yield from client.post('/v1/feedback/', data=json.dumps({
+                'feedback_text': 'Hey there fellas!'
+            }))
+            c = yield from r.json()
+            yield from r.release()
+            self.assertEqual(r.status, 200)
+
+        finally:
+            yield from app.stop()
 
