@@ -278,8 +278,17 @@ class Export(SingleVaultCmd):
         self.loop.run_until_complete(self.app.export(self.config.filename))
 
 
-COMMANDS = [Init(), Vaults(), Clone(), Pull(), Push(), Watch(), AddUser(),
-        Info(), Log(), ConfigSet(), ConfigUnset(), Export(), Keys(), Login()]
+class CheckUpdate(NoVaultCmd):
+    command = 'check-update'
+    description = 'compare the installed version to the latest one'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.check_update())
+
+
+COMMANDS = [Login(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
+        Watch(), AddUser(), Info(), Log(), ConfigSet(), ConfigUnset(),
+        Export(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

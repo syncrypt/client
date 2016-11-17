@@ -2,10 +2,11 @@ import logging
 import os.path
 import socket
 import sys
-from io import StringIO
-
 import asyncio
 import iso8601
+from io import StringIO
+
+import syncrypt
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
 from syncrypt.exceptions import VaultNotInitialized, VaultFolderDoesNotExist
@@ -18,7 +19,9 @@ from syncrypt.vendor.keyart import draw_art
 from tzlocal import get_localzone
 
 from syncrypt.api import SyncryptAPI
+
 from .events import create_watchdog
+from .updates import is_update_available
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +109,18 @@ class SyncryptApp(object):
             self.update_handles[bundle].cancel()
         loop = asyncio.get_event_loop()
         self.update_handles[bundle] = loop.call_later(1.0, self.update_and_upload, bundle)
+
+    @asyncio.coroutine
+    def check_update(self):
+        logger.debug('Retrieving available version...')
+        can_update, available = yield from is_update_available()
+        print('Installed:   {0}'.format(syncrypt.__version__))
+        print('Available:   {0}'.format(available))
+        if can_update:
+            print('\nAn update to version {0} is available, please download it at'.format(available))
+            print('\thttp://alpha.syncrypt.space/releases/')
+        else:
+            print('\nYou are up to date.')
 
     @asyncio.coroutine
     def init(self, vault=None, host=None):
