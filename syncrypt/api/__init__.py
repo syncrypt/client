@@ -3,12 +3,14 @@ import logging
 
 import asyncio
 from aiohttp import web
+import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.base import StorageBackendInvalidAuth
 
 from .resources import (BundleResource, JSONResponse, VaultResource,
                         VaultUserResource, UserResource, FlyingVaultResource)
 from .auth import generate_api_auth_token, require_auth_token
+from ..utils.updates import is_update_available
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,16 @@ class SyncryptAPI():
 
     @asyncio.coroutine
     @require_auth_token
+    def get_version(self, request):
+        can_update, available = yield from is_update_available()
+        return JSONResponse({
+            'update_available': can_update,
+            'available_version': available,
+            'installed_version': syncrypt.__version__
+        })
+
+    @asyncio.coroutine
+    @require_auth_token
     def get_user_info(self, request):
         '''
         Logging out the user simply works by removing the global auth
@@ -153,6 +165,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
         self.web_app.router.add_route('GET', '/v1/auth/user/', self.get_user_info)
         self.web_app.router.add_route('POST', '/v1/feedback/', self.post_user_feedback)
+        self.web_app.router.add_route('GET', '/v1/version/', self.get_version)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)

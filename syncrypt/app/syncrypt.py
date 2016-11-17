@@ -21,7 +21,7 @@ from tzlocal import get_localzone
 from syncrypt.api import SyncryptAPI
 
 from .events import create_watchdog
-from .updates import is_update_available
+from ..utils.updates import is_update_available
 
 logger = logging.getLogger(__name__)
 
