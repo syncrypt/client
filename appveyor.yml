@@ -10,12 +10,28 @@ environment:
     - PYTHON: "C:\\Python34"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
       PYTHON_ARCH: "32"
+      DIST_PLATFORM: "win-i386"
       WHEEL_ARCH: "win32"
 
     - PYTHON: "C:\\Python34-x64"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
       PYTHON_ARCH: "64"
+      DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
+
+init:
+  # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq "true")
+      {
+        Update-AppveyorBuild -Version "$env:APPVEYOR_REPO_TAG_NAME"
+        Set-AppveyorBuildVariable -Name "SYNCRYPT_VER" -Value "$($env:APPVEYOR_REPO_TAG_NAME.TrimStart('v'))"
+      }
+      else
+      {
+        Update-AppveyorBuild -Version "dev-$($env:APPVEYOR_REPO_COMMIT.substring(0,7))"
+        Set-AppveyorBuildVariable -Name "SYNCRYPT_VER" -Value "dev-$($env:APPVEYOR_REPO_COMMIT.substring(0,7))"
+      }
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
@@ -69,6 +85,7 @@ build_script:
   # Build the compiled extension
   - "pyinstaller --onefile scripts/syncrypt"
   - "pyinstaller --onefile scripts/syncrypt_daemon"
+  - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 #test_script:
   # Run the project tests
@@ -83,23 +100,23 @@ build_script:
 
 artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
-  - path: dist\*.exe
+  - path: \*.zip
 
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
 #
 
 deploy:
-  tag: v0.3.3
-  release: Syncrypt-v0.3.3
+  #  tag: v0.3.4
+  #  release: v0.3.4
   description: 'Windows Build'
   provider: GitHub
   auth_token:
     secure: cm6YGcbZ4btLnz/4ZdN9FsqObCDSK3QC9i5XIP2TmUcWVQ45sKjDSdBLGMgb0XVm
-  artifact: /.*\.exe/            # upload all NuGet packages to release assets
+  artifact: /.*\.zip/            # upload all NuGet packages to release assets
   draft: true
   prerelease: false
   on:
-    branch: master                 # release from master branch only
+    branch: appveyor-releases                 # release from master branch only
     appveyor_repo_tag: true        # deploy on tag push only
 

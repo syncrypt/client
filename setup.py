@@ -45,8 +45,8 @@ class DistCommand(Command):
                 machine=platform.machine()
         )
         if platform.system().lower() == 'windows':
-            os.system('pyinstaller scripts/syncrypt')
-            os.system('pyinstaller scripts/syncrypt_daemon')
+            os.system('pyinstaller --onefile scripts/syncrypt')
+            os.system('pyinstaller --onefile scripts/syncrypt_daemon')
         else:
             os.system('rm -rf ./dist/syncrypt')
             os.system('PYTHONPATH=lib/python3.5/site-packages/ pyinstaller syncrypt.spec')
