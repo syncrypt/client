@@ -69,6 +69,7 @@ build_script:
   # Build the compiled extension
   - "pyinstaller --onefile scripts/syncrypt"
   - "pyinstaller --onefile scripts/syncrypt_daemon"
+  - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-0.3.4.win-x86_64.zip
 
 #test_script:
   # Run the project tests
@@ -83,7 +84,7 @@ build_script:
 
 artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
-  - path: dist\*.exe
+  - path: *.zip
 
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
@@ -96,7 +97,7 @@ deploy:
   provider: GitHub
   auth_token:
     secure: cm6YGcbZ4btLnz/4ZdN9FsqObCDSK3QC9i5XIP2TmUcWVQ45sKjDSdBLGMgb0XVm
-  artifact: /.*\.exe/            # upload all NuGet packages to release assets
+  artifact: /.*\.zip/            # upload all NuGet packages to release assets
   draft: true
   prerelease: false
   on:
