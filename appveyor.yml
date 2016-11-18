@@ -4,7 +4,6 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
-    SYNCRYPT_VER: 0.3.4
 
   matrix:
 
@@ -26,10 +25,12 @@ init:
       if ($env:APPVEYOR_REPO_TAG -eq "true")
       {
         Update-AppveyorBuild -Version "$env:APPVEYOR_REPO_TAG_NAME"
+        Set-AppveyorBuildVariable -Name "SYNCRYPT_VER" -Value "$($env:APPVEYOR_REPO_TAG_NAME.TrimStart('v'))"
       }
       else
       {
         Update-AppveyorBuild -Version "dev-$($env:APPVEYOR_REPO_COMMIT.substring(0,7))"
+        Set-AppveyorBuildVariable -Name "SYNCRYPT_VER" -Value "dev-$($env:APPVEYOR_REPO_COMMIT.substring(0,7))"
       }
 
 install:
