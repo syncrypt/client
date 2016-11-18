@@ -107,9 +107,6 @@ artifacts:
 #
 
 deploy:
-  #  tag: v0.3.4
-  #  release: v0.3.4
-  description: 'Windows Build'
   provider: GitHub
   auth_token:
     secure: cm6YGcbZ4btLnz/4ZdN9FsqObCDSK3QC9i5XIP2TmUcWVQ45sKjDSdBLGMgb0XVm
@@ -117,6 +114,6 @@ deploy:
   draft: true
   prerelease: false
   on:
-    branch: appveyor-releases                 # release from master branch only
+    branch: master                 # release from master branch only
     appveyor_repo_tag: true        # deploy on tag push only
 
