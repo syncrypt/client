@@ -20,6 +20,18 @@ environment:
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
 
+init:
+  # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq "true")
+      {
+        Update-AppveyorBuild -Version "$env:APPVEYOR_REPO_TAG_NAME"
+      }
+      else
+      {
+        Update-AppveyorBuild -Version "dev-$($env:APPVEYOR_REPO_COMMIT.substring(0,7))"
+      }
+
 install:
   # If there is a newer build queued for the same PR, cancel this one.
   # The AppVeyor 'rollout builds' option is supposed to serve the same
@@ -72,7 +84,7 @@ build_script:
   # Build the compiled extension
   - "pyinstaller --onefile scripts/syncrypt"
   - "pyinstaller --onefile scripts/syncrypt_daemon"
-  - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$($env:DIST_PLATFORM).zip
+  - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 #test_script:
   # Run the project tests
@@ -94,8 +106,8 @@ artifacts:
 #
 
 deploy:
-  tag: v0.3.4
-  release: v0.3.4
+  #  tag: v0.3.4
+  #  release: v0.3.4
   description: 'Windows Build'
   provider: GitHub
   auth_token:
