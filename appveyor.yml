@@ -4,17 +4,20 @@ environment:
     # /E:ON and /V:ON options are not enabled in the batch script intepreter
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
+    SYNCRYPT_VER: 0.3.4
 
   matrix:
 
     - PYTHON: "C:\\Python34"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
       PYTHON_ARCH: "32"
+      DIST_PLATFORM: "win-i386"
       WHEEL_ARCH: "win32"
 
     - PYTHON: "C:\\Python34-x64"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
       PYTHON_ARCH: "64"
+      DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
 
 install:
@@ -69,7 +72,7 @@ build_script:
   # Build the compiled extension
   - "pyinstaller --onefile scripts/syncrypt"
   - "pyinstaller --onefile scripts/syncrypt_daemon"
-  - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-0.3.4.win-x86_64.zip
+  - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$($env:DIST_PLATFORM).zip
 
 #test_script:
   # Run the project tests
@@ -84,15 +87,15 @@ build_script:
 
 artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
-  - path: *.zip
+  - path: \*.zip
 
 #on_success:
 #  - TODO: upload the content of dist/*.whl to a public wheelhouse
 #
 
 deploy:
-  tag: v0.3.3
-  release: Syncrypt-v0.3.3
+  tag: v0.3.4
+  release: v0.3.4
   description: 'Windows Build'
   provider: GitHub
   auth_token:
@@ -101,6 +104,6 @@ deploy:
   draft: true
   prerelease: false
   on:
-    branch: master                 # release from master branch only
+    branch: appveyor-releases                 # release from master branch only
     appveyor_repo_tag: true        # deploy on tag push only
 
