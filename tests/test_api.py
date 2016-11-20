@@ -124,11 +124,7 @@ class APITests(VaultTestCase):
             shutil.rmtree(clone_folder)
 
         try:
-            login_data = json.dumps({
-                'email': 'test@syncrypt.space',
-                'password': 'test!password'
-            })
-            r = yield from client.login(**login_data)
+            r = yield from client.login(**self.login_data)
             yield from r.release()
             self.assertEqual(r.status, 200)
 
@@ -218,7 +214,7 @@ class APITests(VaultTestCase):
         finally:
             yield from app.stop()
 
-    def test_api_watchdog(self):
+    def test_api_push(self):
         app = self.app
         client = APIClient(self.app_config)
 
@@ -243,7 +239,6 @@ class APITests(VaultTestCase):
 
             yield from app.push()
 
-
             r = yield from client.get('/v1/stats')
             c = yield from r.json()
             self.assertEqual(c['stats']['downloads'], 0)
@@ -255,6 +250,13 @@ class APITests(VaultTestCase):
             c = yield from r.json()
             self.assertIn('api', c.keys())
             yield from r.release()
+
+            r = yield from client.get('/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 1) # still only one vault
+            yield from r.release()
+
+            self.assertFalse(c[0]['modification_date'] is None)
 
         finally:
             yield from app.stop()

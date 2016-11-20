@@ -30,8 +30,9 @@ V_BYTE_SIZE      = Atom('byte_size')
 V_FILE_COUNT     = Atom('file_count')
 V_REVISION_COUNT = Atom('revision_count')
 V_USER_COUNT     = Atom('user_count')
+V_MODIFICATION_DATE = Atom('modification_date')
 
-ALL_VAULT_FIELDS = [V_BYTE_SIZE, V_FILE_COUNT, V_REVISION_COUNT, V_USER_COUNT]
+ALL_VAULT_FIELDS = [V_BYTE_SIZE, V_FILE_COUNT, V_REVISION_COUNT, V_USER_COUNT, V_MODIFICATION_DATE]
 
 class BinaryStorageException(Exception):
     pass

@@ -106,11 +106,15 @@ class VaultResource(Resource):
         dct.update(folder=v.folder, status='ready', state=v.state, metadata=v.metadata)
         # Annotate each obj with information from the server
         vault_size = format_size(vault_info.get('byte_size', 0))
+        modification_date = vault_info.get('modification_date')
+        if isinstance(modification_date, bytes):
+            modification_date = modification_date.decode()
         dct.update(
             size=vault_size,
             user_count=vault_info.get('user_count', 0),
             file_count=vault_info.get('file_count', 0),
-            revision_count=vault_info.get('revision_count', 0)
+            revision_count=vault_info.get('revision_count', 0),
+            modification_date=modification_date
         )
         return dct
 
@@ -202,6 +206,7 @@ class FlyingVaultResource(Resource):
         deh_obj['user_count'] = obj.get('user_count')
         deh_obj['file_count'] = obj.get('file_count')
         deh_obj['revision_count'] = obj.get('revision_count')
+        deh_obj['modification_date'] = obj.get('modification_date')
         ignored = set(obj.keys()) - set(deh_obj.keys())
         if len(ignored) > 0:
             logger.debug('Ignored vault keys: %s', ignored)
@@ -231,11 +236,16 @@ class FlyingVaultResource(Resource):
 
             vault_info = v_info.get(vault_id, {})
             vault_size = format_size(vault_info.get('byte_size', 0))
+            modification_date = vault_info.get('modification_date')
+            if isinstance(modification_date, bytes):
+                modification_date = modification_date.decode()
             vaults.append(dict(vault, id=vault_id, metadata=metadata,
                 size=vault_size,
                 user_count=vault_info.get('user_count', 0),
                 file_count=vault_info.get('file_count', 0),
-                revision_count=vault_info.get('revision_count', 0)))
+                revision_count=vault_info.get('revision_count', 0)),
+                modification_date=modification_date
+            )
 
         yield from backend.close()
         return vaults
