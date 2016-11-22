@@ -243,9 +243,9 @@ class FlyingVaultResource(Resource):
                 size=vault_size,
                 user_count=vault_info.get('user_count', 0),
                 file_count=vault_info.get('file_count', 0),
-                revision_count=vault_info.get('revision_count', 0)),
+                revision_count=vault_info.get('revision_count', 0),
                 modification_date=modification_date
-            )
+            ))
 
         yield from backend.close()
         return vaults
