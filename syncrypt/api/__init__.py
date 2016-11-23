@@ -114,13 +114,28 @@ class SyncryptAPI():
 
     @asyncio.coroutine
     @require_auth_token
+    def get_shutdown(self, request):
+        '''
+        Shut the daemon down
+        '''
+        task = asyncio.get_event_loop().create_task(self.app.shutdown())
+        return JSONResponse({'status': 'ok'})
+
+    @asyncio.coroutine
+    @require_auth_token
     def get_version(self, request):
-        can_update, available = yield from is_update_available()
-        return JSONResponse({
-            'update_available': can_update,
-            'available_version': available,
-            'installed_version': syncrypt.__version__
-        })
+        if int(request.GET.get('check_for_update', 1)):
+            can_update, available = yield from is_update_available()
+            return JSONResponse({
+                'update_available': can_update,
+                'available_version': available,
+                'installed_version': syncrypt.__version__
+            })
+        else:
+            return JSONResponse({
+                'installed_version': syncrypt.__version__
+            })
+
 
     @asyncio.coroutine
     @require_auth_token
@@ -166,6 +181,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/auth/user/', self.get_user_info)
         self.web_app.router.add_route('POST', '/v1/feedback/', self.post_user_feedback)
         self.web_app.router.add_route('GET', '/v1/version/', self.get_version)
+        self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)

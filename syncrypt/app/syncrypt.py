@@ -40,6 +40,7 @@ class SyncryptApp(object):
 
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
+        self.shutdown_event = asyncio.Event()
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
         self.watchdogs = {}
         self.pull_tasks = {}
@@ -192,6 +193,23 @@ class SyncryptApp(object):
                 yield from self.remove_vault(vault)
 
     @asyncio.coroutine
+    def stop(self):
+        for vault in self.vaults:
+            yield from self.unwatch_vault(vault)
+            yield from self.unautopull_vault(vault)
+        yield from self.api.stop()
+
+    @asyncio.coroutine
+    def shutdown(self):
+        yield from self.stop()
+        self.shutdown_event.set()
+
+    @asyncio.coroutine
+    def wait_for_shutdown(self):
+        if not self.shutdown_event.is_set():
+            yield from self.shutdown_event.wait()
+
+    @asyncio.coroutine
     def watch(self, vault):
         'Install a watchdog and auto-pull for vault'
         vault.check_existence()
@@ -223,13 +241,6 @@ class SyncryptApp(object):
         if folder in self.pull_tasks:
             self.pull_tasks[folder].cancel()
             del self.pull_tasks[folder]
-
-    @asyncio.coroutine
-    def stop(self):
-        for vault in self.vaults:
-            yield from self.unwatch_vault(vault)
-            yield from self.unautopull_vault(vault)
-        yield from self.api.stop()
 
     @asyncio.coroutine
     def push_bundle(self, bundle):

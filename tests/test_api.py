@@ -17,6 +17,7 @@ from syncrypt.models import Vault
 from tests.base import VaultTestCase
 
 from syncrypt.api.auth import AUTH_TOKEN_HEADER
+import syncrypt
 
 class APIClient:
     def __init__(self, app_config):
@@ -318,6 +319,27 @@ class APITests(VaultTestCase):
             r = yield from client.post('/v1/feedback/', data=json.dumps({
                 'feedback_text': 'Hey there fellas!'
             }))
+            c = yield from r.json()
+            yield from r.release()
+            self.assertEqual(r.status, 200)
+
+        finally:
+            yield from app.stop()
+
+    def test_api_shutdown(self):
+        app = self.app
+        client = APIClient(self.app_config)
+        yield from app.start()
+        try:
+            r = yield from client.get('/v1/version/', params={'check_for_update': 0})
+            c = yield from r.json()
+            yield from r.release()
+            self.assertEqual(r.status, 200)
+
+            self.assertEqual(c['installed_version'], syncrypt.__version__)
+            self.assertNotIn('update_available', c)
+
+            r = yield from client.get('/v1/shutdown/')
             c = yield from r.json()
             yield from r.release()
             self.assertEqual(r.status, 200)

@@ -36,7 +36,7 @@ app = SyncryptApp(app_config)
 def run_syncrypt():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(app.start())
-    loop.run_forever()
+    loop.run_until_complete(app.wait_for_shutdown())
 
 if config.detach:
     class SyncryptDaemon(Daemon):
