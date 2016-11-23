@@ -18,10 +18,11 @@ from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
 from tzlocal import get_localzone
 
-from syncrypt.api import SyncryptAPI
+from syncrypt.api import SyncryptAPI, APIClient
 
 from .events import create_watchdog
 from ..utils.updates import is_update_available
+from distutils.version import LooseVersion
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,36 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def start(self):
-        yield from self.api.start()
+        try:
+            yield from self.api.start()
+        except OSError:
+            logger.error('Port is blocked, could not start API REST server')
+            logger.info('Attempting to query running server for version...')
+            client = APIClient(self.config)
+            r = yield from client.get('/v1/version/', params={'check_for_update': 0})
+            c = yield from r.json()
+            yield from r.release()
+            other_version = LooseVersion(c['installed_version']) 
+            our_version =  LooseVersion(syncrypt.__version__)
+            if other_version < our_version:
+                logger.info('Starting takeover because other version (%s) is lower than ours (%s)!',
+                        other_version, our_version)
+                r = yield from client.get('/v1/shutdown/')
+                c = yield from r.json()
+                yield from r.release()
+                yield from asyncio.sleep(5.0)
+                try:
+                    yield from self.api.start()
+                except OSError:
+                    logger.error('After 5s, port is still blocked, giving up...')
+                    self.shutdown_event.set()
+                    return
+            else:
+                logger.info('Other version (%s) is higher or same as ours (%s), let\'s leave it alone...',
+                        other_version, our_version)
+
+                self.shutdown_event.set()
+                return
         yield from self.push()
         for vault in self.vaults:
             try:

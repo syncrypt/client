@@ -11,6 +11,7 @@ from .resources import (BundleResource, JSONResponse, VaultResource,
                         VaultUserResource, UserResource, FlyingVaultResource)
 from .auth import generate_api_auth_token, require_auth_token
 from ..utils.updates import is_update_available
+from .client import APIClient
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,11 @@ class SyncryptAPI():
         '''
         Shut the daemon down
         '''
-        task = asyncio.get_event_loop().create_task(self.app.shutdown())
+        @asyncio.coroutine
+        def do_shutdown():
+            yield from asyncio.sleep(0.4)
+            yield from self.app.shutdown()
+        task = asyncio.get_event_loop().create_task(do_shutdown())
         return JSONResponse({'status': 'ok'})
 
     @asyncio.coroutine

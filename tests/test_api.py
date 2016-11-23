@@ -16,33 +16,8 @@ from syncrypt.config import AppConfig
 from syncrypt.models import Vault
 from tests.base import VaultTestCase
 
-from syncrypt.api.auth import AUTH_TOKEN_HEADER
+from syncrypt.api import APIClient
 import syncrypt
-
-class APIClient:
-    def __init__(self, app_config):
-        self.host = app_config.get('api.host')
-        self.port = app_config.get('api.port')
-        self.auth_token = app_config.get('api.auth_token')
-
-    def login(self, **kwargs):
-        return self.post('/v1/auth/login/', data=json.dumps(kwargs))
-
-    def logout(self, **kwargs):
-        return self.get('/v1/auth/logout/')
-
-    def __getattr__(self, http_method):
-        @asyncio.coroutine
-        def api_call(request_uri, *args, **kwargs):
-
-            # Add auth token to headers
-            kwargs['headers'] = dict(kwargs.get('headers', {}), **{AUTH_TOKEN_HEADER: self.auth_token})
-
-            # Build URL
-            url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
-
-            return getattr(aiohttp, http_method)(url, *args, **kwargs)
-        return api_call
 
 class APITests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
@@ -345,5 +320,5 @@ class APITests(VaultTestCase):
             self.assertEqual(r.status, 200)
 
         finally:
-            yield from app.stop()
+            yield from app.wait_for_shutdown()
 
