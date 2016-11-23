@@ -8,7 +8,7 @@ from os import path
 from setuptools import find_packages, setup
 
 __name__ = 'syncrypt'
-__version__ = '0.3.7'
+__version__ = '0.3.8'
 
 here = path.abspath(path.dirname(__file__))
 
