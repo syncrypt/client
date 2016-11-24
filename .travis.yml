@@ -23,13 +23,15 @@ install: |
       brew install snappy;
       python3 -m venv venv;
       source venv/bin/activate;
-      pip install -e '.[dist]'
+      pip install -e '.[dist]' '.[test]'
   else
-      pip install -e '.[dist]'
+      pip install -e '.[dist]' '.[test]'
   fi
 
 # command to build
-script: python setup.py dist
+script:
+  - py.test -m 'not requires_server'
+  - python setup.py dist
 deploy:
   provider: releases
   api_key:
