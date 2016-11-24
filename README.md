@@ -59,10 +59,19 @@ manual](docs/manual.md).
 
 ## Tests
 
-Run tests:
+Install test requirements:
 
     bin/pip install -e '.[test]'
+
+Run all tests:
+
     bin/py.test
+
+Currently there is no public syncrypt instance that you can run your test
+against, so you can limit the tests to those not requiring a test server
+instance:
+
+    bin/py.test -m 'not requires_server'
 
 ## Develop
 

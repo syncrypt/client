@@ -6,6 +6,7 @@ import time
 import unittest
 from glob import glob
 
+import pytest
 import aiohttp
 import asyncio
 import asynctest
@@ -19,6 +20,7 @@ from tests.base import VaultTestCase
 from syncrypt.api import APIClient
 import syncrypt
 
+@pytest.mark.requires_server
 class APITests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
     login_data = {

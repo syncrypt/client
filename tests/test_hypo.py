@@ -6,6 +6,7 @@ import shutil
 import unittest
 from glob import glob
 
+import pytest
 import asyncio
 import asynctest
 from hypothesis import example, given, settings
@@ -19,6 +20,7 @@ from tests.strategies import files
 def count_files(folder):
     return len([name for name in os.listdir(folder) if name != '.vault'])
 
+@pytest.mark.requires_server
 class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 

@@ -5,6 +5,7 @@ import os.path
 import shutil
 import unittest
 
+import pytest
 import asyncio
 import asynctest
 from syncrypt.models import Bundle, Vault
@@ -14,6 +15,7 @@ from tests.base import VaultTestCase
 
 __all__ = ('BinaryServerTests',)
 
+@pytest.mark.requires_server
 class BinaryServerTests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
 
