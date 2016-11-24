@@ -128,6 +128,19 @@ class SyncryptAPI():
 
     @asyncio.coroutine
     @require_auth_token
+    def get_restart(self, request):
+        '''
+        Restart the daemon
+        '''
+        @asyncio.coroutine
+        def do_restart():
+            yield from asyncio.sleep(0.4)
+            yield from self.app.restart()
+        task = asyncio.get_event_loop().create_task(do_restart())
+        return JSONResponse({'status': 'ok'})
+
+    @asyncio.coroutine
+    @require_auth_token
     def get_version(self, request):
         if int(request.GET.get('check_for_update', 1)):
             can_update, available = yield from is_update_available()
@@ -187,6 +200,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('POST', '/v1/feedback/', self.post_user_feedback)
         self.web_app.router.add_route('GET', '/v1/version/', self.get_version)
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
+        self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)

@@ -42,6 +42,7 @@ class SyncryptApp(object):
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
         self.shutdown_event = asyncio.Event()
+        self.restart_flag = False
         self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
         self.watchdogs = {}
         self.pull_tasks = {}
@@ -233,6 +234,12 @@ class SyncryptApp(object):
     def shutdown(self):
         yield from self.stop()
         self.shutdown_event.set()
+
+    @asyncio.coroutine
+    def restart(self):
+        logger.warn('Restart requested, shutting down...')
+        self.restart_flag = True
+        yield from self.shutdown()
 
     @asyncio.coroutine
     def wait_for_shutdown(self):

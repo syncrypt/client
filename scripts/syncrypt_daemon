@@ -4,6 +4,7 @@ import logging
 import logging.config
 import os.path
 import sys
+import time
 
 import asyncio
 from syncrypt.models import Vault
@@ -31,18 +32,22 @@ log_dir = os.path.join(app_config.config_dir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
-app = SyncryptApp(app_config)
 
 def run_syncrypt():
+    app = SyncryptApp(app_config)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(app.start())
     loop.run_until_complete(app.wait_for_shutdown())
+    return app.restart_flag
 
 if config.detach:
     class SyncryptDaemon(Daemon):
         def run(self):
-            run_syncrypt()
+            while run_syncrypt():
+                time.sleep(2)
     syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
     getattr(syncryptd, config.command)()
 else:
-    run_syncrypt()
+    while run_syncrypt():
+        time.sleep(2)
+
