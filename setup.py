@@ -129,9 +129,6 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        'dev': [
-            'pyqt-distutils'
-        ],
         'dist': [
             'pyinstaller==3.1',
             'six',
