@@ -239,23 +239,32 @@ class BinaryStorageConnection(object):
         except ConnectionResetError:
             pass
         finally:
-            if self.writer:
-                self.writer.close()
-
-                # Add a little delay so that the connection socket is actually
-                # closed. This is not needed in Python 3.5+, but somehow in 3.4.
-                if sys.version_info < (3, 5): yield from asyncio.sleep(0.1)
-
-                self.writer = None
-            self.connected = False
-            self.connecting = False
-            self.available.clear()
+            self._clear_connection()
 
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
-        self.available.set()
+    def __exit__(self, ex_type, ex_value, ex_st):
+        if ex_value:
+            # When an exception happened, let's force a disconnect and clear
+            # the slot
+            self._clear_connection()
+        else:
+            # Let's assume there was no problem
+            self.available.set()
+
+    def _clear_connection(self):
+        if self.writer:
+            self.writer.close()
+
+            # Add a little delay so that the connection socket is actually
+            # closed. This is not needed in Python 3.5+, but somehow in 3.4.
+            if sys.version_info < (3, 5): yield from asyncio.sleep(0.1)
+
+            self.writer = None
+        self.connected = False
+        self.connecting = False
+        self.available.clear()
 
     @asyncio.coroutine
     def stat(self, bundle):
