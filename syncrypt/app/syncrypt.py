@@ -97,6 +97,11 @@ class SyncryptApp(object):
         yield from vault.backend.delete_vault()
         yield from self.remove_vault(vault)
 
+    @asyncio.coroutine
+    def delete_vaults(self):
+        for vault in self.vaults:
+            yield from self.delete_vault(vault)
+
     def update_and_upload(self, bundle):
         del self.update_handles[bundle]
         def _update(bundle):

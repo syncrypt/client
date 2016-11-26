@@ -170,6 +170,9 @@ class AppConfig(Config, BackendConfigMixin):
 
     def remove_vault_dir(self, folder):
         a = self.vault_dirs
-        a.remove(folder)
+        try:
+            a.remove(folder)
+        except ValueError:
+            pass
         self.vault_dirs = a
 
