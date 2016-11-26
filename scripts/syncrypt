@@ -150,6 +150,13 @@ class AddUser(SingleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.add_user(self.config.email))
 
+class UploadVaultKey(SingleVaultCmd):
+    command = 'upload-vault-key'
+    description = 'upload the vault key encrypted with my user key'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.upload_vault_key())
+
 class Vaults(NoVaultCmd):
     command = 'vaults'
     description = 'list vaults'
@@ -287,8 +294,8 @@ class CheckUpdate(NoVaultCmd):
 
 
 COMMANDS = [Login(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
-        Watch(), AddUser(), Info(), Log(), ConfigSet(), ConfigUnset(),
-        Export(), Keys()]
+        Watch(), AddUser(), UploadVaultKey(), Info(), Log(), ConfigSet(),
+        ConfigUnset(), Export(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

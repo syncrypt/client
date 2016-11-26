@@ -569,23 +569,31 @@ class SyncryptApp(object):
                 # retrieve key and verify fingerrint
                 fingerprint = key['fingerprint']
                 public_key = key['public_key']
-                yield from self.add_user_vault_key(vault, email, fingerprint, public_key)
+                identity = Identity.from_key(public_key, vault.config)
+                assert identity.get_fingerprint() == fingerprint
+                yield from self.add_user_vault_key(vault, email, identity)
 
     @asyncio.coroutine
-    def add_user_vault_key(self, vault, email, fingerprint, public_key):
-        identity = Identity.from_key(public_key, vault.config)
-        assert identity.get_fingerprint() == fingerprint
-
+    def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package
         export_pipe = vault.package_info() \
             >> EncryptRSA_PKCS1_OAEP(identity.public_key)
         content = yield from export_pipe.readall()
 
         logger.info('Uploading vault package for %s/%s', email,
-                format_fingerprint(fingerprint))
+                format_fingerprint(identity.get_fingerprint()))
         logger.debug('Package length is: %d', len(content))
 
-        yield from vault.backend.add_user_vault_key(email, fingerprint, content)
+        yield from vault.backend.add_user_vault_key(email, identity.get_fingerprint(), content)
+
+    @asyncio.coroutine
+    def upload_vault_key(self, vault=None):
+        if vault is None:
+            vault = self.vaults[0]
+        yield from vault.backend.open()
+        user_info = yield from vault.backend.user_info()
+        email = user_info['email']
+        yield from self.add_user_vault_key(vault, email, self.identity)
 
     @asyncio.coroutine
     def print_log(self, verbose=False):
