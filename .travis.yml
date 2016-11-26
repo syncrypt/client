@@ -23,9 +23,11 @@ install: |
       brew install snappy;
       python3 -m venv venv;
       source venv/bin/activate;
-      pip install -e '.[dist]' '.[test]'
+      pip install -e '.[dist]'
+      pip install -e '.[test]'
   else
-      pip install -e '.[dist]' '.[test]'
+      pip install -e '.[dist]'
+      pip install -e '.[test]'
   fi
 
 # command to build
