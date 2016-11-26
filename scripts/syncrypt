@@ -218,9 +218,12 @@ class Init(SingleVaultCmd):
     def configure_parser(self, parser):
         super(Init, self).configure_parser(parser)
         parser.add_argument('--host', help='remote host (default: storage.syncrypt.space)')
+        parser.add_argument('-k', '--upload-vault-key', action='store_true',
+                dest='upload_vault_key', help='upload encrypted vault key')
 
     def run(self):
-        self.loop.run_until_complete(self.app.init(host=self.config.host))
+        self.loop.run_until_complete(self.app.init(host=self.config.host,
+            upload_vault_key=self.config.upload_vault_key))
 
 class Info(MultipleVaultCmd):
     command = 'info'

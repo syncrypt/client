@@ -126,7 +126,7 @@ class SyncryptApp(object):
             print('\nYou are up to date.')
 
     @asyncio.coroutine
-    def init(self, vault=None, host=None):
+    def init(self, vault=None, host=None, upload_vault_key=False, upload_identity=True):
         for vault in (self.vaults if vault is None else [vault]):
 
             if host:
@@ -161,7 +161,10 @@ class SyncryptApp(object):
             with vault.config.update_context():
                 vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
             yield from vault.backend.set_vault_metadata()
-            yield from vault.backend.upload_identity(self.identity)
+            if upload_identity:
+                yield from vault.backend.upload_identity(self.identity)
+            if upload_vault_key:
+                yield from self.upload_vault_key(vault)
 
     @asyncio.coroutine
     def upload_identity(self):
