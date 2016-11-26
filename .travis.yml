@@ -45,3 +45,5 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+    condition: ( $TRAVIS_PYTHON_VERSION == '3.5' ) || ( $TRAVIS_OS_NAME == 'osx' )
+
