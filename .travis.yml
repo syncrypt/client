@@ -35,15 +35,24 @@ script:
   - py.test -m 'not requires_server'
   - python setup.py dist
 deploy:
-  provider: releases
-  api_key:
-    secure: ObkjUvDXj0VOrY3/rjUjBOj4NPtKB3XgYnZlaerDtNW1pxRF2fd0y1hBbeqg+P/NPXixORShI3MOrIlgZmzkNelDBdDnCB16nI1QUVDnFU42Y+h7zkiPO8/mWJhApm5/s1Hjs3QgRnjERoskj7fdjF22CVbuiE+LffYJamagHyE61sYjI6lBUrUD2QK6kjiNE7jrVfdQgbKYWkVnbsSyB4Xsg6+8G+rPfGuZk5IqE+KOCs0ynbVHyUGC9xv/VufLSJxA9KPrMJyX5pKPEOEEcT6hkrPQDnZqP/2qa6Vbl//hdFvNJj40e+bNc6WYlj4jfVrQ6QBpL6ag6iXXSLVSLKnNpTSBirBggMfRlS8AgbYBOPoJzCblvp9ao/2GqDVfnbI59SxRncu5DObK/eoxukedfMohi3xitPTxfUNiy5oB0o4Y7/SkJfpcLRsBOpMnWjA63GTbUsky5u2+npbbQVBipgJhsr6trioEJkaKMxCrWmBRJg5oVhjvP7Eq/jFM6mVi2/rWnBZXceiBNKwoKMrODFWtPEoA9hABxl14YRleN/XLtjwjT45M4HjnZLdEg2g7b9EpcONw99RqTNevqw2Naa2UeSe2APPgbgs/HKyjcmAeJMsk4yne7GyBbGbInpyvmHyd3L3u1FigFUPZn1NVHOhCBvD19qduLMZiSDc=
-  file:
-    - "dist/syncrypt-*.darwin-x86_64.zip"
-    - "dist/syncrypt-*.linux-x86_64.zip"
-  file_glob: true
-  skip_cleanup: true
-  on:
-    tags: true
-    condition: ( $TRAVIS_PYTHON_VERSION == '3.5' ) || ( $TRAVIS_OS_NAME == 'osx' )
+  - provider: releases
+    api_key:
+      secure: ObkjUvDXj0VOrY3/rjUjBOj4NPtKB3XgYnZlaerDtNW1pxRF2fd0y1hBbeqg+P/NPXixORShI3MOrIlgZmzkNelDBdDnCB16nI1QUVDnFU42Y+h7zkiPO8/mWJhApm5/s1Hjs3QgRnjERoskj7fdjF22CVbuiE+LffYJamagHyE61sYjI6lBUrUD2QK6kjiNE7jrVfdQgbKYWkVnbsSyB4Xsg6+8G+rPfGuZk5IqE+KOCs0ynbVHyUGC9xv/VufLSJxA9KPrMJyX5pKPEOEEcT6hkrPQDnZqP/2qa6Vbl//hdFvNJj40e+bNc6WYlj4jfVrQ6QBpL6ag6iXXSLVSLKnNpTSBirBggMfRlS8AgbYBOPoJzCblvp9ao/2GqDVfnbI59SxRncu5DObK/eoxukedfMohi3xitPTxfUNiy5oB0o4Y7/SkJfpcLRsBOpMnWjA63GTbUsky5u2+npbbQVBipgJhsr6trioEJkaKMxCrWmBRJg5oVhjvP7Eq/jFM6mVi2/rWnBZXceiBNKwoKMrODFWtPEoA9hABxl14YRleN/XLtjwjT45M4HjnZLdEg2g7b9EpcONw99RqTNevqw2Naa2UeSe2APPgbgs/HKyjcmAeJMsk4yne7GyBbGbInpyvmHyd3L3u1FigFUPZn1NVHOhCBvD19qduLMZiSDc=
+    file:
+      - "dist/syncrypt-*.darwin-x86_64.zip"
+      - "dist/syncrypt-*.linux-x86_64.zip"
+    file_glob: true
+    skip_cleanup: true
+    on:
+      tags: true
+      condition: |
+        ( $TRAVIS_PYTHON_VERSION == '3.5' ) || ( $TRAVIS_OS_NAME == 'osx' )
+  - provider: pypi
+    user: lordi
+    password:
+      secure: Tuf6fL62LvkmDfYWmdPH1VMLBV0mNeBWcEJJcQd1VN4vtQnFsmq9eU1CB9tAajpazBTNQBj9gfgcdBSBbT5Wg9rcSGbNFXlWEDxvTdVokpRzByCQNR2NEbGuoQF4pcSD8VSTO6blVDM+XVccSSMIzJJbINulZFiveNgZj3lWMa8B+AqTr+ACuekeU5V1VfkmJ1pWVhwnJ4kj75dsRV7BFtZrGoA5UsuVu4tEUDbUQYuMEOEDbFJ2/uka8KvKcaoFvs5kToiohSH0t+umtnXZe3T+S6Xdn9bw97yyAEwE+7U1UlqXj+uOvtjvtFs+Ai1F40MEVGd2GjC7H5NP4HknrKl+k1VhYEyjCV8SvXBryEvrYYjgYmAET2dMu+AmsOzGcjwV4TT7YhQ0F75aZb8HKnJOX7/UQeUSNhBZIw5NBnrDyPf+5t+FrUJdjtALxrMlhM5nEjm9rCYwo2r+f6+dKiibg9uVej+RbesTJNBHBorbzZBe5B7EFadmfUTRM74cH02OTm8PvaCfrp9jDNfQ3WombUqwSyQIm+EX83BC89sws+ixcmcnVXJLwaK+y8JP+0zpe7YinesvV5rfntH6WBBjVNAVYbi2LIbEfcRMAHe29tKvf+nRcS5KtWCtqJol+w5NxpHcjWYF60xuesjiS6KjneZAoCstJJbyXfc+8+4=
+    on:
+      tags: true
+      condition: |
+        ( $TRAVIS_PYTHON_VERSION == '3.5' ) && ( $TRAVIS_OS_NAME == 'linux' )
 
