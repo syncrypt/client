@@ -140,9 +140,11 @@ class SyncryptApp(object):
             if host:
                 # If host was explicitly given, use it
                 vault.config.set('remote.host', host)
+                vault.backend.host = host
             else:
                 # otherwise, use host from global config
                 vault.config.set('remote.host', self.config.get('remote.host'))
+                vault.backend.host = self.config.get('remote.host')
 
             try:
                 yield from vault.backend.open()
@@ -159,6 +161,7 @@ class SyncryptApp(object):
             try:
                 yield from vault.backend.init()
             except StorageBackendInvalidAuth:
+                vault.set_global_auth(None)
                 username, password = yield from self.auth_provider.get_auth(vault.backend)
                 vault.set_auth(username, password)
                 try:

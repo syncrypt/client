@@ -89,6 +89,47 @@ class APITests(VaultTestCase):
         finally:
             yield from app.stop()
 
+    def test_api_init_vault(self):
+        app = self.app
+        client = APIClient(self.app_config)
+
+        new_vault_folder = os.path.join(self.working_dir, 'newvault')
+        if os.path.exists(new_vault_folder):
+            shutil.rmtree(new_vault_folder)
+        os.makedirs(new_vault_folder)
+
+        yield from app.start()
+
+        try:
+            r = yield from client.login(**self.login_data)
+            yield from r.release()
+            self.assertEqual(r.status, 200)
+
+            yield from asyncio.sleep(0.1)
+
+            r = yield from client.post('/v1/vault/',
+                    data=json.dumps({ 'folder': new_vault_folder }))
+            c = yield from r.json()
+            self.assertGreater(len(c['resource_uri']), 5)
+            yield from r.release()
+
+            #r = yield from client.get('/v1/vault/')
+            #c = yield from r.json()
+            #self.assertEqual(len(c), 1) # one vault
+            #self.assertEqual(c[0]['state'], 'initializing')
+            #yield from r.release()
+
+            #yield from asyncio.sleep(6.0)
+
+            r = yield from client.get('/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 1) # one vault
+            self.assertIn(c[0]['state'], ('syncing', 'synced'))
+            yield from r.release()
+
+        finally:
+            yield from app.stop()
+
     def test_api_add_user(self):
         app = self.app
         client = APIClient(self.app_config)
