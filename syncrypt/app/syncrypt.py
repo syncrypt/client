@@ -668,7 +668,6 @@ class SyncryptApp(object):
                 yield from self.remove_vault(vault)
                 continue
             except Exception as e:
-                import ipdb; ipdb.set_trace()
                 logger.exception(e)
                 continue
         yield from self.wait()
