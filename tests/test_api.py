@@ -113,13 +113,13 @@ class APITests(VaultTestCase):
             self.assertGreater(len(c['resource_uri']), 5)
             yield from r.release()
 
-            #r = yield from client.get('/v1/vault/')
-            #c = yield from r.json()
-            #self.assertEqual(len(c), 1) # one vault
-            #self.assertEqual(c[0]['state'], 'initializing')
-            #yield from r.release()
+            r = yield from client.get('/v1/vault/')
+            c = yield from r.json()
+            self.assertEqual(len(c), 1) # one vault
+            self.assertEqual(c[0]['state'], 'initializing')
+            yield from r.release()
 
-            #yield from asyncio.sleep(6.0)
+            yield from asyncio.sleep(5.0) # after five seconds, the vault should've finished initializing
 
             r = yield from client.get('/v1/vault/')
             c = yield from r.json()

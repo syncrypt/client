@@ -168,13 +168,13 @@ class VaultResource(Resource):
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
-            yield from self.app.open_or_init(vault)
 
             @asyncio.coroutine
-            def push_and_watch(vault):
+            def open_push_watch(vault):
+                yield from self.app.open_or_init(vault)
                 yield from self.app.push_vault(vault)
                 yield from self.app.watch(vault)
-            asyncio.get_event_loop().create_task(push_and_watch(vault))
+            asyncio.get_event_loop().create_task(open_push_watch(vault))
         return vault
 
     @asyncio.coroutine

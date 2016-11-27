@@ -110,7 +110,10 @@ class Vault(MetadataHolder):
 
     @property
     def state(self):
-        return 'syncing' if self.active else 'synced'
+        if not self.config.get('vault.id'):
+            return 'initializing'
+        else:
+            return 'syncing' if self.active else 'synced'
 
     def get_local_size(self):
         return folder_size(self.folder)
