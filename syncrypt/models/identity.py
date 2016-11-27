@@ -1,4 +1,5 @@
 import hashlib
+import asyncio
 import logging
 import os
 import os.path
@@ -48,7 +49,12 @@ class Identity(object):
     def key_size(self):
         return Crypto.Util.number.size(self.private_key.n)
 
+    @asyncio.coroutine
     def init(self):
+        loop = asyncio.get_event_loop()
+        return loop.run_in_executor(None, self._init)
+
+    def _init(self):
         if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):
             self.generate_keys()
         else:

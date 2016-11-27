@@ -61,7 +61,7 @@ class SyncryptApp(object):
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
         id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
         self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
-        self.identity.init()
+        asyncio.get_event_loop().run_until_complete(self.identity.init())
 
         # register vault objects
         if vault_dirs is None:
@@ -148,7 +148,7 @@ class SyncryptApp(object):
             except (StorageBackendInvalidAuth, VaultNotInitialized):
                 pass
             logger.info("Initializing %s", vault)
-            vault.identity.init()
+            yield from vault.identity.init()
             global_auth = self.config.remote.get('auth')
             if global_auth:
                 logger.debug('Using user auth token to initialize vault.')
