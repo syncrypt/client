@@ -17,6 +17,8 @@ from syncrypt.config import AppConfig
 from tests.base import VaultTestCase
 from tests.strategies import files
 
+from .base import TestAppConfig
+
 def count_files(folder):
     return len([name for name in os.listdir(folder) if name != '.vault'])
 
@@ -31,7 +33,8 @@ class HypoBinaryTestCase(asynctest.TestCase):
     @example([{'filename': 'surrogate\udcfc', 'content': b'surrogate\udcfccontent'}], [])
 
     def test_initial_and_added(self, initial_files, added_files):
-        app = SyncryptApp(AppConfig())
+        app_config_file = os.path.join(VaultTestCase.working_dir, 'test_config')
+        app = SyncryptApp(TestAppConfig(app_config_file))
 
         vault_folder = os.path.join(VaultTestCase.working_dir, 'testvault')
         if os.path.exists(vault_folder):
@@ -59,7 +62,7 @@ class HypoBinaryTestCase(asynctest.TestCase):
 
             app.add_vault(self.vault)
 
-            #yield from app.init() # init all vaults
+            yield from app.open_or_init(self.vault)
             yield from app.push() # init all vaults
 
             # now we will clone the initialized vault by copying the vault config
@@ -68,9 +71,11 @@ class HypoBinaryTestCase(asynctest.TestCase):
             self.other_vault = Vault(other_vault_path)
             with self.other_vault.config.update_context():
                 self.other_vault.config.unset('vault.revision')
+                self.other_vault.config.unset('remote.auth')
 
             app.add_vault(self.other_vault)
 
+            yield from app.open_or_init(self.other_vault)
             yield from app.pull()
 
             assert not self.vault.active
