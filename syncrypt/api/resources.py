@@ -8,6 +8,7 @@ import asyncio
 from aiohttp import web
 from .auth import require_auth_token
 from syncrypt.utils.format import format_size
+from syncrypt.models import Identity
 
 logger = logging.getLogger(__name__)
 
@@ -356,7 +357,9 @@ class VaultUserResource(Resource):
                 # retrieve key and verify fingerprint
                 fingerprint = key['fingerprint']
                 public_key = key['public_key']
-                yield from self.app.add_user_vault_key(vault, email, fingerprint, public_key)
+                identity = Identity.from_key(public_key, vault.config)
+                assert identity.get_fingerprint() == fingerprint
+                yield from self.app.add_user_vault_key(vault, email, identity)
 
         return {'email': email}
 
