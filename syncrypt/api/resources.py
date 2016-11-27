@@ -9,6 +9,7 @@ from aiohttp import web
 from .auth import require_auth_token
 from syncrypt.utils.format import format_size
 from syncrypt.models import Identity
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -100,11 +101,14 @@ class VaultResource(Resource):
     resource_name = 'vault'
 
     def get_id(self, v):
-        return str(v.config.get('vault.id'))
+        _hash = hashlib.new('sha1')
+        _hash.update(v.folder.encode('utf-8'))
+        return _hash.hexdigest()
 
     def dehydrate(self, v, vault_info={}):
         dct = super(VaultResource, self).dehydrate(v)
-        dct.update(folder=v.folder, status='ready', state=v.state, metadata=v.metadata)
+        dct.update(folder=v.folder, vault_id=v.config.get('vault.id'),
+                status='ready', state=v.state, metadata=v.metadata)
         # Annotate each obj with information from the server
         vault_size = format_size(vault_info.get('byte_size', 0))
         modification_date = vault_info.get('modification_date')
@@ -123,9 +127,11 @@ class VaultResource(Resource):
     def get_obj_list(self, request):
         return self.app.vaults
 
-    def find_vault_by_id(self, vault_id):
+    def find_vault_by_id(self, id):
         for v in self.app.vaults:
-            if self.get_id(v) == vault_id:
+            _hash = hashlib.new('sha1')
+            _hash.update(v.folder.encode('utf-8'))
+            if id == _hash.hexdigest():
                 return v
 
     @asyncio.coroutine
@@ -181,7 +187,7 @@ class VaultResource(Resource):
     def put_obj(self, request):
         content = yield from request.content.read()
         request_dict = json.loads(content.decode())
-        vault = self.find_vault_by_id(request.match_info['id'])
+        vault = self.find_vault_by_hash(request.match_info['id'])
         if vault is None:
             raise ValueError() # this should return 404
         if 'metadata' in request_dict:
@@ -251,9 +257,6 @@ class FlyingVaultResource(Resource):
         yield from backend.close()
         return vaults
 
-    @asyncio.coroutine
-    def get_obj(self, request):
-        return find_vault_by_id(request.match_info['id'])
 
 class UserResource(Resource):
     resource_name = 'user'
