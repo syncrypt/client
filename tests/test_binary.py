@@ -32,6 +32,8 @@ class BinaryServerTests(VaultTestCase):
         pass
 
     def test_upload(self):
+        app = self.app
+        yield from app.open_or_init(self.vault)
         backend = self.vault.backend
 
         yield from backend.open()
@@ -47,6 +49,8 @@ class BinaryServerTests(VaultTestCase):
             self.assertEqual(bundle.remote_hash_differs, False)
 
     def test_upload_2(self):
+        app = self.app
+        yield from app.open_or_init(self.vault)
         backend = self.vault.backend
 
         bundles = list(self.vault.walk_disk())
@@ -74,20 +78,18 @@ class BinaryServerTests(VaultTestCase):
             self.assertEqual(bundle.remote_hash_differs, False)
 
     def test_app_push(self):
-        app = SyncryptApp(self.app_config)
-        app.add_vault(self.vault)
-        yield from app.push()
+        self.app.add_vault(self.vault)
+        yield from self.app.push()
 
     def test_app_push1(self):
-        app = SyncryptApp(self.app_config)
-        app.add_vault(self.vault)
+        app = self.app
         yield from app.open_or_init(self.vault)
         bundle = list(self.vault.walk_disk())[0]
         yield from app.push_bundle(bundle)
         yield from app.wait()
 
     def test_vault_metadata(self):
-        app = SyncryptApp(self.app_config)
+        app = self.app
         yield from app.open_or_init(self.vault)
         backend = self.vault.backend
         yield from backend.open()
@@ -160,10 +162,10 @@ class BinaryServerTests(VaultTestCase):
         if os.path.exists(other_vault_path):
             shutil.rmtree(other_vault_path)
 
-        app = SyncryptApp(self.app_config)
+        app = self.app
         app.add_vault(self.vault)
 
-        #yield from app.init() # init all vaults
+        yield from app.open_or_init(self.vault)
         yield from app.push() # init all vaults
 
         # now we will clone the initialized vault by copying the vault config
@@ -173,6 +175,7 @@ class BinaryServerTests(VaultTestCase):
         with self.other_vault.config.update_context():
             self.other_vault.config.unset('vault.revision')
 
+        yield from app.open_or_init(self.other_vault)
         app.add_vault(self.other_vault)
 
         yield from app.pull()

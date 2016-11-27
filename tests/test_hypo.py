@@ -99,6 +99,7 @@ class HypoBinaryTestCase(asynctest.TestCase):
         def close():
             yield from app.close()
 
+        self.loop.run_until_complete(app.initialize())
         try:
             self.loop.run_until_complete(go())
         finally:

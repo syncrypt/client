@@ -61,7 +61,6 @@ class SyncryptApp(object):
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
         id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
         self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
-        asyncio.get_event_loop().run_until_complete(self.identity.init())
 
         # register vault objects
         if vault_dirs is None:
@@ -75,6 +74,10 @@ class SyncryptApp(object):
                 logger.warn('Ignoring %s, because its folder does not exist', vault)
 
         super(SyncryptApp, self).__init__()
+
+    @asyncio.coroutine
+    def initialize(self):
+        yield from self.identity.init()
 
     def add_vault_by_path(self, path):
         return self.add_vault(Vault(path))

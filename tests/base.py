@@ -46,4 +46,5 @@ class VaultTestCase(asynctest.TestCase):
 
         self.app_config = TestAppConfig(app_config_file)
         self.app = SyncryptApp(self.app_config, auth_provider=TestAuthenticationProvider())
+        asyncio.get_event_loop().run_until_complete(self.app.initialize())
 
