@@ -27,10 +27,6 @@ class BinaryServerTests(VaultTestCase):
     def test_vault(self):
         self.assertEqual(len(list(self.vault.walk_disk())), 8)
 
-    @asynctest.ignore_loop
-    def test_encrypt(self):
-        pass
-
     def test_upload(self):
         app = self.app
         yield from app.open_or_init(self.vault)
