@@ -248,10 +248,16 @@ class BinaryStorageConnection(object):
         if ex_value:
             # When an exception happened, let's force a disconnect and clear
             # the slot
+            logger.debug('Exception %s has been raised in with-block, clearing connection.',
+                ex_value)
             self._clear_connection()
         else:
             # Let's assume there was no problem
             self.available.set()
+
+        # Explicitely return False to signal that exception should be processed
+        # normally
+        return False
 
     def _clear_connection(self):
         if self.writer:
