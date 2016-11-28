@@ -111,21 +111,25 @@ class APITests(VaultTestCase):
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = yield from r.json()
             self.assertGreater(len(c['resource_uri']), 5)
+            vault_uri = c['resource_uri']
             yield from r.release()
 
-            r = yield from client.get('/v1/vault/')
+            r = yield from client.get('/v1/stats')
             c = yield from r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'initializing')
+            self.assertIn('states', c)
+            self.assertEqual(c['states'][vault_uri], 'initializing')
             yield from r.release()
 
-            yield from asyncio.sleep(5.0) # after five seconds, the vault should've finished initializing
-
-            r = yield from client.get('/v1/vault/')
-            c = yield from r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertIn(c[0]['state'], ('syncing', 'synced'))
-            yield from r.release()
+            for i in range(5):
+                # after five seconds, the vault should've finished initializing
+                yield from asyncio.sleep(1.0)
+                r = yield from client.get('/v1/stats')
+                c = yield from r.json()
+                yield from r.release()
+                if c['states'][vault_uri] == 'synced':
+                    break
+            self.assertIn('states', c)
+            self.assertEqual(c['states'][vault_uri], 'synced')
 
         finally:
             yield from app.stop()
