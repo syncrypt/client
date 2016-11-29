@@ -213,7 +213,6 @@ class SyncryptApp(object):
                 logger.info('Starting takeover because other version (%s) is lower than ours (%s)!',
                         other_version, our_version)
                 r = yield from client.get('/v1/shutdown/')
-                c = yield from r.json()
                 yield from r.release()
                 yield from asyncio.sleep(5.0)
                 try:
