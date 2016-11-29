@@ -239,6 +239,14 @@ class BinaryStorageConnection(object):
         except ConnectionResetError:
             pass
         finally:
+            if self.writer:
+                self.writer.close()
+
+                # Add a little delay so that the connection socket is actually
+                # closed. This is not needed in Python 3.5+, but somehow in 3.4.
+                if sys.version_info < (3, 5): yield from asyncio.sleep(0.1)
+
+                self.writer = None
             self._clear_connection()
 
     def __enter__(self):
@@ -262,11 +270,6 @@ class BinaryStorageConnection(object):
     def _clear_connection(self):
         if self.writer:
             self.writer.close()
-
-            # Add a little delay so that the connection socket is actually
-            # closed. This is not needed in Python 3.5+, but somehow in 3.4.
-            if sys.version_info < (3, 5): yield from asyncio.sleep(0.1)
-
             self.writer = None
         self.connected = False
         self.connecting = False
@@ -773,7 +776,8 @@ class BinaryStorageBackend(StorageBackend):
         @asyncio.coroutine
         def myco(*args, **kwargs):
             with (yield from self.manager.acquire_connection()) as conn:
-                return (yield from getattr(conn, name)(*args, **kwargs))
+                result = yield from getattr(conn, name)(*args, **kwargs)
+            return result
         return myco
 
     @asyncio.coroutine
