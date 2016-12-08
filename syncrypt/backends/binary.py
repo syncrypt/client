@@ -11,7 +11,7 @@ import asyncio
 from erlastic import Atom
 import syncrypt
 from syncrypt import __project__, __version__
-from syncrypt.pipes import Limit, Once, StreamReader
+from syncrypt.pipes import Limit, Once, StreamReader, URLReader
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 from syncrypt.exceptions import VaultNotInitialized
@@ -513,6 +513,11 @@ class BinaryStorageConnection(object):
 
         response = yield from self.read_term()
 
+        if response[0] == Atom('s3_download'):
+            url = response[3]
+        else:
+            url = None
+
         server_info = rewrite_atoms_dict(response[1])
         server_info.update(**rewrite_atoms_dict(response[2]))
 
@@ -531,8 +536,13 @@ class BinaryStorageConnection(object):
 
         yield from bundle.load_key()
 
+        if url:
+            stream_source = URLReader(url)
+        else:
+            stream_source = StreamReader(self.reader)
+
         hash_ok = yield from bundle.write_encrypted_stream(
-                StreamReader(self.reader) >> Limit(file_size),
+                stream_source >> Limit(file_size),
                 assert_hash=content_hash
             )
 
