@@ -32,7 +32,7 @@ install: |
 
 # command to build
 script:
-  - py.test -m 'not requires_server'
+  - py.test -m 'not (requires_server or external_resources)'
   - python setup.py dist
 deploy:
   - provider: releases
