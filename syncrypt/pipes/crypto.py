@@ -14,7 +14,7 @@ from .base import Buffered, Pipe
 logger = logging.getLogger(__name__)
 
 class Hash(Pipe):
-    'Hash (and count) everything that comes through this pipe'
+    'Hash everything that goes through this pipe'
 
     def __init__(self, hash_algo):
         super(Hash, self).__init__()
