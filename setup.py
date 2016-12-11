@@ -99,6 +99,7 @@ setup(
 
     scripts=[
         'scripts/syncrypt',
+        'scripts/git-remote-syncrypt',
         'scripts/syncrypt_daemon',
     ],
 

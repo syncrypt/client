@@ -1,0 +1,601 @@
+#!/usr/bin/env python
+
+# Code largely taken from https://github.com/anishathalye/git-remote-dropbox/
+import argparse
+import logging
+import logging.config
+import os.path
+import posixpath
+import subprocess
+import sys
+import zlib
+import functools
+
+import asyncio
+from syncrypt.models import Vault, Bundle
+from syncrypt.pipes import MemorySink
+from syncrypt.app import SyncryptApp
+from syncrypt.app.cli import CLIAuthenticationProvider
+from syncrypt.config import AppConfig
+from syncrypt.utils.logging import setup_logging
+
+DEVNULL = open(os.devnull, 'w')
+
+def stdout(line):
+    """
+    Write line to standard output.
+    """
+    sys.stdout.write(line)
+    sys.stdout.flush()
+
+
+def stderr(line):
+    """
+    Write line to standard error.
+    """
+    sys.stderr.write(line)
+    sys.stderr.flush()
+
+
+def readline():
+    """
+    Read a line from standard input.
+    """
+    return sys.stdin.readline().strip()  # remove trailing newline
+
+def git_command_output(*args, **kwargs):
+    """
+    Return the result of running a git command.
+    """
+    args = ('git',) + args
+    output = subprocess.check_output(args, stderr=DEVNULL)
+    if kwargs.get('decode', True):
+        output = output.decode('utf8')
+    if kwargs.get('strip', True):
+        output = output.strip()
+    return output
+
+
+def git_command_ok(*args):
+    """
+    Return whether a git command runs successfully.
+    """
+    args = ('git',) + args
+    return subprocess.call(args, stdout=DEVNULL, stderr=DEVNULL) == 0
+
+
+def git_is_ancestor(ancestor, ref):
+    """
+    Return whether ancestor is an ancestor of ref.
+    This returns true when it is possible to fast-forward from ancestor to ref.
+    """
+    return git_command_ok('merge-base', '--is-ancestor', ancestor, ref)
+
+
+def git_object_exists(sha):
+    """
+    Return whether the object exists in the repository.
+    """
+    return git_command_ok('cat-file', '-t', sha)
+
+
+def git_history_exists(sha):
+    """
+    Return whether the object, along with its history, exists in the
+    repository.
+    """
+    return git_command_ok('rev-list', '--objects', sha)
+
+
+def git_ref_value(ref):
+    """
+    Return the hash of the ref.
+    """
+    return git_command_output('rev-parse', ref)
+
+
+def git_object_kind(sha):
+    """
+    Return the type of the object.
+    """
+    return git_command_output('cat-file', '-t', sha)
+
+
+def git_object_data(sha, kind=None):
+    """
+    Return the contents of the object.
+    If kind is None, return a pretty-printed representation of the object.
+    """
+    if kind is not None:
+        return git_command_output('cat-file', kind, sha, decode=False, strip=False)
+    else:
+        return git_command_output('cat-file', '-p', sha, decode=False, strip=False)
+
+
+def git_encode_object(sha):
+    """
+    Return the encoded contents of the object.
+    The encoding is identical to the encoding git uses for loose objects.
+    This operation is the inverse of `git_decode_object`.
+    """
+    kind = git_object_kind(sha)
+    size = git_command_output('cat-file', '-s', sha)
+    contents = git_object_data(sha, kind)
+    data = kind.encode('utf8') + b' ' + size.encode('utf8') + b'\0' + contents
+    compressed = zlib.compress(data)
+    return compressed
+
+
+def git_decode_object(data):
+    """
+    Decode the object, write it, and return the computed hash.
+    This operation is the inverse of `git_encode_object`.
+    """
+    decompressed = zlib.decompress(data)
+    header, contents = decompressed.split(b'\0', 1)
+    kind = header.split()[0]
+    p = subprocess.Popen(['git', 'hash-object', '-w', '--stdin', '-t', kind],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=DEVNULL)
+    sha = p.communicate(contents)[0].decode('utf8').strip()
+    return sha
+
+
+def git_list_objects(ref, exclude):
+    """
+    Return the objects reachable from ref excluding the objects reachable from
+    exclude.
+    """
+    exclude = ['^%s' % obj for obj in exclude if git_object_exists(obj)]
+    objects = git_command_output('rev-list', '--objects', ref, *exclude)
+    if not objects:
+        return []
+    return [i.split()[0] for i in objects.split('\n')]
+
+
+def git_referenced_objects(sha):
+    """
+    Return the objects directly referenced by the object.
+    """
+    kind = git_object_kind(sha)
+    if kind == 'blob':
+        # blob objects do not reference any other objects
+        return []
+    data = git_object_data(sha).decode('utf8').strip()
+    if kind == 'tag':
+        # tag objects reference a single object
+        obj = data.split('\n')[0].split()[1]
+        return [obj]
+    elif kind == 'commit':
+        # commit objects reference a tree and zero or more parents
+        lines = data.split('\n')
+        tree = lines[0].split()[1]
+        objs = [tree]
+        for line in lines[1:]:
+            if line.startswith('parent '):
+                objs.append(line.split()[1])
+            else:
+                break
+        return objs
+    elif kind == 'tree':
+        # tree objects reference zero or more trees and blobs, or submodules
+        lines = data.split('\n')
+        # submodules have the mode '160000' and the kind 'commit', we filter them out because
+        # there is nothing to download and this causes errors
+        return [line.split()[2] for line in lines if not line.startswith('160000 commit ')]
+    else:
+        raise Exception('unexpected git object type: %s' % kind)
+
+
+def _object_path(name):
+    """
+    Return the path to the given object on the remote.
+    """
+    prefix = name[:2]
+    suffix = name[2:]
+    return posixpath.join('objects', prefix, suffix)
+
+class Level(object):
+    """
+    A class for severity levels.
+    """
+
+    ERROR = 0
+    WARNING = 1
+    INFO = 2
+    DEBUG = 3
+
+class GitBundle(Bundle):
+    '''
+    A MemoryBundle is a Bundle where the clear text only resides in memory.
+    '''
+
+    def contents_writer(self):
+        self.sink = MemorySink()
+        return self.sink
+
+    def get_content(self):
+        return self.sink.contents
+
+    def is_ref(self):
+        return self.relpath.startswith('refs/')
+
+    def is_object(self):
+        return self.relpath.startswith('objects/')
+
+    @staticmethod
+    def from_sha(sha):
+        return GitBundle(path=_object_path(sha))
+
+    def get_sha(self):
+        return self.get_content().decode().strip()
+
+class GitVault(Vault):
+    _bundle_cls = GitBundle
+
+class GitVaultBridge(SyncryptApp):
+    def __init__(self, vault):
+        self._vault = vault
+        self._verbosity = Level.WARNING  # default verbosity
+        self._refs = {}  # map from remote ref name => (rev number, sha)
+        self._url = 'sample-url'
+        self._pushed = {}  # map from remote ref name => sha
+        super(GitVaultBridge, self).__init__(AppConfig())
+        self.add_vault(self._vault)
+
+    def _write(self, message=None):
+        """
+        Write a message to standard output.
+        """
+        if message is not None:
+            stdout('%s\n' % message)
+        else:
+            stdout('\n')
+
+    def _trace(self, message, level=Level.DEBUG):
+        """
+        Log a message with a given severity level.
+        """
+        #if level > self._verbosity:
+        #    return
+        if level <= Level.ERROR:
+            stderr('error: %s\n' % message)
+        elif level == Level.WARNING:
+            stderr('warning: %s\n' % message)
+        elif level == Level.INFO:
+            stderr('info: %s\n' % message)
+        elif level == Level.DEBUG:
+            stderr('debug: %s\n' % message)
+
+    def _fatal(self, message):
+        """
+        Log a fatal error and exit.
+        """
+        self._trace(message, Level.ERROR)
+        exit(1)
+
+    def run(self):
+        """
+        Run the helper following the git remote helper communication protocol.
+        """
+        while True:
+            line = readline()
+            stderr('read: %s\n' % line)
+            if line == 'capabilities':
+                self._write('option')
+                self._write('push')
+                self._write('fetch')
+                self._write()
+            elif line.startswith('option'):
+                self._do_option(line)
+            elif line.startswith('list'):
+                self._do_list(line)
+            elif line.startswith('push'):
+                self._do_push(line)
+            elif line.startswith('fetch'):
+                self._do_fetch(line)
+            elif line == '':
+                break
+            else:
+                self._fatal('unsupported operation: %s' % line)
+
+    @asyncio.coroutine
+    def _close(self):
+        yield from self._vault.close()
+
+    def close(self):
+        asyncio.get_event_loop()\
+            .run_until_complete(self._close())
+
+    def _do_option(self, line):
+        """
+        Handle the option command.
+        """
+        if line.startswith('option verbosity'):
+            self._verbosity = int(line[len('option verbosity '):])
+            self._write('ok')
+        else:
+            self._write('unsupported')
+
+    def _ref_path(self, name):
+        """
+        Return the path to the given ref on the remote.
+        """
+        assert name.startswith('refs/')
+        return posixpath.join(self._url, name)
+
+    def _ref_name_from_path(self, path):
+        """
+        Return the ref name given the full path of the remote ref.
+        """
+        prefix = '%s/' % self._url
+        assert path.startswith(prefix)
+        return path[len(prefix):]
+
+    def _do_list(self, line):
+        """
+        Handle the list command.
+        """
+        for_push = 'for-push' in line
+        refs = self._get_refs(for_push=for_push)
+        for ref in refs:
+            self._write(ref)
+        self._write()
+
+    def _do_push(self, line):
+        """
+        Handle the push command.
+        """
+        while True:
+            src, dst = line.split(' ')[1].split(':')
+            if src == '':
+                self._delete(dst)
+            else:
+                self._push(src, dst)
+            line = readline()
+            if line == '':
+                break
+        self._write()
+
+    def _do_fetch(self, line):
+        """
+        Handle the fetch command.
+        """
+        while True:
+            _, sha, value = line.split(' ')
+
+            asyncio.get_event_loop()\
+                .run_until_complete(self._fetch(sha))
+
+            self._fetch(sha)
+            line = readline()
+            if line == '':
+                break
+        self._write()
+
+    @asyncio.coroutine
+    def _fetch(self, sha):
+        """
+        Recursively fetch the given object and the objects it references.
+        """
+        # have multiple threads downloading in parallel
+        queue = [sha]
+        pending = set()
+        downloaded = set()
+
+        def pull_finished(sha, future):
+            stderr('%s => %s\n' % (sha, future.result()))
+            bundle = future.result()
+            pending.remove(sha)
+
+        while queue or pending:
+            yield from asyncio.sleep(1)
+            if queue:
+                sha = queue.pop()
+                if sha in downloaded or sha in pending:
+                    continue
+                if git_object_exists(sha):
+                    if not git_history_exists(sha):
+                        # this can only happen in the case of aborted fetches
+                        # that are resumed later
+                        self._trace('missing part of history from %s' % sha)
+                        queue.extend(git_referenced_objects(sha))
+                    else:
+                        self._trace('%s already downloaded' % sha)
+                else:
+                    self._trace('downloading %s' % sha)
+                    pending.add(sha)
+
+                    path = _object_path(sha)
+                    # bundle = self._vault.bundle_for(path)
+                    bundle = Bundle(os.path.abspath(os.path.join('.git', path)), vault=self._vault)
+                    bundle.path = os.path.abspath(os.path.join('.git', path))
+                    bundle.relpath = path
+
+
+
+                    future = yield from self.pull_bundle(bundle)
+                    stderr('AAAR %s' % future)
+                    future.add_done_callback(functools.partial(pull_finished, sha))
+        """
+        self._trace('', level=Level.INFO, exact=True) # for showing progress
+        while queue or pending:
+            if queue:
+                # if possible, queue up download
+                sha = queue.pop()
+                if sha in downloaded or sha in pending:
+                    continue
+                if git_object_exists(sha):
+                    if not git_history_exists(sha):
+                        # this can only happen in the case of aborted fetches
+                        # that are resumed later
+                        self._trace('missing part of history from %s' % sha)
+                        queue.extend(git_referenced_objects(sha))
+                    else:
+                        self._trace('%s already downloaded' % sha)
+                else:
+                    pending.add(sha)
+                    input_queue.put(sha)
+            else:
+                # process completed download
+                res = output_queue.get()
+                if isinstance(res, Poison):
+                    self._fatal(res.message)
+                pending.remove(res)
+                downloaded.add(res)
+                queue.extend(git_referenced_objects(res))
+                # show progress
+                done = len(downloaded)
+                total = done + len(pending)
+                pct = float(done) / total
+                message = '\rReceiving objects: {:4.0%} ({}/{})'.format(pct, done, total)
+                self._trace(message, level=Level.INFO, exact=True)
+        self._trace('\rReceiving objects: 100% ({}/{}), done.\n'.format(done, total),
+                    level=Level.INFO, exact=True)
+        #for proc in procs:
+        #    input_queue.put(Poison())
+        #for proc in procs:
+        #    proc.join()
+        """
+        yield from self.wait()
+
+
+    def _push(self, src, dst):
+        """
+        Push src to dst on the remote.
+        """
+        force = False
+        if src.startswith('+'):
+            src = src[1:]
+            force = True
+        present = [self._refs[name][1] for name in self._refs]
+        present.extend(self._pushed.values())
+        # before updating the ref, write all objects that are referenced
+        objects = git_list_objects(src, present)
+        stderr('writing %d...\n' % len(objects))
+
+        asyncio.get_event_loop()\
+            .run_until_complete(self._put_objects(objects))
+
+        sha = git_ref_value(src)
+        error = self._write_ref(sha, dst, force)
+        if error is None:
+            self._pushed[dst] = sha
+        else:
+            self._write('error %s %s' % (dst, error))
+
+    def _write_ref(self, new_sha, dst, force=False):
+        """
+        Atomically update the given reference to point to the given object.
+        Return None if there is no error, otherwise return a description of the
+        error.
+        """
+        path = self._ref_path(dst)
+        if force:
+            # overwrite regardless of what is there before
+            mode = 'overwrite'#dropbox.files.WriteMode('overwrite')
+        else:
+            info = self._refs.get(dst, None)
+            if info:
+                rev, sha = info
+                is_fast_forward = git_is_ancestor(sha, new_sha)
+                if not is_fast_forward and not force:
+                    return 'non-fast-forward'
+                # perform an atomic compare-and-swap
+                mode = 'update-'+rev#dropbox.files.WriteMode.update(rev)
+            else:
+                # perform an atomic add, which fails if a concurrent writer
+                # writes before this does
+                mode = 'add'# dropbox.files.WriteMode('add')
+        self._trace('writing ref %s with mode %s' % (dst, mode))
+        data = ('%s\n' % new_sha).encode('utf8')
+        asyncio.get_event_loop()\
+            .run_until_complete(self._put_ref(data, dst))
+
+    def _get_refs(self, for_push):
+        ref_bundles = asyncio.get_event_loop()\
+            .run_until_complete(self._retrieve_refs())
+        ret = ['%s %s' % (ref_bundle.get_sha(), ref_bundle.relpath)
+                for ref_bundle in ref_bundles
+                if hasattr(ref_bundle, 'sink') # temporary workaround
+                ]
+        return ret
+
+    @asyncio.coroutine
+    def _retrieve_refs(self):
+        refs = []
+        queue = yield from self._vault.backend.list_files()
+        while True:
+            item = yield from queue.get()
+            if item is None:
+                break
+            store_hash, metadata, server_info = item
+            bundle = yield from self._vault.add_bundle_by_metadata(store_hash, metadata)
+            yield from bundle.load_key()
+            if bundle.is_ref():
+                yield from self.pull_bundle(bundle)
+                refs.append(bundle)
+        yield from self.wait()
+        return refs
+
+    @asyncio.coroutine
+    def _put_objects(self, objects):
+        for sha in objects:
+            yield from self._put_object(sha)
+        yield from self.wait()
+
+    @asyncio.coroutine
+    def _put_object(self, sha):
+        """
+        Upload an object to the remote.
+        """
+
+        data = git_encode_object(sha)
+        path = _object_path(sha)
+
+        bundle = Bundle(os.path.abspath(os.path.join('.git', path)), vault=self._vault)
+        bundle.path = os.path.abspath(os.path.join('.git', path))
+        bundle.relpath = path
+
+        stderr('writing: %s (%d bytes)\n' % (bundle, len(data)))
+
+        yield from self.push_bundle(bundle)
+
+    @asyncio.coroutine
+    def _put_ref(self, data, path):
+        """
+        Update a ref on the remote.
+        """
+        bundle = self._vault.bundle_for(path)
+        bundle.path = os.path.abspath(os.path.join('.git', path))
+
+        stderr('writing: %s (%d bytes)\n' % (bundle, len(data)))
+
+        yield from self.push_bundle(bundle)
+        yield from self.wait()
+
+def main():
+
+    name, url = sys.argv[1:3]
+    url = url.lower()
+    if url.startswith('syncrypt://'):
+        url = url[len('syncrypt:/'):]  # keep single leading slash
+    if not url.startswith('/') or url.endswith('/'):
+        stderr('error: URL must have leading slash and no trailing slash\n')
+        exit(1)
+
+    vault = GitVault(url)
+    bridge = GitVaultBridge(vault)
+    try:
+        bridge.run()
+    finally:
+        bridge.close()
+
+
+if __name__ == '__main__':
+    if sys.platform == 'win32':
+        import msvcrt
+        msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    setup_logging(logging.DEBUG)
+    main()
+

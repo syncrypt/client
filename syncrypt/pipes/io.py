@@ -2,6 +2,7 @@ import logging
 import sys
 import os.path
 import shutil
+from io import BytesIO
 
 import aiofiles
 import asyncio
@@ -109,3 +110,19 @@ class FileWriter(Sink):
             yield from self.input.close()
         if self.handle:
             yield from self.handle.close()
+
+class MemorySink(Sink):
+    def __init__(self):
+        self.stream = BytesIO()
+        self.contents = None
+        super(MemorySink, self).__init__()
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        buf = yield from self.input.read(count)
+        if len(buf) == 0:
+            self.contents = self.stream.getvalue()
+            self.stream.close()
+        else:
+            self.stream.write(buf)
+        return buf
