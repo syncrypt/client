@@ -26,20 +26,25 @@ class Bundle(MetadataHolder):
             'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
             'key', 'bytes_written')
 
-    def __init__(self, abspath, vault, store_hash=None):
+    def __init__(self, abspath, vault, store_hash=None, relpath=None):
         self.vault = vault
         self.path = abspath
         self.uptodate = False
         self.remote_crypt_hash = None
         self.key = None
         self.bytes_written = 0
-        self.relpath = None
+        self.relpath = relpath
 
-        if self.path is not None:
+        if self.path is not None and self.relpath is None:
             self.relpath = os.path.relpath(self.path, self.vault.folder)
+        if self.relpath is not None:
             h = hashlib.new(self.vault.config.hash_algo)
             h.update(self.encode_path(self.relpath))
             self.store_hash = h.hexdigest()
+            logger.info('STORE HASH\n\t%s\n\t%s\n\t%s',
+                    self.relpath,
+                    self.vault.folder,
+                    self.store_hash)
         if store_hash is not None:
             self.store_hash = store_hash
 
@@ -114,6 +119,9 @@ class Bundle(MetadataHolder):
                 >> PadAES() \
                 >> EncryptAES(self.key)
 
+    def contents_writer(self):
+        return FileWriter(self.path, create_dirs=True, create_backup=True, store_temporary=True)
+
     @asyncio.coroutine
     def write_encrypted_stream(self, stream, assert_hash=None):
         hash_pipe = Hash(self.vault.config.hash_algo)
@@ -127,7 +135,7 @@ class Bundle(MetadataHolder):
                 >> UnpadAES() \
                 >> SnappyDecompress() \
                 >> hash_pipe \
-                >> FileWriter(self.path, create_dirs=True, create_backup=True, store_temporary=True)
+                >> self.contents_writer()
 
         yield from sink.consume()
 
@@ -140,7 +148,8 @@ class Bundle(MetadataHolder):
         if not passed:
             logger.error('hash mismatch: {} != {}'.format(assert_hash, received_hash))
 
-        yield from sink.finalize()
+        if hasattr(sink, 'finalize'):
+            yield from sink.finalize()
 
         return passed
 

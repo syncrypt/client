@@ -34,9 +34,11 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
             }))
 
 class Vault(MetadataHolder):
-    def __init__(self, folder):
+
+    def __init__(self, folder, bundle_cls=Bundle):
         self.folder = folder
         self._bundle_cache = {}
+        self._bundle_cls = bundle_cls
 
         self.logger = VaultLoggerAdapter(self, logger)
 
@@ -145,7 +147,7 @@ class Vault(MetadataHolder):
         for f in glob(os.path.join(self.bundle_metadata_path, '??/*')):
             store_hash = os.path.relpath(f, self.bundle_metadata_path).replace('/', '')
             if len(store_hash) == 64:
-                yield Bundle(None, vault=self, store_hash=store_hash)
+                yield self._bundle_cls(None, vault=self, store_hash=store_hash)
 
     def walk_disk(self, subfolder=None):
         '''
@@ -169,7 +171,7 @@ class Vault(MetadataHolder):
 
     @asyncio.coroutine
     def add_bundle_by_metadata(self, store_hash, metadata):
-        bundle = Bundle(None, vault=self, store_hash=store_hash)
+        bundle = self._bundle_cls(None, vault=self, store_hash=store_hash)
         yield from bundle.write_encrypted_metadata(Once(metadata))
         return bundle
 
@@ -184,7 +186,7 @@ class Vault(MetadataHolder):
 
         if not relpath in self._bundle_cache:
             self._bundle_cache[relpath] =\
-                    Bundle(os.path.join(self.folder, relpath), vault=self)
+                    self._bundle_cls(os.path.join(self.folder, relpath), vault=self)
 
         return self._bundle_cache[relpath]
 

@@ -19,6 +19,8 @@ from syncrypt.app.cli import CLIAuthenticationProvider
 from syncrypt.config import AppConfig
 from syncrypt.utils.logging import setup_logging
 
+logger = logging.getLogger('syncrypt.plugins.git')
+
 DEVNULL = open(os.devnull, 'w')
 
 def stdout(line):
@@ -205,17 +207,25 @@ class Level(object):
     INFO = 2
     DEBUG = 3
 
+
 class GitBundle(Bundle):
-    '''
-    A MemoryBundle is a Bundle where the clear text only resides in memory.
-    '''
+    def __init__(self, *args, **kwargs):
+        super(GitBundle, self).__init__(*args, **kwargs)
+        self.persist = True
 
     def contents_writer(self):
-        self.sink = MemorySink()
-        return self.sink
+        if self.persist:
+            return super(GitBundle, self).contents_writer()
+        else:
+            self.sink = MemorySink()
+            return self.sink
 
     def get_content(self):
-        return self.sink.contents
+        if self.persist:
+            with open(self.path, 'rb') as f:
+                return f.read()
+        else:
+            return self.sink.contents
 
     def is_ref(self):
         return self.relpath.startswith('refs/')
@@ -223,24 +233,23 @@ class GitBundle(Bundle):
     def is_object(self):
         return self.relpath.startswith('objects/')
 
-    @staticmethod
-    def from_sha(sha):
-        return GitBundle(path=_object_path(sha))
+    @classmethod
+    def from_sha(cls, sha, **kwargs):
+        bundle = cls(os.path.join('.git', _object_path(sha)),
+                relpath=_object_path(sha), **kwargs)
+        return bundle
 
     def get_sha(self):
         return self.get_content().decode().strip()
 
-class GitVault(Vault):
-    _bundle_cls = GitBundle
-
-class GitVaultBridge(SyncryptApp):
-    def __init__(self, vault):
-        self._vault = vault
+class SyncryptGitBridge(SyncryptApp):
+    def __init__(self, git_folder):
+        self._vault = Vault(git_folder, bundle_cls=GitBundle)
         self._verbosity = Level.WARNING  # default verbosity
         self._refs = {}  # map from remote ref name => (rev number, sha)
         self._url = 'sample-url'
         self._pushed = {}  # map from remote ref name => sha
-        super(GitVaultBridge, self).__init__(AppConfig())
+        super(SyncryptGitBridge, self).__init__(AppConfig(), vault_dirs=[])
         self.add_vault(self._vault)
 
     def _write(self, message=None):
@@ -384,8 +393,10 @@ class GitVaultBridge(SyncryptApp):
         downloaded = set()
 
         def pull_finished(sha, future):
-            stderr('%s => %s\n' % (sha, future.result()))
+            stderr('PULL FINISHED %s => %s\n' % (sha, future.result()))
             bundle = future.result()
+            queue.extend(git_referenced_objects(sha))
+            logger.info('Extending queue by %s', git_referenced_objects(sha))
             pending.remove(sha)
 
         while queue or pending:
@@ -403,19 +414,20 @@ class GitVaultBridge(SyncryptApp):
                     else:
                         self._trace('%s already downloaded' % sha)
                 else:
-                    self._trace('downloading %s' % sha)
                     pending.add(sha)
 
                     path = _object_path(sha)
+                    git_path = os.path.abspath(os.path.join('.git', path))
+                    sc_path = os.path.join(self._vault.folder, path)
+                    #os.path.join('.git', path))
                     # bundle = self._vault.bundle_for(path)
-                    bundle = Bundle(os.path.abspath(os.path.join('.git', path)), vault=self._vault)
-                    bundle.path = os.path.abspath(os.path.join('.git', path))
-                    bundle.relpath = path
+                    logger.warn('downloading %s -> %s', sha, git_path)
+                    bundle = GitBundle.from_sha(sha, vault=self._vault)
 
-
+                    # We want this bundle to stream to disk
+                    bundle.persist = True
 
                     future = yield from self.pull_bundle(bundle)
-                    stderr('AAAR %s' % future)
                     future.add_done_callback(functools.partial(pull_finished, sha))
         """
         self._trace('', level=Level.INFO, exact=True) # for showing progress
@@ -514,15 +526,16 @@ class GitVaultBridge(SyncryptApp):
 
     def _get_refs(self, for_push):
         ref_bundles = asyncio.get_event_loop()\
-            .run_until_complete(self._retrieve_refs())
+            .run_until_complete(self._retrieve_refs(for_push=for_push))
         ret = ['%s %s' % (ref_bundle.get_sha(), ref_bundle.relpath)
                 for ref_bundle in ref_bundles
-                if hasattr(ref_bundle, 'sink') # temporary workaround
+                if hasattr(ref_bundle, 'get_sha') # temporary workaround
                 ]
+        logger.warn("RREFS %s", ret)
         return ret
 
     @asyncio.coroutine
-    def _retrieve_refs(self):
+    def _retrieve_refs(self, for_push):
         refs = []
         queue = yield from self._vault.backend.list_files()
         while True:
@@ -532,10 +545,17 @@ class GitVaultBridge(SyncryptApp):
             store_hash, metadata, server_info = item
             bundle = yield from self._vault.add_bundle_by_metadata(store_hash, metadata)
             yield from bundle.load_key()
+            if for_push:
+                bundle.path = os.path.join('/tmp/xxxx', bundle.relpath)
+            else:
+                bundle.path = os.path.join('.git', bundle.relpath)
             if bundle.is_ref():
+                logger.warn("IS_REF!! for_push=%s %s %s", for_push, bundle.relpath, bundle.path)
+                bundle.persist = not for_push
                 yield from self.pull_bundle(bundle)
                 refs.append(bundle)
         yield from self.wait()
+        logger.warn("REFS %s", refs)
         return refs
 
     @asyncio.coroutine
@@ -550,13 +570,8 @@ class GitVaultBridge(SyncryptApp):
         Upload an object to the remote.
         """
 
+        bundle = GitBundle.from_sha(sha, vault=self._vault)
         data = git_encode_object(sha)
-        path = _object_path(sha)
-
-        bundle = Bundle(os.path.abspath(os.path.join('.git', path)), vault=self._vault)
-        bundle.path = os.path.abspath(os.path.join('.git', path))
-        bundle.relpath = path
-
         stderr('writing: %s (%d bytes)\n' % (bundle, len(data)))
 
         yield from self.push_bundle(bundle)
@@ -584,12 +599,12 @@ def main():
         stderr('error: URL must have leading slash and no trailing slash\n')
         exit(1)
 
-    vault = GitVault(url)
-    bridge = GitVaultBridge(vault)
+    git_folder = url
+    app = SyncryptGitBridge(git_folder)
     try:
-        bridge.run()
+        app.run()
     finally:
-        bridge.close()
+        app.close()
 
 
 if __name__ == '__main__':
