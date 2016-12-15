@@ -10,9 +10,9 @@ You can login to the Syncrypt server via:
     syncrypt login
 
 This step is optional, but we recommend you to run it. Otherwise you will
-need to provide your login credentials every time you run a syncrypt command.
-The above command will retrieve an auth token which will be used by any
-subsequent command.
+need to provide your login credentials every time you run a `syncrypt` command.
+The above command will retrieve an authentication token which will be used by any
+subsequent commands.
 
 ## Basics
 

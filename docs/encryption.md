@@ -55,13 +55,13 @@ future, because it has been proven more robust.
 Sharing files with new users or devices
 ---------------------------------------
 
-In addition the vault and file keys, Syncrypt also has the concept of user
+In addition to the vault and file keys, Syncrypt also has the concept of user
 keys. These keys identify a user (or a device). In order to share a vault with
 a new user or a new device, the above mentioned vault keys need to be
-transmitted to the new device. This can either be done either
+transmitted to the new device. This can be done either
 
  * manually by exporting and importing the keys or
- * by letting Syncrypt encrypt those key with the public key of the target user or device.
+ * by letting Syncrypt encrypt those keys with the public key of the target user or device.
 
 In the latter case, Syncrypt will transmit those encrypted keys over the Syncrypt
 server. Note that this step is *fully optional* and secured by the same strong
