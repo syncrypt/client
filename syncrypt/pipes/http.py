@@ -31,5 +31,5 @@ class URLReader(Pipe):
     @asyncio.coroutine
     def close(self):
         if not self.response is None:
-            yield from self.response.close()
+            yield from self.response.release()
             self.response = None
