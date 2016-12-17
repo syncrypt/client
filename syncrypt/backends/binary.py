@@ -614,7 +614,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def delete_vault(self):
         vault = self.storage.vault
-        logger.warn('Wiping vault: %s', vault.config.id)
+        logger.info('Wiping vault: %s', vault.config.id)
 
         # download key and file
         yield from self.write_term('delete_vault', vault.config.id)
