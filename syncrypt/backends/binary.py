@@ -513,13 +513,17 @@ class BinaryStorageConnection(object):
 
         response = yield from self.read_term()
 
-        if response[0] == Atom('s3_download'):
-            url = response[3]
-        else:
+        if len(response) == 3:
+            server_info = rewrite_atoms_dict(response[1])
+            server_info.update(**rewrite_atoms_dict(response[2]))
             url = None
-
-        server_info = rewrite_atoms_dict(response[1])
-        server_info.update(**rewrite_atoms_dict(response[2]))
+        elif len(response) == 2 and isinstance(response[1], tuple) and response[1][0] == Atom('url'):
+            response_obj = response[1]
+            url = response_obj[1].decode()
+            server_info = rewrite_atoms_dict(response_obj[2])
+            server_info.update(**rewrite_atoms_dict(response_obj[3]))
+        else:
+            raise Exception('xx')
 
         content_hash = server_info['content_hash'].decode()
         metadata = server_info['metadata']
@@ -527,7 +531,10 @@ class BinaryStorageConnection(object):
 
         assert type(file_size) == int
 
-        logger.debug('Downloading content ({} bytes)'.format(file_size))
+        if url:
+            logger.debug('Downloading content ({} bytes) from URL: {}'.format(file_size, url))
+        else:
+            logger.debug('Downloading content ({} bytes) from stream.'.format(file_size))
 
         # read content hash
         logger.debug('Content hash: %s', content_hash)
