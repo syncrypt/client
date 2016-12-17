@@ -106,6 +106,10 @@ class BackendConfigMixin():
             kwargs['ssl'] = not (kwargs['ssl'].lower() in ['no', 'false', '0'])
         else:
             del kwargs['ssl']
+        if 'ssl_verify' in kwargs and kwargs['type'] == 'binary':
+            kwargs['ssl_verify'] = not (kwargs['ssl_verify'].lower() in ['no', 'false', '0'])
+        else:
+            del kwargs['ssl_verify']
         kwargs.pop('type')
         return kwargs
 

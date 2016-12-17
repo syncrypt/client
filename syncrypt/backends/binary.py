@@ -683,6 +683,9 @@ class BinaryStorageBackend(StorageBackend):
         self.ssl_verify = ssl_verify
         self.vault = vault
 
+        assert isinstance(self.ssl, bool)
+        assert isinstance(self.ssl_verify, bool)
+
         # Vault specific login information
         self.auth = auth
 
