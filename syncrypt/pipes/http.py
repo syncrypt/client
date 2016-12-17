@@ -23,9 +23,13 @@ class URLReader(Pipe):
     def read(self, count=-1):
         if self.response is None:
             self.response = yield from self.client.get(self.url)
-        return (yield from self.response.content.read(count))
+        buf = (yield from self.response.content.read(count))
+        if len(buf) == 0:
+            yield from self.close()
+        return buf
 
     @asyncio.coroutine
     def close(self):
-        # Do NOT close handle
-        pass
+        if not self.response is None:
+            yield from self.response.close()
+            self.response = None
