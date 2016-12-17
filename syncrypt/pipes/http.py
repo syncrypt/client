@@ -33,3 +33,5 @@ class URLReader(Pipe):
         if not self.response is None:
             yield from self.response.release()
             self.response = None
+        if not self.client.closed:
+            yield from self.client.close()

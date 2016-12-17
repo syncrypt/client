@@ -54,7 +54,7 @@ class SyncryptApp(object):
             }
 
         def handler(*args, **kwargs):
-            logger.error("%s, %s", args, kwargs)
+            logger.error("Exception in event loop: %s, %s", args, kwargs)
         asyncio.get_event_loop().set_exception_handler(handler)
 
         # generate or read users identity
