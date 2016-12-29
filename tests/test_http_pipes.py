@@ -3,11 +3,12 @@ import os.path
 import shutil
 import unittest
 import pytest
+import json
 
 import aiofiles
 import asyncio
 import asynctest
-from syncrypt.pipes import URLReader, Hash, Count
+from syncrypt.pipes import URLReader, Hash, Count, Once, Repeat, URLWriter, StdoutWriter, Buffered
 from .base import VaultTestCase
 
 __all__ = ('URLReaderTests',)
@@ -36,3 +37,23 @@ class URLReaderTests(asynctest.TestCase):
         self.assertEqual(counted.count, 1048576)
         self.assertEqual(stream.hash,
             '9f5a9086cf5ade0d0eeea626861e29f42dfd840691259e6742aa1446fc466057')
+
+    @pytest.mark.external_resources
+    @asyncio.coroutine
+    def test_url_put(self):
+        times = 3 # repeat test data this many times
+        url = 'https://httpbin.org/put'
+        data = b'Ifooqu1oong3phie2iHeefohb0eej1oo'\
+               b'x2iJei7aijawae9jah7Xa7ai7aaFa7za'\
+               b'e4ieVu9kooY3Ohngavae0hie6ahkee1a'\
+               b'cej6koofeiwaeWahmoo9ogh0aeshaeme'
+        data_pipe = Once(data) >> Repeat(times) >> Buffered(50)
+        writer = data_pipe >> URLWriter(url)
+        returned_content = yield from writer.readall()
+
+        # The httpbin API will return a JSON object with the data.
+        obj = json.loads(returned_content.decode('utf-8'))
+
+        self.assertEqual(obj['data'].encode('utf-8'), data * times)
+
+
