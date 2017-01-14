@@ -134,16 +134,17 @@ class Limit(Pipe):
 
     @asyncio.coroutine
     def read(self, count=-1):
+        if self._eof: return b''
         # fill up buffer
         left = self.bytes_limit - self.bytes_read
         if left == 0:
             self._eof = True
             return b''
-        buf = yield from self.input.read(max(count, left))
-        if len(buf) == 0:
+        read_bytes = max(count, left)
+        buf = yield from self.input.read(read_bytes)
+        if len(buf) < read_bytes:
             self._eof = True
-        else:
-            self.bytes_read += len(buf)
+        self.bytes_read += len(buf)
         return buf
 
 class Count(Pipe):

@@ -7,18 +7,18 @@ import aiohttp
 import aiofiles
 import asyncio
 
-from .base import Pipe, Sink, Source
+from .base import Pipe, Sink, Source, Limit
 
 logger = logging.getLogger(__name__)
 
-
-class URLReader(Pipe):
-    def __init__(self, url):
 class URLReader(Source):
     def __init__(self, url, client=None):
         super(URLReader, self).__init__()
         self.url = url
-        self.client = aiohttp.ClientSession() if client is None else client
+        if client:
+            self.client_owned, self.client = False, client
+        else:
+            self.client_owned, self.client = True, aiohttp.ClientSession()
         self.response = None
 
     @asyncio.coroutine
@@ -35,14 +35,17 @@ class URLReader(Source):
         if not self.response is None:
             yield from self.response.release()
             self.response = None
-        if not self.client.closed:
+        if self.client_owned and not self.client.closed:
             yield from self.client.close()
 
 class URLWriter(Sink):
     def __init__(self, url, client=None):
         super(URLWriter, self).__init__()
         self.url = url
-        self.client = aiohttp.ClientSession() if client is None else client
+        if client:
+            self.client_owned, self.client = False, client
+        else:
+            self.client_owned, self.client = True, aiohttp.ClientSession()
         self._done = False
         self.response = None
 
@@ -72,7 +75,28 @@ class URLWriter(Sink):
         if not self.response is None:
             yield from self.response.release()
             self.response = None
-        if not self.client.closed:
+        if self.client_owned and not self.client.closed:
             yield from self.client.close()
 
+class ChunkedURLWriter(Sink):
+    '''
+    The ChunkedURLWriter will instantiate an URLWriter for each URL given to
+    it.
+    '''
+    def __init__(self, urls, chunksize, client=None):
+        super(ChunkedURLWriter, self).__init__()
+        self.client = aiohttp.ClientSession() if client is None else client
+        self._urls = urls
+        self._chunksize = chunksize
+        self._url_idx = 0
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        if self._url_idx >= len(self._urls):
+            return b''
+        url = self._urls[self._url_idx]
+        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, client=self.client)
+        result = (yield from writer.readall())
+        self._url_idx = self._url_idx + 1
+        return result
 
