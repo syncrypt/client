@@ -11,15 +11,24 @@ from .base import Pipe, Sink, Source, Limit
 
 logger = logging.getLogger(__name__)
 
-class URLReader(Source):
-    def __init__(self, url, client=None):
-        super(URLReader, self).__init__()
-        self.url = url
+class AiohttpClientSessionMixin():
+    def init_client(self, client):
         if client:
             self.client_owned, self.client = False, client
         else:
             self.client_owned, self.client = True, aiohttp.ClientSession()
+
+    @asyncio.coroutine
+    def close_client(self):
+        if self.client_owned and not self.client.closed:
+            yield from self.client.close()
+
+class URLReader(Source, AiohttpClientSessionMixin):
+    def __init__(self, url, client=None):
+        super(URLReader, self).__init__()
+        self.url = url
         self.response = None
+        self.init_client(client)
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -35,19 +44,16 @@ class URLReader(Source):
         if not self.response is None:
             yield from self.response.release()
             self.response = None
-        if self.client_owned and not self.client.closed:
-            yield from self.client.close()
+        yield from self.close_client()
 
-class URLWriter(Sink):
+
+class URLWriter(Sink, AiohttpClientSessionMixin):
     def __init__(self, url, client=None):
         super(URLWriter, self).__init__()
         self.url = url
-        if client:
-            self.client_owned, self.client = False, client
-        else:
-            self.client_owned, self.client = True, aiohttp.ClientSession()
         self._done = False
         self.response = None
+        self.init_client(client)
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -75,20 +81,19 @@ class URLWriter(Sink):
         if not self.response is None:
             yield from self.response.release()
             self.response = None
-        if self.client_owned and not self.client.closed:
-            yield from self.client.close()
+        yield from self.close_client()
 
-class ChunkedURLWriter(Sink):
+class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     '''
     The ChunkedURLWriter will instantiate an URLWriter for each URL given to
     it.
     '''
     def __init__(self, urls, chunksize, client=None):
         super(ChunkedURLWriter, self).__init__()
-        self.client = aiohttp.ClientSession() if client is None else client
         self._urls = urls
         self._chunksize = chunksize
         self._url_idx = 0
+        self.init_client(client)
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -100,3 +105,6 @@ class ChunkedURLWriter(Sink):
         self._url_idx = self._url_idx + 1
         return result
 
+    @asyncio.coroutine
+    def close(self):
+        yield from self.close_client()

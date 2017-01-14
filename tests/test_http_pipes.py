@@ -81,6 +81,7 @@ class URLReaderTests(asynctest.TestCase):
             # The httpbin API will return a JSON object with the data.
             obj = json.loads(returned_content.decode('utf-8'))
             complete_data += obj['data']
+        yield from writer.close()
 
         self.assertEqual(complete_data.encode('utf-8'), data * times)
 
