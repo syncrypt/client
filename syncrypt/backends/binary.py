@@ -73,7 +73,9 @@ class BinaryStorageConnection(object):
         self.reader = None
 
     def __repr__(self):
-        return "<Slot %d %d %d>" % (self.connecting, self.connected, self.available.is_set())
+        return "<Slot %s%s>" % (
+                'connecting' if self.connecting else ('connected' if self.connected else 'disconnected'),
+                ' available' if self.available.is_set() else '')
 
     @asyncio.coroutine
     def read_term(self, assert_ok=True):
@@ -640,6 +642,7 @@ class BinaryStorageManager(object):
     def __init__(self, backend, concurrency):
         self.backend = backend
         self.concurrency = concurrency
+        self._monitor_task = None
         self.slots = [BinaryStorageConnection(backend) for i in range(concurrency)]
 
     def get_active_connection_count(self):
@@ -657,8 +660,24 @@ class BinaryStorageManager(object):
                 yield from conn.disconnect()
 
     @asyncio.coroutine
+    def monitor_connections(self):
+        '''
+        Monitor and close open and non-busy connections one-by-one.
+        '''
+        while True:
+            yield from asyncio.sleep(3.0)
+            for conn in self.slots:
+                if conn.connected and conn.available.is_set():
+                    yield from conn.disconnect()
+                    break
+
+    @asyncio.coroutine
     def acquire_connection(self):
         'return an available connection or block until one is free'
+        if self._monitor_task is None:
+            self._monitor_task = \
+                    asyncio.get_event_loop().create_task(self.monitor_connections())
+
         for conn in self.slots:
             if conn.connected and conn.available.is_set():
                 logger.debug('Found an available connection!')
