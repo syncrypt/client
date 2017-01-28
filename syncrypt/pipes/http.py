@@ -12,11 +12,11 @@ from .base import Pipe, Sink, Source, Limit
 logger = logging.getLogger(__name__)
 
 class AiohttpClientSessionMixin():
-    def init_client(self, client):
+    def init_client(self, client, headers={}):
         if client:
             self.client_owned, self.client = False, client
         else:
-            self.client_owned, self.client = True, aiohttp.ClientSession()
+            self.client_owned, self.client = True, aiohttp.ClientSession(headers=headers, skip_auto_headers=["User-Agent"])
 
     @asyncio.coroutine
     def close_client(self):
@@ -48,13 +48,13 @@ class URLReader(Source, AiohttpClientSessionMixin):
 
 
 class URLWriter(Sink, AiohttpClientSessionMixin):
-    def __init__(self, url, client=None):
+    def __init__(self, url, file_size, client=None):
         super(URLWriter, self).__init__()
         self.url = url
         self._done = False
         self.response = None
         self.bytes_written = 0
-        self.init_client(client)
+        self.init_client(client, headers={"Content-Length": file_size.__str__()})
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -108,7 +108,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
             return b''
         url = self._urls[self._url_idx]
         logger.debug('Uploading to: %s (max. %d bytes)', url, self._chunksize)
-        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, client=self.client)
+        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, self._chunksize, client=self.client)
         result = (yield from writer.readall())
         self.bytes_written += writer.bytes_written
         self._url_idx = self._url_idx + 1

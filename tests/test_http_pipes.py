@@ -50,7 +50,7 @@ class URLReaderTests(asynctest.TestCase):
                b'e4ieVu9kooY3Ohngavae0hie6ahkee1a'\
                b'cej6koofeiwaeWahmoo9ogh0aeshaeme'
         data_pipe = Once(data) >> Repeat(times) >> Buffered(50)
-        writer = data_pipe >> URLWriter(url)
+        writer = data_pipe >> URLWriter(url, len(data) * times)
         returned_content = yield from writer.readall()
 
         self.assertEqual(writer.bytes_written, len(data) * times)
@@ -88,6 +88,3 @@ class URLReaderTests(asynctest.TestCase):
         self.assertEqual(writer.bytes_written, len(data) * times)
 
         self.assertEqual(complete_data.encode('utf-8'), data * times)
-
-
-

@@ -327,7 +327,7 @@ class BinaryStorageConnection(object):
             else:
                 url = response[1].decode()
                 logger.info('Non-chunked URL upload to %s.', url)
-                writer = reader >> URLWriter(url)
+                writer = reader >> URLWriter(url, bundle.file_size_crypt)
                 upload_id = None
 
             yield from writer.consume()
