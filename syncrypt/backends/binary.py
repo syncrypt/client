@@ -320,10 +320,10 @@ class BinaryStorageConnection(object):
                 _, upload_id, urls = response[1]
                 chunksize = int(math.ceil(bundle.file_size_crypt * 1.0 / len(urls)))
                 logger.info('Chunked URL upload to %d urls. chunksize=%d', len(urls), chunksize)
-                writer = reader >> ChunkedURLWriter(urls[0], chunksize)
+                writer = reader >> ChunkedURLWriter([u.decode() for u in urls], chunksize)
                 url = None
             else:
-                url = response[1]
+                url = response[1].decode()
                 logger.info('Non-chunked URL upload to %s.', url)
                 writer = reader >> URLWriter(url)
                 upload_id = None
