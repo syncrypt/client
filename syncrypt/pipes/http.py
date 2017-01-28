@@ -53,6 +53,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         self.url = url
         self._done = False
         self.response = None
+        self.bytes_written = 0
         self.init_client(client)
 
     @asyncio.coroutine
@@ -74,6 +75,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
             if len(buf) == 0:
                 break
             yield buf
+            self.bytes_written += len(buf)
 
     @asyncio.coroutine
     def close(self):
@@ -94,6 +96,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         self._chunksize = chunksize
         self._url_idx = 0
         self.init_client(client)
+        self.bytes_written = 0
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -103,6 +106,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         logger.debug('Uploading to: %s (max. %d bytes)', url, self._chunksize)
         writer = self.input >> Limit(self._chunksize) >> URLWriter(url, client=self.client)
         result = (yield from writer.readall())
+        self.bytes_written += writer.bytes_written
         self._url_idx = self._url_idx + 1
         return result
 

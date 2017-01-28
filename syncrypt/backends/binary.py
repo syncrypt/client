@@ -330,6 +330,12 @@ class BinaryStorageConnection(object):
 
             yield from writer.consume()
 
+            if writer.bytes_written != bundle.file_size_crypt:
+                logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
+                        bundle.file_size_crypt, writer.bytes_written,
+                        writer.bytes_written - bundle.file_size_crypt)
+                raise Exception('Uploaded size did not match')
+
             if upload_id:
                 yield from self.write_term('uploaded', (Atom('multi'), upload_id))
             else:

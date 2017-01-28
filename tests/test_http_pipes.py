@@ -53,6 +53,8 @@ class URLReaderTests(asynctest.TestCase):
         writer = data_pipe >> URLWriter(url)
         returned_content = yield from writer.readall()
 
+        self.assertEqual(writer.bytes_written, len(data) * times)
+
         # The httpbin API will return a JSON object with the data.
         obj = json.loads(returned_content.decode('utf-8'))
 
@@ -82,6 +84,8 @@ class URLReaderTests(asynctest.TestCase):
             obj = json.loads(returned_content.decode('utf-8'))
             complete_data += obj['data']
         yield from writer.close()
+
+        self.assertEqual(writer.bytes_written, len(data) * times)
 
         self.assertEqual(complete_data.encode('utf-8'), data * times)
 
