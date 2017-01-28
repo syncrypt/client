@@ -305,7 +305,7 @@ class BinaryStorageConnection(object):
         yield from self.write_term('upload', bundle.store_hash,
                 bundle.crypt_hash, metadata, bundle.file_size_crypt)
 
-        response = yield from self.read_term() # make sure server returns 'ok'
+        response = yield from self.read_response() # make sure server returns 'ok'
 
         logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
                 .format(metadata_size, bundle.file_size_crypt))
