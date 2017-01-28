@@ -144,6 +144,7 @@ class VaultResource(Resource):
             yield from self.app.remove_vault(obj)
 
     @asyncio.coroutine
+    @require_auth_token
     def dispatch_list(self, request):
         objs = yield from self.get_obj_list(request)
         backend = yield from self.app.open_backend()
