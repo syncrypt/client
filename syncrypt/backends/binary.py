@@ -11,7 +11,7 @@ import asyncio
 from erlastic import Atom
 import syncrypt
 from syncrypt import __project__, __version__
-from syncrypt.pipes import Limit, Once, StreamReader, URLReader
+from syncrypt.pipes import Limit, Once, StreamReader, URLReader, URLWriter, ChunkedURLWriter
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 from syncrypt.exceptions import VaultNotInitialized
@@ -318,12 +318,14 @@ class BinaryStorageConnection(object):
         if len(response) > 0 and response[0] == Atom('url'):
             if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
                 _, upload_id, urls = response[1]
-                chunksize = math.ceil(bundle.file_size_crypt * 1.0 / len(urls))
-                writer = ChunkedURLWriter(urls[0], chunksize)
+                chunksize = int(math.ceil(bundle.file_size_crypt * 1.0 / len(urls)))
+                logger.info('Chunked URL upload to %d urls. chunksize=%d', len(urls), chunksize)
+                writer = reader >> ChunkedURLWriter(urls[0], chunksize)
                 url = None
             else:
                 url = response[1][0]
-                writer = URLWriter(url)
+                logger.info('Non-chunked URL upload to %s.', url)
+                writer = reader >> URLWriter(url)
                 upload_id = None
 
             yield from writer.consume()
@@ -333,6 +335,7 @@ class BinaryStorageConnection(object):
             else:
                 yield from self.write_term('uploaded', url)
         else:
+            logger.info('Streaming upload requested.')
             try:
                 while True:
                     buf = yield from reader.read()
