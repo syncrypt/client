@@ -323,7 +323,7 @@ class BinaryStorageConnection(object):
                 writer = reader >> ChunkedURLWriter(urls[0], chunksize)
                 url = None
             else:
-                url = response[1][0]
+                url = response[1]
                 logger.info('Non-chunked URL upload to %s.', url)
                 writer = reader >> URLWriter(url)
                 upload_id = None
