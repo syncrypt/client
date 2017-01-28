@@ -100,6 +100,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         if self._url_idx >= len(self._urls):
             return b''
         url = self._urls[self._url_idx]
+        logger.debug('Uploading to: %s (max. %d bytes)', url, self._chunksize)
         writer = self.input >> Limit(self._chunksize) >> URLWriter(url, client=self.client)
         result = (yield from writer.readall())
         self._url_idx = self._url_idx + 1
