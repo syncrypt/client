@@ -305,29 +305,50 @@ class BinaryStorageConnection(object):
         yield from self.write_term('upload', bundle.store_hash,
                 bundle.crypt_hash, metadata, bundle.file_size_crypt)
 
-        yield from self.read_term() # make sure server returns 'ok'
+        response = yield from self.read_term() # make sure server returns 'ok'
 
         logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
                 .format(metadata_size, bundle.file_size_crypt))
 
         bundle.bytes_written = 0
+        upload_id = None
+        urls = None
         reader = bundle.read_encrypted_stream()
-        try:
-            while True:
-                buf = yield from reader.read()
-                if len(buf) == 0:
-                    break
-                self.writer.write(buf)
-                bundle.bytes_written += len(buf)
-                yield from self.writer.drain()
-        finally:
-            yield from reader.close()
 
-        if bundle.bytes_written != bundle.file_size_crypt:
-            logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
-                    bundle.file_size_crypt, bundle.bytes_written,
-                    bundle.bytes_written - bundle.file_size_crypt)
-            raise Exception('Uploaded size did not match')
+        if len(response) > 0 and response[0] == Atom('url'):
+            if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
+                _, upload_id, urls = response[1]
+                chunksize = math.ceil(bundle.file_size_crypt * 1.0 / len(urls))
+                writer = ChunkedURLWriter(urls[0], chunksize)
+                url = None
+            else:
+                url = response[1][0]
+                writer = URLWriter(url)
+                upload_id = None
+
+            yield from writer.consume()
+
+            if upload_id:
+                yield from self.write_term('uploaded', (Atom('multi'), upload_id))
+            else:
+                yield from self.write_term('uploaded', url)
+        else:
+            try:
+                while True:
+                    buf = yield from reader.read()
+                    if len(buf) == 0:
+                        break
+                    self.writer.write(buf)
+                    bundle.bytes_written += len(buf)
+                    yield from self.writer.drain()
+            finally:
+                yield from reader.close()
+
+            if bundle.bytes_written != bundle.file_size_crypt:
+                logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
+                        bundle.file_size_crypt, bundle.bytes_written,
+                        bundle.bytes_written - bundle.file_size_crypt)
+                raise Exception('Uploaded size did not match')
 
         # server should return the reponse
         response = yield from self.read_response()
