@@ -65,6 +65,10 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
                     data=self.feed_http_upload())
         content = yield from self.response.read()
         yield from self.response.release()
+        if not self.response.status in (200, 201, 202):
+            raise aiohttp.HttpProcessingError(
+                code=self.response.status, message=self.response.reason,
+                headers=self.response.headers)
         self._done = True
         return content
 
