@@ -684,6 +684,8 @@ class BinaryStorageManager(object):
                     logger.debug('Disconnecting from server')
                     logged = True
                 yield from conn.disconnect()
+        if not self._monitor_task is None:
+            self._monitor_task.cancel()
 
     @asyncio.coroutine
     def monitor_connections(self):
