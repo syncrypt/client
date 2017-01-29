@@ -82,6 +82,38 @@ class Repeat(Pipe):
             self.copies -= 1
         return self.buf
 
+class BufferedFree(Pipe):
+    '''
+    This will buffer the input data to allow arbitrary reads.
+    '''
+    def __init__(self):
+        self.buf = b''
+        super(BufferedFree, self).__init__()
+
+    @asyncio.coroutine
+    def read(self, count=-1):
+        if count == -1:
+            raise NotImplementedError()
+        else:
+            while len(self.buf) < count:
+                # fill up buffer
+                add_buf = yield from self.input.read()
+                if len(add_buf) == 0:
+                    self._eof = True
+                    break
+                self.buf += add_buf
+        if len(self.buf) < count:
+            ret = self.buf
+            self.buf = b''
+            return ret
+        else:
+            return self.pop(count)
+
+    def pop(self, length):
+        retbuf = self.buf[:length]
+        self.buf = self.buf[length:]
+        return retbuf
+
 class Buffered(Pipe):
     '''
     This pipe will chop the input stream in parts like this:

@@ -7,7 +7,7 @@ import aiohttp
 import aiofiles
 import asyncio
 
-from .base import Pipe, Sink, Source, Limit
+from .base import Pipe, Sink, Source, Limit, BufferedFree
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +104,9 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         self.init_client(client)
         self.bytes_written = 0
         self.total_size = total_size
+
+    def add_input(self, input):
+        self.input = input >> BufferedFree()
 
     @asyncio.coroutine
     def read(self, count=-1):

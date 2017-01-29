@@ -10,7 +10,7 @@ import aiofiles
 import asyncio
 import asynctest
 from syncrypt.pipes import (URLReader, Hash, Count, Once, Repeat, URLWriter,
-        StdoutWriter, Buffered, ChunkedURLWriter)
+        StdoutWriter, Buffered, ChunkedURLWriter, BufferedFree)
 from .base import VaultTestCase
 
 __all__ = ('URLReaderTests',)
@@ -71,9 +71,10 @@ class URLReaderTests(asynctest.TestCase):
         chunksize = 112
         chunks = math.ceil((len(data) * times * 1.0) / chunksize)
         urls = ['https://httpbin.org/put?chunk={0}'.format(c) for c in range(chunks)]
-        data_pipe = Once(data) >> Repeat(times) >> Buffered(chunksize)
+        data_pipe = Once(data) >> Repeat(times)
 
-        writer = data_pipe >> ChunkedURLWriter(urls, chunksize=chunksize)
+        writer = data_pipe >> ChunkedURLWriter(urls, chunksize=chunksize,
+                                    total_size=len(data)*10)
 
         complete_data = ''
         while True:
