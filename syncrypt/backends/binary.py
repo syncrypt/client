@@ -342,7 +342,7 @@ class BinaryStorageConnection(object):
                 raise Exception('Uploaded size did not match')
 
             if upload_id:
-                yield from self.write_term('uploaded', (Atom('multi'), upload_id))
+                yield from self.write_term('uploaded', (Atom('multi'), upload_id, writer.etags))
             else:
                 yield from self.write_term('uploaded', url)
         else:

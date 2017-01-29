@@ -16,7 +16,7 @@ class AiohttpClientSessionMixin():
         if client:
             self.client_owned, self.client = False, client
         else:
-            self.client_owned, self.client = True, aiohttp.ClientSession(headers=headers, skip_auto_headers=["User-Agent"])
+            self.client_owned, self.client = True, aiohttp.ClientSession(headers=headers, skip_auto_headers=["Content-Type", "User-Agent"])
 
     @asyncio.coroutine
     def close_client(self):
@@ -64,7 +64,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         if self.response is None:
             self.response = yield from self.client.put(self.url,
                     data=self.feed_http_upload(),
-                    headers=None if self.size is None else {"Content-Length": str(self.size)})
+                    headers={} if self.size is None else {"Content-Length": str(self.size)})
         content = yield from self.response.read()
         yield from self.response.release()
         if not self.response.status in (200, 201, 202):
@@ -72,6 +72,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
                 code=self.response.status, message=self.response.reason,
                 headers=self.response.headers)
         self._done = True
+        self.etag = self.response.headers["ETAG"][1:-1]
         return content
 
     @asyncio.coroutine
@@ -104,6 +105,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         self.init_client(client)
         self.bytes_written = 0
         self.total_size = total_size
+        self.etags = []
 
     def add_input(self, input):
         self.input = input >> BufferedFree()
@@ -115,8 +117,9 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         url = self._urls[self._url_idx]
         logger.debug('Uploading to: %s (max. %d bytes)', url, self._chunksize)
         size = None if self.total_size is None else min(self.total_size - self.bytes_written, self._chunksize)
-        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, size, client=self.client)
+        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, size=size, client=self.client)
         result = (yield from writer.readall())
+        self.etags.append(writer.etag)
         self.bytes_written += writer.bytes_written
         self._url_idx += 1
         return result or b'<empty response>'
