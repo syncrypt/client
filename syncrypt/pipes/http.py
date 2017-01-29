@@ -118,7 +118,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         writer = self.input >> Limit(self._chunksize) >> URLWriter(url, size, client=self.client)
         result = (yield from writer.readall())
         self.bytes_written += writer.bytes_written
-        self._url_idx = self._url_idx + 1
+        self._url_idx += 1
         return result or b'<empty response>'
 
     @asyncio.coroutine
