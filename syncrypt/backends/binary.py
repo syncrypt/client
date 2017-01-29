@@ -62,6 +62,14 @@ def rewrite_atoms_dict(bert_dict):
     # rewriter
     return {str(k): bert_val(v) for (k, v) in bert_dict.items()}
 
+class BinaryStorageLoggerAdapter(logging.LoggerAdapter):
+    def __init__(self, storage):
+        self.storage = storage
+        super(BinaryStorageLoggerAdapter, self).__init__(logger, {})
+
+    def process(self, msg, kwargs):
+        return (msg, dict(kwargs, extra={'vault': self.storage.vault}))
+
 class BinaryStorageConnection(object):
     def __init__(self, storage):
         self.storage = storage
@@ -71,6 +79,7 @@ class BinaryStorageConnection(object):
         self.connecting = False
         self.writer = None
         self.reader = None
+        self.logger = self.storage.logger
 
     def __repr__(self):
         return "<Slot %s%s>" % (
@@ -95,10 +104,10 @@ class BinaryStorageConnection(object):
                 raise ConnectionResetException()
             packet += buf
         if BINARY_DEBUG:
-            logger.debug('[READ] Serialized: %s', packet)
+            self.logger.debug('[READ] Serialized: %s', packet)
         decoded = bert.decode(packet)
         if BINARY_DEBUG:
-            logger.debug('[READ] Unserialized: %s', decoded)
+            self.logger.debug('[READ] Unserialized: %s', decoded)
         if assert_ok and decoded[0] != Atom('ok'):
             if decoded[0] == Atom('error'):
                 raise ServerError(decoded[1:])
@@ -115,12 +124,12 @@ class BinaryStorageConnection(object):
     def write_term(self, *term):
         '''write a BERT tuple'''
         if BINARY_DEBUG:
-            logger.debug('[WRITE] Unserialized: %s', term)
+            self.logger.debug('[WRITE] Unserialized: %s', term)
         packet = bert.encode((Atom(term[0]),) + term[1:])
         packet_length = len(packet)
         assert packet_length > 0
         if BINARY_DEBUG:
-            logger.debug('[WRITE] Serialized: %s', packet)
+            self.logger.debug('[WRITE] Serialized: %s', packet)
         self.writer.write(struct.pack('!I', packet_length))
         self.writer.write(packet)
         yield from self.writer.drain()
@@ -130,13 +139,13 @@ class BinaryStorageConnection(object):
         if self.storage.ssl:
             sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cadata=ROOT_CA_DATA)
             if not self.storage.ssl_verify or self.storage.host in ('127.0.0.1', 'localhost'):
-                logger.warn('Continuing without verifying SSL cert')
+                self.logger.warn('Continuing without verifying SSL cert')
                 sc.check_hostname = False
                 sc.verify_mode = ssl.CERT_NONE
         else:
             sc = None
 
-        logger.debug('Connecting to server %s:%d ssl=%s...', self.storage.host,
+        self.logger.debug('Connecting to server %s:%d ssl=%s...', self.storage.host,
                 int(self.storage.port), bool(sc))
 
         self.reader, self.writer = \
@@ -148,12 +157,12 @@ class BinaryStorageConnection(object):
 
         client_version = '%s' % __version__
         client_ident = (__project__, client_version)
-        logger.debug('Identifying to server as %s', client_ident)
+        self.logger.debug('Identifying to server as %s', client_ident)
         yield from self.write_term('hello', client_ident)
 
         yield from self.read_term() # expect OK
 
-        logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
+        self.logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
 
         if self.storage.auth:
             yield from self.write_term('auth',
@@ -205,7 +214,7 @@ class BinaryStorageConnection(object):
 
                 if response[0] == Atom('ok'):
                     self.storage.auth = response[2].decode(self.storage.vault.config.encoding)
-                    logger.info('Created vault %s', response[1])
+                    self.logger.info('Created vault %s', response[1])
                     with vault.config.update_context():
                         vault.config.update('remote', {
                             'auth': self.storage.auth
@@ -258,7 +267,7 @@ class BinaryStorageConnection(object):
         if ex_value:
             # When an exception happened, let's force a disconnect and clear
             # the slot
-            logger.debug('Exception %s has been raised in with-block, clearing connection.',
+            self.logger.debug('Exception %s has been raised in with-block, clearing connection.',
                 ex_value)
             self._clear_connection()
         else:
@@ -279,14 +288,14 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def stat(self, bundle):
-        logger.debug('Stat %s (%s)', bundle, bundle.store_hash)
+        self.logger.debug('Stat %s (%s)', bundle, bundle.store_hash)
 
         yield from self.write_term('stat', bundle.store_hash)
 
         response = yield from self.read_term()
 
         if isinstance(response[1], (tuple, list)) and response[1][0] == Atom('not_found'):
-            logger.info('File not found: %s', bundle.store_hash)
+            self.logger.info('File not found: %s', bundle.store_hash)
             return None
 
         dct = rewrite_atoms_dict(response[1])
@@ -296,7 +305,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def upload(self, bundle):
 
-        logger.info('Uploading %s', bundle)
+        self.logger.info('Uploading %s', bundle)
 
         assert bundle.uptodate
 
@@ -309,7 +318,7 @@ class BinaryStorageConnection(object):
 
         yield from self.read_term() # make sure server returns 'ok'
 
-        logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
+        self.logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
                 .format(metadata_size, bundle.file_size_crypt))
 
         bundle.bytes_written = 0
@@ -326,7 +335,7 @@ class BinaryStorageConnection(object):
             yield from reader.close()
 
         if bundle.bytes_written != bundle.file_size_crypt:
-            logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
+            self.logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
                     bundle.file_size_crypt, bundle.bytes_written,
                     bundle.bytes_written - bundle.file_size_crypt)
             raise Exception('Uploaded size did not match')
@@ -341,25 +350,25 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def vault_metadata(self):
-        logger.debug('Getting metadata for %s', self.storage.vault)
+        self.logger.debug('Getting metadata for %s', self.storage.vault)
 
         yield from self.write_term('vault_metadata')
 
         metadata = yield from self.read_response()
 
         if metadata is None:
-            logger.debug('Metadata is not yet set')
+            self.logger.debug('Metadata is not yet set')
         else:
-            logger.debug('Metadata size is %d bytes', len(metadata))
+            self.logger.debug('Metadata size is %d bytes', len(metadata))
 
         if not metadata is None:
             yield from self.storage.vault.write_encrypted_metadata(Once(metadata))
         else:
-            logger.warn('Empty metadata for %s', self.storage.vault)
+            self.logger.warn('Empty metadata for %s', self.storage.vault)
 
     @asyncio.coroutine
     def user_info(self):
-        logger.debug('Retrieving user information from server')
+        self.logger.debug('Retrieving user information from server')
         yield from self.write_term('user_info')
         user_info = yield from self.read_response()
         user_info = rewrite_atoms_dict(user_info)
@@ -377,7 +386,7 @@ class BinaryStorageConnection(object):
         vault = self.storage.vault
         metadata = yield from vault.encrypted_metadata_reader().readall()
 
-        logger.debug('Setting metadata for %s (%d bytes)', self.storage.vault,
+        self.logger.debug('Setting metadata for %s (%d bytes)', self.storage.vault,
                 len(metadata))
 
         # upload metadata
@@ -388,7 +397,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def changes(self, since_rev, to_rev, queue, verbose=False):
-        logger.info('Getting a list of changes for %s (%s to %s)',
+        self.logger.info('Getting a list of changes for %s (%s to %s)',
                 self.storage.vault, since_rev or 'earliest', to_rev or 'latest')
 
         if verbose:
@@ -408,9 +417,9 @@ class BinaryStorageConnection(object):
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
                 if metadata is None:
-                    logger.warn('Skipping file %s (no metadata!)', store_hash)
+                    self.logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
-                logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
+                self.logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
                         len(metadata))
                 yield from queue.put((store_hash, metadata, server_info))
             yield from queue.put(None)
@@ -421,16 +430,16 @@ class BinaryStorageConnection(object):
                 metadata = server_info['metadata']
                 user_email = server_info['email'].decode()
                 if metadata is None:
-                    logger.warn('Skipping file %s (no metadata!)', store_hash)
+                    self.logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
-                logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
+                self.logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
                         len(metadata))
                 yield from queue.put((store_hash, metadata, server_info))
             yield from queue.put(None)
 
     @asyncio.coroutine
     def list_vaults(self):
-        logger.info('Getting a list of vaults')
+        self.logger.info('Getting a list of vaults')
 
         yield from self.write_term('list_vaults', ALL_VAULT_FIELDS)
         response = yield from self.read_term()
@@ -440,7 +449,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def list_vaults_by_fingerprint(self, fingerprint):
 
-        logger.info('Getting a list of vaults by fingerprint: %s', fingerprint)
+        self.logger.info('Getting a list of vaults by fingerprint: %s', fingerprint)
 
         yield from self.write_term('list_vaults_by_fingerprint', str(fingerprint))
         response = yield from self.read_term()
@@ -451,7 +460,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def list_vault_users(self):
 
-        logger.info('Getting a list of vault users')
+        self.logger.info('Getting a list of vault users')
 
         yield from self.write_term('list_vault_users')
         response = yield from self.read_term()
@@ -462,7 +471,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def list_files(self, queue):
 
-        logger.info('Getting a list of files for vault %s', self.storage.vault)
+        self.logger.info('Getting a list of files for vault %s', self.storage.vault)
 
         yield from self.write_term('list_files')
 
@@ -479,9 +488,9 @@ class BinaryStorageConnection(object):
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
                 if metadata is None:
-                    logger.warn('Skipping file %s (no metadata!)', store_hash)
+                    self.logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue
-                logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
+                self.logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
                         len(metadata))
                 yield from queue.put((store_hash, metadata, server_info))
             yield from queue.put(None)
@@ -508,7 +517,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def download(self, bundle):
 
-        logger.info('Downloading %s', bundle)
+        self.logger.info('Downloading %s', bundle)
 
         # download key and file
         yield from self.write_term('download', bundle.store_hash)
@@ -534,12 +543,12 @@ class BinaryStorageConnection(object):
         assert type(file_size) == int
 
         if url:
-            logger.debug('Downloading content ({} bytes) from URL: {}'.format(file_size, url))
+            self.logger.debug('Downloading content ({} bytes) from URL: {}'.format(file_size, url))
         else:
-            logger.debug('Downloading content ({} bytes) from stream.'.format(file_size))
+            self.logger.debug('Downloading content ({} bytes) from stream.'.format(file_size))
 
         # read content hash
-        logger.debug('Content hash: %s', content_hash)
+        self.logger.debug('Content hash: %s', content_hash)
 
         yield from bundle.write_encrypted_metadata(Once(metadata))
 
@@ -562,7 +571,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def vault_size(self, vault):
-        logger.debug('Querying vault size: %s', vault.config.id)
+        self.logger.debug('Querying vault size: %s', vault.config.id)
 
         # download key and file
         yield from self.write_term('vault_size', vault.config.id)
@@ -590,7 +599,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def upload_identity(self, identity, description=""):
-        logger.debug('Uploading my public key to server')
+        self.logger.debug('Uploading my public key to server')
 
         # upload public key and fingerprint
         yield from self.write_term('add_user_key',
@@ -616,7 +625,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def delete_vault(self):
         vault = self.storage.vault
-        logger.info('Wiping vault: %s', vault.config.id)
+        self.logger.info('Wiping vault: %s', vault.config.id)
 
         # download key and file
         yield from self.write_term('delete_vault', vault.config.id)
@@ -628,7 +637,7 @@ class BinaryStorageConnection(object):
         '''
         @asyncio.coroutine
         def myco(*args, **kwargs):
-            logger.info('Calling generic API %s/%d', name, len(args))
+            self.logger.info('Calling generic API %s/%d', name, len(args))
             yield from self.write_term(name, *args)
             return (yield from self.read_response())
         return myco
@@ -655,7 +664,7 @@ class BinaryStorageManager(object):
         for conn in self.slots:
             if conn.connected or conn.connecting:
                 if not logged:
-                    logger.debug('Disconnecting from server')
+                    self.logger.debug('Disconnecting from server')
                     logged = True
                 yield from conn.disconnect()
 
@@ -713,6 +722,9 @@ class BinaryStorageBackend(StorageBackend):
     def __init__(self, vault=None, auth=None, host=None, port=None,
             concurrency=None, username=None, password=None, ssl=True,
             ssl_verify=True):
+
+        self.logger = BinaryStorageLoggerAdapter(self)
+
         self.host = host
         self.port = port
         self.ssl = ssl
@@ -733,6 +745,7 @@ class BinaryStorageBackend(StorageBackend):
         self.buf_size = 10 * 1024
         self.concurrency = int(concurrency)
         self.manager = BinaryStorageManager(self, self.concurrency)
+
         super(BinaryStorageBackend, self).__init__(vault)
 
     @asyncio.coroutine
@@ -744,7 +757,7 @@ class BinaryStorageBackend(StorageBackend):
                 with self.vault.config.update_context():
                     self.vault.config.update('remote', {'auth': self.auth})
                 self.invalid_auth = False
-                logger.info('Successfully logged in and stored auth token')
+                self.logger.info('Successfully logged in and stored auth token')
         except StorageBackendInvalidAuth:
             self.invalid_auth = True
             raise
@@ -757,13 +770,13 @@ class BinaryStorageBackend(StorageBackend):
             with (yield from self.manager.acquire_connection()) as conn:
                 self.invalid_auth = False
                 version = yield from conn.version()
-                logger.debug('Logged in to server (version %s)', version)
+                self.logger.debug('Logged in to server (version %s)', version)
 
     @asyncio.coroutine
     def vault_size(self, vault):
         with (yield from self.manager.acquire_connection()) as conn:
             size = yield from conn.vault_size(vault)
-            logger.debug('Vault size is: %s', format_size(size))
+            self.logger.debug('Vault size is: %s', format_size(size))
             return size
 
     @asyncio.coroutine
@@ -809,7 +822,7 @@ class BinaryStorageBackend(StorageBackend):
             try:
                 yield from conn.download(bundle)
             except UnsuccessfulResponse:
-                logger.error('Could not download bundle: %s', str(bundle))
+                self.logger.error('Could not download bundle: %s', str(bundle))
 
     def __getattr__(self, name):
         @asyncio.coroutine
