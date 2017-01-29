@@ -69,7 +69,7 @@ class URLReaderTests(asynctest.TestCase):
                b'cej6koofeiwaeWahmoo9ogh0aeshaeme'
         times = 10 # repeat test data this many times
         chunksize = 112
-        chunks = math.ceil((len(data) * times) / chunksize)
+        chunks = math.ceil((len(data) * times * 1.0) / chunksize)
         urls = ['https://httpbin.org/put?chunk={0}'.format(c) for c in range(chunks)]
         data_pipe = Once(data) >> Repeat(times) >> Buffered(chunksize)
 
