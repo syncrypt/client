@@ -11,7 +11,8 @@ import asyncio
 from erlastic import Atom
 import syncrypt
 from syncrypt import __project__, __version__
-from syncrypt.pipes import Limit, Once, StreamReader, URLReader, URLWriter, ChunkedURLWriter
+from syncrypt.pipes import (Limit, Once, StreamReader, StreamWriter, URLReader,
+                        URLWriter, ChunkedURLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 from syncrypt.exceptions import VaultNotInitialized
@@ -317,7 +318,7 @@ class BinaryStorageConnection(object):
         urls = None
         reader = bundle.read_encrypted_stream()
 
-        if len(response) > 0 and response[0] == Atom('url'):
+        if isinstance(response, tuple) and len(response) > 0 and response[0] == Atom('url'):
             if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
                 _, upload_id, urls = response[1]
                 chunksize = int(math.ceil(bundle.file_size_crypt * 1.0 / len(urls)))
@@ -344,24 +345,17 @@ class BinaryStorageConnection(object):
                 yield from self.write_term('uploaded', url)
         else:
             logger.info('Streaming upload requested.')
-            try:
-                while True:
-                    buf = yield from reader.read()
-                    if len(buf) == 0:
-                        break
-                    self.writer.write(buf)
-                    bundle.bytes_written += len(buf)
-                    yield from self.writer.drain()
-            finally:
-                yield from reader.close()
 
-            if bundle.bytes_written != bundle.file_size_crypt:
+            writer = reader >> StreamWriter(self.writer)
+            yield from writer.consume()
+
+            if writer.bytes_written != bundle.file_size_crypt:
                 logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
-                        bundle.file_size_crypt, bundle.bytes_written,
-                        bundle.bytes_written - bundle.file_size_crypt)
+                        bundle.file_size_crypt, writer.bytes_written,
+                        writer.bytes_written - bundle.file_size_crypt)
                 raise Exception('Uploaded size did not match')
 
-        # server should return the reponse
+        # server should return the response
         response = yield from self.read_response()
         server_info = rewrite_atoms_dict(response)
 

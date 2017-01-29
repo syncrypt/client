@@ -10,8 +10,7 @@ from .base import Pipe, Sink, Source
 
 logger = logging.getLogger(__name__)
 
-
-class StreamReader(Pipe):
+class StreamReader(Source):
     def __init__(self, reader):
         super(StreamReader, self).__init__()
         self.input = reader
@@ -39,16 +38,25 @@ class FileReader(Source):
         if self.handle:
             yield from self.handle.close()
 
-class StdoutWriter(Sink):
-    def __init__(self):
-        self.handle = sys.stdout
-        super(StdoutWriter, self).__init__()
+class StreamWriter(Sink):
+    def __init__(self, writer):
+        self.writer = writer
+        self.bytes_written = 0
+        super(StreamWriter, self).__init__()
 
     @asyncio.coroutine
     def read(self, count=-1):
-        contents = yield from self.input.read(count)
-        self.handle.buffer.write(contents)
-        return contents
+        buf = yield from self.input.read(count)
+        if buf and len(buf) > 0:
+            self.writer.write(buf)
+            yield from self.writer.drain()
+            self.bytes_written += len(buf)
+        return buf
+
+class StdoutWriter(StreamWriter):
+    def __init__(self):
+        self.handle = sys.stdout
+        super(StdoutWriter, self).__init__(self.handle.buffer)
 
 class FileWriter(Sink):
     # simple wrapper for aiofiles
