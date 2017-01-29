@@ -48,13 +48,14 @@ class URLReader(Source, AiohttpClientSessionMixin):
 
 
 class URLWriter(Sink, AiohttpClientSessionMixin):
-    def __init__(self, url, file_size, client=None):
+    def __init__(self, url, file_size=None, client=None):
         super(URLWriter, self).__init__()
         self.url = url
         self._done = False
         self.response = None
         self.bytes_written = 0
-        self.init_client(client, headers={"Content-Length": file_size.__str__()})
+        self.file_size = file_size
+        self.init_client(client)
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -62,7 +63,8 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
             return b''
         if self.response is None:
             self.response = yield from self.client.put(self.url,
-                    data=self.feed_http_upload())
+                    data=self.feed_http_upload(),
+                    headers={} if self.file_size is None else {"Content-Length": str(self.file_size)})
         content = yield from self.response.read()
         yield from self.response.release()
         if not self.response.status in (200, 201, 202):
