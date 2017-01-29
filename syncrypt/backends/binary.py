@@ -5,6 +5,7 @@ import sys
 import struct
 import os.path
 import time
+import math
 from getpass import getpass
 
 import asyncio
