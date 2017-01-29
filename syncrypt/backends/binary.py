@@ -323,12 +323,13 @@ class BinaryStorageConnection(object):
                 _, upload_id, urls = response[1]
                 chunksize = int(math.ceil(bundle.file_size_crypt * 1.0 / len(urls)))
                 logger.info('Chunked URL upload to %d urls. chunksize=%d', len(urls), chunksize)
-                writer = reader >> ChunkedURLWriter([u.decode() for u in urls], chunksize)
+                writer = reader >> ChunkedURLWriter([u.decode() for u in urls], chunksize,\
+                        total_size=bundle.file_size_crypt)
                 url = None
             else:
                 url = response[1].decode()
                 logger.info('Non-chunked URL upload to %s.', url)
-                writer = reader >> URLWriter(url, bundle.file_size_crypt)
+                writer = reader >> URLWriter(url, size=bundle.file_size_crypt)
                 upload_id = None
 
             yield from writer.consume()

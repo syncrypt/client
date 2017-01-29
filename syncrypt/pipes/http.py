@@ -48,13 +48,13 @@ class URLReader(Source, AiohttpClientSessionMixin):
 
 
 class URLWriter(Sink, AiohttpClientSessionMixin):
-    def __init__(self, url, file_size=None, client=None):
+    def __init__(self, url, size=None, client=None):
         super(URLWriter, self).__init__()
         self.url = url
         self._done = False
         self.response = None
         self.bytes_written = 0
-        self.file_size = file_size
+        self.size = size
         self.init_client(client)
 
     @asyncio.coroutine
@@ -64,7 +64,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         if self.response is None:
             self.response = yield from self.client.put(self.url,
                     data=self.feed_http_upload(),
-                    headers={} if self.file_size is None else {"Content-Length": str(self.file_size)})
+                    headers=None if self.size is None else {"Content-Length": str(self.size)})
         content = yield from self.response.read()
         yield from self.response.release()
         if not self.response.status in (200, 201, 202):
@@ -96,13 +96,14 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     The ChunkedURLWriter will instantiate an URLWriter for each URL given to
     it.
     '''
-    def __init__(self, urls, chunksize, client=None):
+    def __init__(self, urls, chunksize, total_size=None, client=None):
         super(ChunkedURLWriter, self).__init__()
         self._urls = urls
         self._chunksize = chunksize
         self._url_idx = 0
         self.init_client(client)
         self.bytes_written = 0
+        self.total_size = total_size
 
     @asyncio.coroutine
     def read(self, count=-1):
@@ -110,7 +111,8 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
             return b''
         url = self._urls[self._url_idx]
         logger.debug('Uploading to: %s (max. %d bytes)', url, self._chunksize)
-        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, self._chunksize, client=self.client)
+        size = None if self.total_size is None else min(self.total_size - self.bytes_written, self._chunksize)
+        writer = self.input >> Limit(self._chunksize) >> URLWriter(url, size, client=self.client)
         result = (yield from writer.readall())
         self.bytes_written += writer.bytes_written
         self._url_idx = self._url_idx + 1
