@@ -13,7 +13,7 @@ from erlastic import Atom
 import syncrypt
 from syncrypt import __project__, __version__
 from syncrypt.pipes import (Limit, Once, StreamReader, StreamWriter, URLReader,
-                        URLWriter, ChunkedURLWriter)
+                        URLWriter, ChunkedURLWriter, BufferedFree)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 from syncrypt.exceptions import VaultNotInitialized
@@ -572,7 +572,7 @@ class BinaryStorageConnection(object):
         yield from bundle.load_key()
 
         if url:
-            stream_source = URLReader(url)
+            stream_source = URLReader(url) >> BufferedFree()
         else:
             stream_source = StreamReader(self.reader)
 
