@@ -5,13 +5,15 @@ import sys
 import struct
 import os.path
 import time
+import math
 from getpass import getpass
 
 import asyncio
 from erlastic import Atom
 import syncrypt
 from syncrypt import __project__, __version__
-from syncrypt.pipes import Limit, Once, StreamReader, URLReader
+from syncrypt.pipes import (Limit, Once, StreamReader, StreamWriter, URLReader,
+                        URLWriter, ChunkedURLWriter, BufferedFree)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 from syncrypt.exceptions import VaultNotInitialized
@@ -316,31 +318,55 @@ class BinaryStorageConnection(object):
         yield from self.write_term('upload', bundle.store_hash,
                 bundle.crypt_hash, metadata, bundle.file_size_crypt)
 
-        yield from self.read_term() # make sure server returns 'ok'
+        response = yield from self.read_response() # make sure server returns 'ok'
 
         self.logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
                 .format(metadata_size, bundle.file_size_crypt))
 
         bundle.bytes_written = 0
+        upload_id = None
+        urls = None
         reader = bundle.read_encrypted_stream()
-        try:
-            while True:
-                buf = yield from reader.read()
-                if len(buf) == 0:
-                    break
-                self.writer.write(buf)
-                bundle.bytes_written += len(buf)
-                yield from self.writer.drain()
-        finally:
-            yield from reader.close()
 
-        if bundle.bytes_written != bundle.file_size_crypt:
-            self.logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
-                    bundle.file_size_crypt, bundle.bytes_written,
-                    bundle.bytes_written - bundle.file_size_crypt)
-            raise Exception('Uploaded size did not match')
+        if isinstance(response, tuple) and len(response) > 0 and response[0] == Atom('url'):
+            if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
+                _, upload_id, urls = response[1]
+                chunksize = int(math.ceil(bundle.file_size_crypt * 1.0 / len(urls)))
+                self.logger.info('Chunked URL upload to %d urls. chunksize=%d', len(urls), chunksize)
+                writer = reader >> ChunkedURLWriter([u.decode() for u in urls], chunksize,\
+                        total_size=bundle.file_size_crypt)
+                url = None
+            else:
+                url = response[1].decode()
+                self.logger.info('Non-chunked URL upload to %s.', url)
+                writer = reader >> URLWriter(url, size=bundle.file_size_crypt)
+                upload_id = None
 
-        # server should return the reponse
+            yield from writer.consume()
+
+            if writer.bytes_written != bundle.file_size_crypt:
+                self.logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
+                        bundle.file_size_crypt, writer.bytes_written,
+                        writer.bytes_written - bundle.file_size_crypt)
+                raise Exception('Uploaded size did not match')
+
+            if upload_id:
+                yield from self.write_term('uploaded', (Atom('multi'), upload_id, writer.etags))
+            else:
+                yield from self.write_term('uploaded', url)
+        else:
+            self.logger.info('Streaming upload requested.')
+
+            writer = reader >> StreamWriter(self.writer)
+            yield from writer.consume()
+
+            if writer.bytes_written != bundle.file_size_crypt:
+                self.logger.error('Uploaded size did not match: should be %d, is %d (diff %d)',
+                        bundle.file_size_crypt, writer.bytes_written,
+                        writer.bytes_written - bundle.file_size_crypt)
+                raise Exception('Uploaded size did not match')
+
+        # server should return the response
         response = yield from self.read_response()
         server_info = rewrite_atoms_dict(response)
 
@@ -555,7 +581,7 @@ class BinaryStorageConnection(object):
         yield from bundle.load_key()
 
         if url:
-            stream_source = URLReader(url)
+            stream_source = URLReader(url) >> BufferedFree()
         else:
             stream_source = StreamReader(self.reader)
 
@@ -667,6 +693,8 @@ class BinaryStorageManager(object):
                     self.logger.debug('Disconnecting from server')
                     logged = True
                 yield from conn.disconnect()
+        if not self._monitor_task is None:
+            self._monitor_task.cancel()
 
     @asyncio.coroutine
     def monitor_connections(self):
