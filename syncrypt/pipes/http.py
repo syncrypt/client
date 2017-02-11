@@ -55,6 +55,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         self.response = None
         self.bytes_written = 0
         self.size = size
+        self.etag = None
         self.init_client(client)
 
     @asyncio.coroutine
@@ -64,7 +65,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         if self.response is None:
             self.response = yield from self.client.put(self.url,
                     data=self.feed_http_upload(),
-                    headers={} if self.size is None else {"Content-Length": str(self.size)})
+                    headers={} if self.size is None else {'Content-Length': str(self.size)})
         content = yield from self.response.read()
         yield from self.response.release()
         if not self.response.status in (200, 201, 202):
@@ -72,7 +73,8 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
                 code=self.response.status, message=self.response.reason,
                 headers=self.response.headers)
         self._done = True
-        self.etag = self.response.headers["ETAG"][1:-1]
+        if 'ETAG' in self.response.headers:
+            self.etag = self.response.headers['ETAG'][1:-1]
         return content
 
     @asyncio.coroutine
