@@ -32,9 +32,13 @@ log_dir = os.path.join(app_config.config_dir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
-
 def run_syncrypt():
     app = SyncryptApp(app_config)
+
+    # In the future, we will dispatch plugin hook signals here
+    from syncrypt.builtins.sqlite_log import setup as sqlite_log_setup
+    sqlite_log_setup(app)
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete(app.initialize())
     loop.run_until_complete(app.start())
