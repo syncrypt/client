@@ -77,8 +77,10 @@ class SyncryptApp(object):
         super(SyncryptApp, self).__init__()
 
     @asyncio.coroutine
-    def initialize(self):
+    def initialize(self, with_api=False):
         yield from self.identity.init()
+        if with_api:
+            self.api.initialize()
 
     def add_vault_by_path(self, path):
         return self.add_vault(Vault(path))

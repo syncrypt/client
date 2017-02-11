@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 class SyncryptAPI():
     def __init__(self, app):
         self.app = app
+        self.web_app = None
         self.server = None
 
         if not self.app.config.get('api.auth_token'):
@@ -182,8 +183,7 @@ class SyncryptAPI():
         yield from backend.close()
         return JSONResponse({'status': 'ok'})
 
-    @asyncio.coroutine
-    def start(self):
+    def initialize(self):
         loop = asyncio.get_event_loop()
         self.web_app = web.Application(loop=loop)
 
@@ -206,6 +206,12 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
         self.web_app.router.add_route('GET', '/v1/push', self.get_push)
         self.web_app.router.add_route('GET', '/v1/config', self.get_config)
+
+    @asyncio.coroutine
+    def start(self):
+        assert self.web_app is not None
+
+        loop = asyncio.get_event_loop()
 
         self.handler = self.web_app.make_handler()
         self.server = yield from loop.create_server(self.handler,

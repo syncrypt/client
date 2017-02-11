@@ -7,18 +7,12 @@ import itertools
 import asyncio
 from aiohttp import web
 from .auth import require_auth_token
+from .responses import JSONResponse
 from syncrypt.utils.format import format_size
 from syncrypt.models import Identity
 
 logger = logging.getLogger(__name__)
 
-
-class JSONResponse(web.Response):
-    def __init__(self, obj, **kwargs):
-        super(JSONResponse, self).__init__(
-                body=json.dumps(obj).encode('utf-8'),
-                content_type='application_json',
-                **kwargs)
 
 
 class Resource(object):
