@@ -111,17 +111,18 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'pycrypto',
         'aiofiles',
         'aiohttp',
-        'umsgpack',
-        'msgpack-python>=0.4.0',
         'colorlog',
-        'hachiko',
-        'python-snappy',
         'erlastic',
+        'hachiko',
+        'iso8601',
+        'msgpack-python>=0.4.0',
+        'pycrypto',
+        'python-snappy',
+        'smokesignal',
         'tzlocal',
-        'iso8601'
+        'umsgpack'
     ],
 
     # List additional groups of dependencies here (e.g. development
