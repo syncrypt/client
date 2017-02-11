@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 import argparse
+import asyncio
 import logging
 import logging.config
 import os.path
 import sys
 import time
 
-import asyncio
-from syncrypt.models import Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.config import AppConfig, Config
+from syncrypt.models import Vault
 from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
 

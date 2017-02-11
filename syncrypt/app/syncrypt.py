@@ -1,28 +1,29 @@
+import asyncio
 import logging
 import os.path
 import socket
 import sys
-import asyncio
-import iso8601
+from distutils.version import LooseVersion
 from io import StringIO
 
+import iso8601
+from tzlocal import get_localzone
+
 import syncrypt
+from syncrypt.api import APIClient, SyncryptAPI
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
-from syncrypt.exceptions import VaultNotInitialized, VaultFolderDoesNotExist
+from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
-from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
+from syncrypt.utils.format import (format_fingerprint, format_size,
+                                   size_with_unit)
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
-from tzlocal import get_localzone
 
-from syncrypt.api import SyncryptAPI, APIClient
-
-from .events import create_watchdog
 from ..utils.updates import is_update_available
-from distutils.version import LooseVersion
+from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
 
