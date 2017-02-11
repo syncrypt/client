@@ -65,12 +65,17 @@ def rewrite_atoms_dict(bert_dict):
     return {str(k): bert_val(v) for (k, v) in bert_dict.items()}
 
 class BinaryStorageLoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, storage):
+    def __init__(self, storage, *args):
         self.storage = storage
-        super(BinaryStorageLoggerAdapter, self).__init__(logger, {})
+        super(BinaryStorageLoggerAdapter, self).__init__(*args, {})
 
     def process(self, msg, kwargs):
-        return (msg, dict(kwargs, extra={'vault': self.storage.vault}))
+        if self.storage.vault is None:
+            return (msg, kwargs)
+        else:
+            return (msg, dict(kwargs, extra={
+                    'vault_id': self.storage.vault.config.id
+                }))
 
 class BinaryStorageConnection(object):
     def __init__(self, storage):
@@ -690,7 +695,7 @@ class BinaryStorageManager(object):
         for conn in self.slots:
             if conn.connected or conn.connecting:
                 if not logged:
-                    self.logger.debug('Disconnecting from server')
+                    self.backend.logger.debug('Disconnecting from server')
                     logged = True
                 yield from conn.disconnect()
         if not self._monitor_task is None:
@@ -717,7 +722,7 @@ class BinaryStorageManager(object):
 
         for conn in self.slots:
             if conn.connected and conn.available.is_set():
-                logger.debug('Found an available connection!')
+                self.backend.logger.debug('Found an available connection!')
                 conn.available.clear()
                 return conn
         # trigger at most one connection
@@ -751,7 +756,7 @@ class BinaryStorageBackend(StorageBackend):
             concurrency=None, username=None, password=None, ssl=True,
             ssl_verify=True):
 
-        self.logger = BinaryStorageLoggerAdapter(self)
+        self.logger = BinaryStorageLoggerAdapter(self, logger)
 
         self.host = host
         self.port = port
