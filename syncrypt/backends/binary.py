@@ -693,7 +693,7 @@ class BinaryStorageManager(object):
         Monitor and close open and non-busy connections one-by-one.
         '''
         while True:
-            yield from asyncio.sleep(3.0)
+            yield from asyncio.sleep(20.0)
             for conn in self.slots:
                 if conn.connected and conn.available.is_set():
                     yield from conn.disconnect()
