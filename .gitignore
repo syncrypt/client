@@ -59,6 +59,7 @@ target/
 # virtualenv
 bin/
 include/
+share/
 lib/
 pip-selfcheck.json
 
