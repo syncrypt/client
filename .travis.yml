@@ -21,12 +21,11 @@ install: |
   if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 
       brew update;
-      brew install python3;
-      brew install pyenv;
       brew install snappy;
-      pyenv install 3.5.3;
-      pyenv local 3.5.3;
-      python3 -m venv venv;
+      PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.5.2;
+      pyenv local 3.5.2;
+      pyenv global 3.5.2;
+      $(pyenv root)/shims/python -m venv venv;
       source venv/bin/activate;
       pip install -e '.[dist]'
       pip install -e '.[test]'
