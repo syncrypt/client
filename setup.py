@@ -140,6 +140,9 @@ setup(
             'asynctest',
             'hypothesis'
         ],
+        'uvloop': [
+            'uvloop'
+        ]
     },
 
     cmdclass=cmdclass

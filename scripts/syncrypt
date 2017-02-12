@@ -329,6 +329,13 @@ if __name__ == '__main__':
     import locale
     locale.setlocale(locale.LC_TIME, '')
 
+    try:
+        # Use uvloop if available (currently only on *nix and py 3.5)
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except ImportError:
+        pass
+
     args = global_parser.parse_args(sys.argv[1:2])
 
     if args.version:
