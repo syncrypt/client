@@ -14,10 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 class JSONResponse(web.Response):
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods" : "GET, POST, PUT, DELETE",
+        "Access-Control-Allow-Headers": "X-Authtoken, Content-Type, Origin, Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers"
+    }
+
     def __init__(self, obj, **kwargs):
         super(JSONResponse, self).__init__(
                 body=json.dumps(obj).encode('utf-8'),
-                content_type='application_json',
+                content_type='application/json',
+                headers=self.cors_headers,
                 **kwargs)
 
 
@@ -35,6 +42,8 @@ class Resource(object):
         router.add_route('GET', '/{version}/{name}/'.format(**opts), self.dispatch_list)
         router.add_route('GET', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_get)
         router.add_route('GET', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_get)
+        router.add_route('OPTIONS', '/{version}/{name}/'.format(**opts), self.dispatch_options)
+        router.add_route('OPTIONS', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_options)
         router.add_route('DELETE', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_delete)
         router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_delete)
 
@@ -56,6 +65,11 @@ class Resource(object):
     def dispatch_get(self, request):
         obj = yield from self.get_obj(request)
         return JSONResponse(self.dehydrate(obj))
+
+
+    @asyncio.coroutine
+    def dispatch_options(self, request):
+        return JSONResponse({})
 
     @asyncio.coroutine
     @require_auth_token
