@@ -120,7 +120,7 @@ class VaultResource(Resource):
         dct = super(VaultResource, self).dehydrate(v)
         dct.update(folder=v.folder, status='ready', state=v.state, metadata=v.metadata)
         # Annotate each obj with information from the server
-        vault_size = format_size(vault_info.get('byte_size', 0))
+        vault_size = vault_info.get('byte_size', 0)
         modification_date = vault_info.get('modification_date')
         if isinstance(modification_date, bytes):
             modification_date = modification_date.decode()
@@ -218,7 +218,7 @@ class FlyingVaultResource(Resource):
     def dehydrate(self, obj):
         deh_obj = super(FlyingVaultResource, self).dehydrate(obj)
         deh_obj['metadata'] = obj.get('metadata', {})
-        deh_obj['size'] = format_size(obj.get('byte_size'))
+        deh_obj['size'] = obj.get('byte_size')
         deh_obj['user_count'] = obj.get('user_count')
         deh_obj['file_count'] = obj.get('file_count')
         deh_obj['revision_count'] = obj.get('revision_count')
@@ -251,7 +251,7 @@ class FlyingVaultResource(Resource):
                 metadata = None
 
             vault_info = v_info.get(vault_id, {})
-            vault_size = format_size(vault_info.get('byte_size', 0))
+            vault_size = vault_info.get('byte_size', 0)
             modification_date = vault_info.get('modification_date')
             if isinstance(modification_date, bytes):
                 modification_date = modification_date.decode()
