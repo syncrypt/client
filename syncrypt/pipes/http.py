@@ -23,6 +23,10 @@ class AiohttpClientSessionMixin():
         if self.client_owned and not self.client.closed:
             yield from self.client.close()
 
+
+DEFAULT_CHUNK_SIZE = 1024*10*16
+
+
 class URLReader(Source, AiohttpClientSessionMixin):
     def __init__(self, url, client=None):
         super(URLReader, self).__init__()
@@ -32,8 +36,11 @@ class URLReader(Source, AiohttpClientSessionMixin):
 
     @asyncio.coroutine
     def read(self, count=-1):
+        if self._eof:
+            return b''
         if self.response is None:
             self.response = yield from self.client.get(self.url)
+        if count == -1: count = DEFAULT_CHUNK_SIZE
         buf = (yield from self.response.content.read(count))
         if len(buf) == 0:
             yield from self.close()
@@ -41,6 +48,7 @@ class URLReader(Source, AiohttpClientSessionMixin):
 
     @asyncio.coroutine
     def close(self):
+        self._eof = True
         if not self.response is None:
             yield from self.response.release()
             self.response = None

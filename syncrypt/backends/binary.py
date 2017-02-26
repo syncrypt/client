@@ -572,12 +572,12 @@ class BinaryStorageConnection(object):
         yield from bundle.load_key()
 
         if url:
-            stream_source = URLReader(url) >> BufferedFree()
+            stream_source = URLReader(url)
         else:
-            stream_source = StreamReader(self.reader)
+            stream_source = StreamReader(self.reader) >> Limit(file_size)
 
         hash_ok = yield from bundle.write_encrypted_stream(
-                stream_source >> Limit(file_size),
+                stream_source,
                 assert_hash=content_hash
             )
 

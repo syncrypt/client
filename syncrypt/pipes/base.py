@@ -174,7 +174,7 @@ class Limit(Pipe):
             return b''
         read_bytes = max(count, left)
         buf = yield from self.input.read(read_bytes)
-        if len(buf) < read_bytes:
+        if len(buf) == 0:
             self._eof = True
         self.bytes_read += len(buf)
         return buf
