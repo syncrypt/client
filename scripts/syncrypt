@@ -14,7 +14,7 @@ from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
 
 COPYRIGHT = '''Syncrypt v{version}
-(c) 2016 Syncrypt UG | https://syncrypt.space
+(c) 2016-2017 Syncrypt UG | https://syncrypt.space
 Licensed under the GPLv3 | Source: https://github.com/syncrypt/client'''\
     .format(version=__version__)
 
