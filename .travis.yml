@@ -27,9 +27,11 @@ install: |
       pyenv global 3.5.2;
       $(pyenv root)/shims/python -m venv venv;
       source venv/bin/activate;
+      pip install setuptools==19.2
       pip install -e '.[dist]'
       pip install -e '.[test]'
   else
+      pip install setuptools==19.2
       pip install -e '.[dist]'
       pip install -e '.[test]'
   fi
