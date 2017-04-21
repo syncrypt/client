@@ -13,6 +13,9 @@ from syncrypt.config import AppConfig, Config
 from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
 
+if getattr(sys, 'frozen', False):
+    os.environ['SSL_CERT_FILE'] = os.path.join(sys._MEIPASS, 'lib', 'cert.pem')
+
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
 parser = argparse.ArgumentParser(description='Run Syncrypt client')
