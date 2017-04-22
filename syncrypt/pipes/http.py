@@ -1,22 +1,30 @@
+import asyncio
 import logging
-import sys
 import os.path
 import shutil
-import aiohttp
+import ssl
+import sys
 
 import aiofiles
-import asyncio
+import aiohttp
+import certifi
 
-from .base import Pipe, Sink, Source, Limit, BufferedFree
+from .base import BufferedFree, Limit, Pipe, Sink, Source
 
 logger = logging.getLogger(__name__)
 
 class AiohttpClientSessionMixin():
     def init_client(self, client, headers={}):
+        sslcontext = ssl.create_default_context(cafile=certifi.where())
+        conn = aiohttp.TCPConnector(ssl_context=sslcontext)
         if client:
             self.client_owned, self.client = False, client
         else:
-            self.client_owned, self.client = True, aiohttp.ClientSession(headers=headers, skip_auto_headers=["Content-Type", "User-Agent"])
+            self.client_owned, self.client = True, aiohttp.ClientSession(
+                    connector=conn,
+                    headers=headers,
+                    skip_auto_headers=["Content-Type", "User-Agent"]
+                    )
 
     @asyncio.coroutine
     def close_client(self):
