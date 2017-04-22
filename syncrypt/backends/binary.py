@@ -1,23 +1,24 @@
+import asyncio
 import logging
+import math
+import os.path
 import re
 import ssl
-import sys
 import struct
-import os.path
+import sys
 import time
-import math
 from getpass import getpass
 
-import asyncio
 from erlastic import Atom
+
+import certifi
 import syncrypt
 from syncrypt import __project__, __version__
-from syncrypt.pipes import (Limit, Once, StreamReader, StreamWriter, URLReader,
-                        URLWriter, ChunkedURLWriter, BufferedFree)
+from syncrypt.exceptions import VaultNotInitialized
+from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once,
+                            StreamReader, StreamWriter, URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
-from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.ca import ROOT_CA_DATA
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -130,7 +131,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def connect(self):
         if self.storage.ssl:
-            sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cadata=ROOT_CA_DATA)
+            sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
             if not self.storage.ssl_verify or self.storage.host in ('127.0.0.1', 'localhost'):
                 logger.warn('Continuing without verifying SSL cert')
                 sc.check_hostname = False

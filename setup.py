@@ -120,6 +120,7 @@ setup(
         'hachiko',
         'python-snappy',
         'erlastic',
+        'certifi',
         'tzlocal',
         'iso8601'
     ],
