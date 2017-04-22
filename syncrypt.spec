@@ -1,19 +1,13 @@
 # -*- mode: python -*-
 
 import os.path
-from PyInstaller.utils.hooks import exec_statement
-
-cert_datas = exec_statement("""
-    import ssl
-    print(ssl.get_default_verify_paths().cafile)""").strip().split()
-cert_datas = [(f, 'lib') for f in cert_datas]
 
 block_cipher = None
 
 a = Analysis(['scripts/syncrypt'],
              pathex=[os.path.abspath('.')],
              binaries=None,
-             datas=cert_datas,
+             datas=None,
              hiddenimports=[
                  'six',
                  'packaging',
@@ -43,7 +37,7 @@ exe = EXE(pyz,
 b = Analysis(['scripts/syncrypt_daemon'],
              pathex=[os.path.abspath('.')],
              binaries=None,
-             datas=cert_datas,
+             datas=None,
              hiddenimports=[
                  'six',
                  'packaging',
