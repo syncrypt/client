@@ -114,6 +114,7 @@ setup(
         'pycrypto',
         'aiofiles',
         'aiohttp',
+        'aiohttp_cors',
         'umsgpack',
         'msgpack-python>=0.4.0',
         'colorlog',

@@ -14,10 +14,8 @@ def generate_api_auth_token():
 
 def require_auth_token(f):
     def inner(resource, request, *args, **kwargs):
-        req_token = request.headers.get(AUTH_TOKEN_HEADER, '')
-        auth_token = resource.app.config.get('api.auth_token')
-
-        if not auth_token or (req_token == auth_token):
+        origin = request.headers.get('Origin', None)
+        if origin is None or origin == 'http://localhost':
             return f(resource, request, *args, **kwargs)
         else:
             raise aiohttp.web.HTTPForbidden()

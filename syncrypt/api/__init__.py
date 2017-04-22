@@ -1,17 +1,19 @@
+import asyncio
 import json
 import logging
 
-import asyncio
+import aiohttp_cors
 from aiohttp import web
+
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.base import StorageBackendInvalidAuth
 
-from .resources import (BundleResource, JSONResponse, VaultResource,
-                        VaultUserResource, UserResource, FlyingVaultResource)
-from .auth import generate_api_auth_token, require_auth_token
 from ..utils.updates import is_update_available
+from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
+from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
+                        UserResource, VaultResource, VaultUserResource)
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +208,17 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
         self.web_app.router.add_route('GET', '/v1/push', self.get_push)
         self.web_app.router.add_route('GET', '/v1/config', self.get_config)
+
+        cors = aiohttp_cors.setup(self.web_app, defaults={
+            "*": aiohttp_cors.ResourceOptions(allow_credentials=False),
+            "http://localhost": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers='*', allow_headers='*'
+            ),
+        })
+
+        for route in list(self.web_app.router.routes()):
+            cors.add(route)
 
         self.handler = self.web_app.make_handler()
         self.server = yield from loop.create_server(self.handler,
