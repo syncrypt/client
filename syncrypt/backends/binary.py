@@ -615,6 +615,13 @@ class BinaryStorageConnection(object):
 
         return map(transform_key, keys)
 
+
+    @asyncio.coroutine
+    def list_vault_user_key_fingerprints(self):
+        yield from self.write_term('list_vault_user_key_fingerprints')
+        fingerprints = [fp.decode() for fp in (yield from self.read_response())]
+        return fingerprints
+
     @asyncio.coroutine
     def upload_identity(self, identity, description=""):
         logger.debug('Uploading my public key to server')

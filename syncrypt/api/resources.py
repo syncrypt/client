@@ -113,6 +113,11 @@ class Resource(object):
 class VaultResource(Resource):
     resource_name = 'vault'
 
+    def add_routes(self, router):
+        super(VaultResource, self).add_routes(router)
+        opts = {'version': self.version, 'name': self.resource_name}
+        router.add_route('GET', '/{version}/{name}/{{id}}/fingerprints/'.format(**opts), self.dispatch_fingerprints)
+
     def get_id(self, v):
         return str(v.config.get('vault.id'))
 
@@ -172,6 +177,14 @@ class VaultResource(Resource):
 
         yield from backend.close()
         return JSONResponse([self.dehydrate(obj, v_info.get(obj.config.get('vault.id'), {})) for obj in objs])
+
+
+    @asyncio.coroutine
+    def dispatch_fingerprints(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+        fingerprint_list = yield from vault.backend.list_vault_user_key_fingerprints()
+        return JSONResponse(fingerprint_list)
 
     @asyncio.coroutine
     def post_obj(self, request):
