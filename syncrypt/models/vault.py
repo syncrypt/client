@@ -46,7 +46,8 @@ class Vault(MetadataHolder):
 
     def __get_metadata(self):
         return {
-            'name': self.config.vault.get('name', '')
+            'name': self.config.vault.get('name', ''),
+            'icon': self.config.vault.get('icon', None)
         }
 
     def __set_metadata(self, metadata):
@@ -54,6 +55,10 @@ class Vault(MetadataHolder):
             logger.debug('Setting vault\'s name to "%s"', metadata['name'])
             with self.config.update_context():
                 self.config.vault['name'] = metadata['name']
+        if 'icon' in metadata:
+            logger.debug('Setting vault icon')
+            with self.config.update_context():
+                self.config.vault['icon'] = metadata['icon']
 
     metadata = property(__get_metadata, __set_metadata)
 
