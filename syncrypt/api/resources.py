@@ -133,12 +133,23 @@ class VaultResource(Resource):
         if isinstance(modification_date, bytes):
             modification_date = modification_date.decode()
 
+        # Compile some information about the underlying crypto system(s)
+        crypt_info = {
+            'aes_key_len': v.config.aes_key_len,
+            'rsa_key_len': v.config.rsa_key_len,
+            'key_algo': 'rsa',
+            'transfer_algo': 'aes',
+            'hash_algo': v.config.hash_algo,
+            'fingerprint': v.identity.get_fingerprint() if v.identity else None
+        }
+
         dct.update(
             size=vault_size,
             user_count=vault_info.get('user_count', 0),
             file_count=vault_info.get('file_count', 0),
             revision_count=vault_info.get('revision_count', 0),
-            modification_date=modification_date
+            modification_date=modification_date,
+            crypt_info=crypt_info
         )
         return dct
 
