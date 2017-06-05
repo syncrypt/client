@@ -159,8 +159,7 @@ class SyncryptAPI():
     @require_auth_token
     def get_user_info(self, request):
         '''
-        Logging out the user simply works by removing the global auth
-        token.
+        Return information about the currently logged in user (First name, Last name, ...)
         '''
         backend = yield from self.app.open_backend()
         user_info = yield from backend.user_info()
