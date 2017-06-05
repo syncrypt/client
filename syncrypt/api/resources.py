@@ -258,6 +258,8 @@ class FlyingVaultResource(Resource):
         for (vault, user_vault_key, encrypted_metadata) in \
                 (yield from backend.list_vaults_by_fingerprint(my_fingerprint)):
 
+            yield from asyncio.sleep(0.001)
+
             vault_id = vault['id'].decode('utf-8')
 
             logger.debug("Received vault: %s (with%s metadata)", vault_id, '' if encrypted_metadata else 'out')
