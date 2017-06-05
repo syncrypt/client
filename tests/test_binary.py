@@ -11,6 +11,7 @@ import asynctest
 from syncrypt.models import Bundle, Vault
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
+from syncrypt.backends.binary import get_manager_instance
 from tests.base import VaultTestCase
 
 __all__ = ('BinaryServerTests',)
@@ -205,7 +206,7 @@ class BinaryServerTests(VaultTestCase):
         yield from app.get_remote_size_for_vault(vault)
         yield from app.get_remote_size_for_vault(vault)
 
-        self.assertEqual(vault.backend.manager.get_active_connection_count(), 1)
+        self.assertEqual(get_manager_instance().get_active_connection_count(), 1)
 
 if __name__ == '__main__':
     from syncrypt.utils.logging import setup_logging

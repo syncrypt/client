@@ -159,13 +159,13 @@ class SyncryptApp(object):
             global_auth = self.config.remote.get('auth')
             if global_auth:
                 logger.debug('Using user auth token to initialize vault.')
-                vault.set_global_auth(global_auth)
+                vault.backend.global_auth = global_auth
             try:
                 yield from vault.backend.init()
             except StorageBackendInvalidAuth:
-                vault.set_global_auth(None)
+                vault.backend.global_auth = None
                 username, password = yield from self.auth_provider.get_auth(vault.backend)
-                vault.set_auth(username, password)
+                vault.backend.set_auth(username, password)
                 try:
                     yield from vault.backend.init()
                 except StorageBackendInvalidAuth:
@@ -484,15 +484,20 @@ class SyncryptApp(object):
         backend = cfg.backend_cls(**cfg.backend_kwargs)
         for try_num in range(num_tries):
             if always_ask_for_creds or try_num >= 1:
+                if not auth_provider:
+                    raise ValueError('Can not login, do not have auth provider')
                 username, password = yield from auth_provider.get_auth(backend)
                 backend.username = username
                 backend.password = password
                 backend.auth = None
             try:
+                if not backend.global_auth:
+                    backend.global_auth = cfg.get('remote.auth')
                 yield from backend.open()
-                if backend.auth:
+                if backend.global_auth and backend.global_auth != cfg.get('remote.auth'):
+                    logger.info('Updating global auth token')
                     with cfg.update_context():
-                        cfg.update('remote', {'auth': backend.auth})
+                        cfg.update('remote', {'auth': backend.global_auth})
                 return backend
             except StorageBackendInvalidAuth:
                 logger.error('Invalid login')
@@ -577,8 +582,8 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def login(self):
+        logger.info('AAA')
         backend = yield from self.open_backend(always_ask_for_creds=True)
-        logger.info('Successfully logged in and stored auth token.')
         yield from backend.close()
         yield from self.upload_identity()
 

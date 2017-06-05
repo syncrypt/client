@@ -66,8 +66,9 @@ def rewrite_atoms_dict(bert_dict):
     return {str(k): bert_val(v) for (k, v) in bert_dict.items()}
 
 class BinaryStorageConnection(object):
-    def __init__(self, storage):
-        self.storage = storage
+    def __init__(self, manager):
+        self.manager = manager
+        self.vault = None
         self.available = asyncio.Event()
         self.available.clear()
         self.connected = False
@@ -75,10 +76,21 @@ class BinaryStorageConnection(object):
         self.writer = None
         self.reader = None
 
+    @property
+    def state(self):
+        if self.connected:
+            if self.available.is_set():
+                return 'idle'
+            else:
+                return 'busy'
+        elif self.connecting:
+            return 'opening'
+        else:
+            return 'closed'
+
     def __repr__(self):
-        return "<Slot %s%s>" % (
-                'connecting' if self.connecting else ('connected' if self.connected else 'disconnected'),
-                ' available' if self.available.is_set() else '')
+        return "<%s%s>" % (self.state,
+                           self.vault and ' v={0}'.format(str(self.vault.config.id)[:4]) or '')
 
     @asyncio.coroutine
     def read_term(self, assert_ok=True):
@@ -129,55 +141,61 @@ class BinaryStorageConnection(object):
         yield from self.writer.drain()
 
     @asyncio.coroutine
-    def connect(self):
-        if self.storage.ssl:
-            sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
-            if not self.storage.ssl_verify or self.storage.host in ('127.0.0.1', 'localhost'):
-                logger.warn('Continuing without verifying SSL cert')
-                sc.check_hostname = False
-                sc.verify_mode = ssl.CERT_NONE
-        else:
-            sc = None
+    def connect(self, vault=None):
 
-        logger.debug('Connecting to server %s:%d ssl=%s...', self.storage.host,
-                int(self.storage.port), bool(sc))
+        if not self.connected:
+            if self.manager.ssl:
+                sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
+                if not self.manager.ssl_verify or self.manager.host in ('127.0.0.1', 'localhost'):
+                    logger.warn('Continuing without verifying SSL cert')
+                    sc.check_hostname = False
+                    sc.verify_mode = ssl.CERT_NONE
+            else:
+                sc = None
 
-        self.reader, self.writer = \
-                yield from asyncio.open_connection(self.storage.host,
-                                                   int(self.storage.port), ssl=sc)
+            logger.debug('Connecting to server %s:%d ssl=%s...', self.manager.host,
+                    int(self.manager.port), bool(sc))
 
-        version_info = yield from self.read_term()
-        self.server_version = version_info[1].decode()
+            self.reader, self.writer = \
+                    yield from asyncio.open_connection(self.manager.host,
+                                                       int(self.manager.port), ssl=sc)
 
-        client_version = '%s' % __version__
-        client_ident = (__project__, client_version)
-        logger.debug('Identifying to server as %s', client_ident)
-        yield from self.write_term('hello', client_ident)
+            version_info = yield from self.read_term()
+            self.server_version = version_info[1].decode()
 
-        yield from self.read_term() # expect OK
+            client_version = '%s' % __version__
+            client_ident = (__project__, client_version)
+            logger.debug('Identifying to server as %s', client_ident)
+            yield from self.write_term('hello', client_ident)
 
-        logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
+            yield from self.read_term() # expect OK
 
-        if self.storage.auth:
-            yield from self.write_term('auth',
-                self.storage.auth)
+            logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
+
+        self.vault = vault
+        if vault:
+            logger.debug('Login to vault %s', vault.config.id)
+
+        auth = self.vault and self.vault.config.get('remote.auth')
+
+        if auth:
+            yield from self.write_term('auth', auth)
             response = yield from self.read_term(assert_ok=False)
             if response[0] != Atom('ok'):
                 yield from self.disconnect()
                 raise StorageBackendInvalidAuth(response)
         else:
             # we don't have auth token yet
-            if not self.storage.global_auth and (self.storage.username is None or self.storage.username == ''):
+            if not self.manager.global_auth and (self.manager.username is None or self.manager.username == ''):
                 yield from self.disconnect()
                 raise StorageBackendInvalidAuth('No username/email or auth token provided')
 
-            vault = self.storage.vault
             if vault is None:
-                if self.storage.global_auth:
-                    yield from self.write_term('auth', self.storage.global_auth)
+                if self.manager.global_auth:
+                    yield from self.write_term('auth', self.manager.global_auth)
                 else:
-                    yield from self.write_term('login', self.storage.username,
-                            self.storage.password)
+                    yield from self.write_term('login', self.manager.username,
+                            self.manager.password)
 
                 response = yield from self.read_term(assert_ok=False)
 
@@ -185,16 +203,20 @@ class BinaryStorageConnection(object):
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(response)
 
-                self.storage.auth = response[1].decode()
+                if len(response) == 2:
+                    self.manager.global_auth = response[1].decode()
 
             elif vault.config.id is None:
-                if self.storage.global_auth:
-                    yield from self.write_term('auth', self.storage.global_auth)
+                if self.manager.global_auth:
+                    yield from self.write_term('auth', self.manager.global_auth)
                 else:
-                    yield from self.write_term('login', self.storage.username,
-                            self.storage.password)
+                    yield from self.write_term('login', self.manager.username,
+                            self.manager.password)
 
                 response = yield from self.read_term(assert_ok=False)
+
+                if len(response) == 2:
+                    self.manager.global_auth = response[1].decode()
 
                 if response[0] != Atom('ok'):
                     yield from self.disconnect()
@@ -207,27 +229,31 @@ class BinaryStorageConnection(object):
                 response = yield from self.read_term(assert_ok=False)
 
                 if response[0] == Atom('ok'):
-                    self.storage.auth = response[2].decode(self.storage.vault.config.encoding)
+                    auth = response[2].decode(self.vault.config.encoding)
                     logger.info('Created vault %s', response[1])
                     with vault.config.update_context():
                         vault.config.update('remote', {
-                            'auth': self.storage.auth
+                            'auth': auth
                         })
                         vault.config.update('vault', {
-                            'id': response[1].decode(self.storage.vault.config.encoding)
+                            'id': response[1].decode(self.vault.config.encoding)
                         })
                 else:
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(response)
 
             else:
-                yield from self.write_term('vault_login', self.storage.username,
-                        self.storage.password, vault.config.id)
+                yield from self.write_term('vault_login', self.manager.username,
+                        self.manager.password, vault.config.id)
 
                 login_response = yield from self.read_term(assert_ok=False)
 
                 if login_response[0] == Atom('ok') and login_response[1] != '':
-                    self.storage.auth = login_response[1].decode(self.storage.vault.config.encoding)
+                    auth = login_response[1].decode(self.vault.config.encoding)
+                    with vault.config.update_context():
+                        vault.config.update('remote', {
+                            'auth': auth
+                        })
                 else:
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(login_response[1])
@@ -238,6 +264,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def disconnect(self):
+        logger.debug('Disconnecting %s', self)
         try:
             if self.writer:
                 yield from self.write_term('disconnect')
@@ -363,12 +390,12 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response)
 
         # if all went well, store revision_id in vault
-        self.storage.vault.update_revision(server_info['id'])
+        self.vault.update_revision(server_info['id'])
 
 
     @asyncio.coroutine
     def vault_metadata(self):
-        logger.debug('Getting metadata for %s', self.storage.vault)
+        logger.debug('Getting metadata for %s', self.vault)
 
         yield from self.write_term('vault_metadata')
 
@@ -380,9 +407,9 @@ class BinaryStorageConnection(object):
             logger.debug('Metadata size is %d bytes', len(metadata))
 
         if not metadata is None:
-            yield from self.storage.vault.write_encrypted_metadata(Once(metadata))
+            yield from self.vault.write_encrypted_metadata(Once(metadata))
         else:
-            logger.warn('Empty metadata for %s', self.storage.vault)
+            logger.warn('Empty metadata for %s', self.vault)
 
     @asyncio.coroutine
     def user_info(self):
@@ -401,10 +428,10 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def set_vault_metadata(self):
 
-        vault = self.storage.vault
+        vault = self.vault
         metadata = yield from vault.encrypted_metadata_reader().readall()
 
-        logger.debug('Setting metadata for %s (%d bytes)', self.storage.vault,
+        logger.debug('Setting metadata for %s (%d bytes)', self.vault,
                 len(metadata))
 
         # upload metadata
@@ -416,7 +443,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def changes(self, since_rev, to_rev, queue, verbose=False):
         logger.info('Getting a list of changes for %s (%s to %s)',
-                self.storage.vault, since_rev or 'earliest', to_rev or 'latest')
+                self.vault, since_rev or 'earliest', to_rev or 'latest')
 
         if verbose:
             yield from self.write_term('changes_with_email', since_rev, to_rev)
@@ -489,7 +516,7 @@ class BinaryStorageConnection(object):
     @asyncio.coroutine
     def list_files(self, queue):
 
-        logger.info('Getting a list of files for vault %s', self.storage.vault)
+        logger.info('Getting a list of files for vault %s', self.vault)
 
         yield from self.write_term('list_files')
 
@@ -520,11 +547,11 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def get_user_vault_key(self, fingerprint, vault_id):
-        if self.storage.auth:
-            yield from self.write_term('vault_login', self.storage.auth, vault_id)
+        if self.manager.global_auth:
+            yield from self.write_term('vault_login', self.manager.global_auth, vault_id)
         else:
-            yield from self.write_term('vault_login', self.storage.username,
-                    self.storage.password, vault_id)
+            yield from self.write_term('vault_login', self.manager.username,
+                    self.manager.password, vault_id)
         auth_token = yield from self.read_response()
         auth_token = auth_token.decode()
         yield from self.write_term('get_user_vault_key', fingerprint, vault_id)
@@ -584,7 +611,7 @@ class BinaryStorageConnection(object):
 
         if not hash_ok:
             # alert server of hash mismatch
-            yield from self.write_term('invalid_content_hash', bundle.store_hash, self.storage.vault.revision)
+            yield from self.write_term('invalid_content_hash', bundle.store_hash, self.vault.revision)
 
 
     @asyncio.coroutine
@@ -649,7 +676,7 @@ class BinaryStorageConnection(object):
 
     @asyncio.coroutine
     def delete_vault(self):
-        vault = self.storage.vault
+        vault = self.vault
         logger.info('Wiping vault: %s', vault.config.id)
 
         # download key and file
@@ -673,18 +700,39 @@ class BinaryStorageConnection(object):
 
 class BinaryStorageManager(object):
 
-    def __init__(self, backend, concurrency):
-        self.backend = backend
-        self.concurrency = concurrency
+    def __init__(self):
+        self.host = None
+        self.port = None
+        self.ssl = None
+        self.ssl_verify = None
+
+        # Global user auth information
+        self.global_auth = None
+        self.username = None
+        self.password = None
+        self.concurrency = None
+
         self._monitor_task = None
-        self.slots = [BinaryStorageConnection(backend) for i in range(concurrency)]
+        self.slots = None
+        self.loop = None
+
+    def init(self):
+        if self.loop is not None and self.loop != asyncio.get_event_loop():
+            if self.loop.is_running():
+                raise ValueError('manager has been initialized with a differnt loop which is still running')
+            self.slots = []
+            self.loop = None
+        self.loop = asyncio.get_event_loop()
+        if not self.slots:
+            logger.info('Registering connection slots for id=%s', id(asyncio.get_event_loop()))
+            self.slots = [BinaryStorageConnection(self) for i in range(self.concurrency)]
 
     def get_active_connection_count(self):
         return len([conn for conn in self.slots if conn.connected or conn.connecting])
 
-
     @asyncio.coroutine
     def close(self):
+        logger.info('Closing backend manager')
         logged = False
         for conn in self.slots:
             if conn.connected or conn.connecting:
@@ -694,6 +742,8 @@ class BinaryStorageManager(object):
                 yield from conn.disconnect()
         if not self._monitor_task is None:
             self._monitor_task.cancel()
+        self.slots = []
+        self.loop = None
 
     @asyncio.coroutine
     def monitor_connections(self):
@@ -701,14 +751,16 @@ class BinaryStorageManager(object):
         Monitor and close open and non-busy connections one-by-one.
         '''
         while True:
-            yield from asyncio.sleep(20.0)
+            yield from asyncio.sleep(30.0)
+            logger.debug('Slots: %s', self.slots)
             for conn in self.slots:
                 if conn.connected and conn.available.is_set():
+                    logger.debug('Closing due to idleness: %s', conn)
                     yield from conn.disconnect()
                     break
 
     @asyncio.coroutine
-    def acquire_connection(self):
+    def acquire_connection(self, vault):
         'return an available connection or block until one is free'
         if self._monitor_task is None:
             self._monitor_task = \
@@ -716,69 +768,113 @@ class BinaryStorageManager(object):
 
         for conn in self.slots:
             if conn.connected and conn.available.is_set():
-                logger.debug('Found an available connection!')
+                conn.available.clear()
+                if conn.vault != vault:
+                    logger.debug('Found an available connection, but we need to switch the vault to %s', vault)
+                    conn.connecting = True
+                    yield from conn.connect(vault)
+                elif vault:
+                    logger.debug('Found an available connection for %s', vault)
+                else:
+                    logger.debug('Found an available connection')
                 conn.available.clear()
                 return conn
+
         # trigger at most one connection
         for conn in self.slots:
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
-                yield from conn.connect()
+                yield from conn.connect(vault)
                 break
-
-        #logger.debug("Wait for empty slot in: %s", self.slots)
 
         # wait until one slot is available
         done, running = yield from \
                 asyncio.wait([conn.available.wait() for conn in self.slots],
                             return_when=asyncio.FIRST_COMPLETED)
 
-        for f in running: f.cancel()
+        for f in running:
+            f.cancel()
 
         # find this slot
         for conn in self.slots:
             if conn.connected and conn.available.is_set():
+                logger.debug("Choosing %s", conn)
                 conn.available.clear()
                 return conn
 
+        logger.debug("Wait for empty slot in: %s", self.slots)
+
+        yield from asyncio.sleep(1.0)
+
         # if we haven't found one, try again
-        return (yield from self.acquire_connection())
+        return (yield from self.acquire_connection(vault))
+
+
+def get_manager_instance():
+    if not hasattr(get_manager_instance, '_manager'):
+        get_manager_instance._manager = BinaryStorageManager()
+    return get_manager_instance._manager
+
 
 class BinaryStorageBackend(StorageBackend):
 
     def __init__(self, vault=None, auth=None, host=None, port=None,
             concurrency=None, username=None, password=None, ssl=True,
             ssl_verify=True):
-        self.host = host
-        self.port = port
-        self.ssl = ssl
-        self.ssl_verify = ssl_verify
-        self.vault = vault
 
-        assert isinstance(self.ssl, bool)
-        assert isinstance(self.ssl_verify, bool)
+        assert isinstance(ssl, bool)
+        assert isinstance(ssl_verify, bool)
 
-        # Vault specific login information
-        self.auth = auth
+        manager = get_manager_instance()
+
+        # Global connection settings
+        manager.host = host
+        manager.port = port
+        manager.ssl = ssl
+        manager.ssl_verify = ssl_verify
 
         # Global user auth information
-        self.global_auth = None
-        self.username = username
-        self.password = password
+        if not manager.username: manager.username = username
+        if not manager.password: manager.password = password
+        manager.concurrency = int(concurrency)
 
-        self.buf_size = 10 * 1024
-        self.concurrency = int(concurrency)
-        self.manager = BinaryStorageManager(self, self.concurrency)
+        manager.init()
+
+        # Vault specific login information
+        self.vault = vault
+        self.auth = auth
+
         super(BinaryStorageBackend, self).__init__(vault)
+
+    @property
+    def global_auth(self):
+        return get_manager_instance().global_auth
+
+    @global_auth.setter
+    def global_auth(self, value):
+        manager = get_manager_instance()
+        if not manager.global_auth or value is None:
+            logger.warning('Setting global_auth to %s', value)
+            manager.global_auth = value
+
+    def set_auth(self, username, password):
+        manager = get_manager_instance()
+        manager.username = username
+        manager.password = password
+
+    @asyncio.coroutine
+    def _acquire_connection(self):
+        conn = yield from get_manager_instance().acquire_connection(self.vault)
+        return conn
 
     @asyncio.coroutine
     def init(self):
         self.auth = None
         try:
-            with (yield from self.manager.acquire_connection()) as conn:
+            with (yield from self._acquire_connection()) as conn:
                 # after successful login, write back config
-                with self.vault.config.update_context():
-                    self.vault.config.update('remote', {'auth': self.auth})
+                #with self.vault.config.update_context():
+                #    self.vault.config.update('remote', {'auth': self.auth})
                 self.invalid_auth = False
                 logger.info('Successfully logged in and stored auth token')
         except StorageBackendInvalidAuth:
@@ -789,22 +885,22 @@ class BinaryStorageBackend(StorageBackend):
     def open(self):
         if self.vault and not self.vault.config.get('vault.id'):
             raise VaultNotInitialized()
-        if self.manager.get_active_connection_count() == 0:
-            with (yield from self.manager.acquire_connection()) as conn:
+        if get_manager_instance().get_active_connection_count() == 0:
+            with (yield from self._acquire_connection()) as conn:
                 self.invalid_auth = False
                 version = yield from conn.version()
                 logger.debug('Logged in to server (version %s)', version)
 
     @asyncio.coroutine
     def vault_size(self, vault):
-        with (yield from self.manager.acquire_connection()) as conn:
+        with (yield from self._acquire_connection()) as conn:
             size = yield from conn.vault_size(vault)
             logger.debug('Vault size is: %s', format_size(size))
             return size
 
     @asyncio.coroutine
     def stat(self, bundle):
-        with (yield from self.manager.acquire_connection()) as conn:
+        with (yield from self._acquire_connection()) as conn:
             bundle.remote_crypt_hash = None
             stat_info = yield from conn.stat(bundle)
             if stat_info and 'content_hash' in stat_info:
@@ -812,7 +908,7 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def list_files(self):
-        conn = yield from self.manager.acquire_connection()
+        conn = yield from self._acquire_connection()
         queue = asyncio.Queue()
         task = asyncio.get_event_loop().create_task(conn.list_files(queue))
 
@@ -824,7 +920,7 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def changes(self, since_rev, to_rev, verbose=False):
-        conn = yield from self.manager.acquire_connection()
+        conn = yield from self._acquire_connection()
         queue = asyncio.Queue()
         task = asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
 
@@ -836,12 +932,12 @@ class BinaryStorageBackend(StorageBackend):
 
     @asyncio.coroutine
     def upload(self, bundle):
-        with (yield from self.manager.acquire_connection()) as conn:
+        with (yield from self._acquire_connection()) as conn:
             yield from conn.upload(bundle)
 
     @asyncio.coroutine
     def download(self, bundle):
-        with (yield from self.manager.acquire_connection()) as conn:
+        with (yield from self._acquire_connection()) as conn:
             try:
                 yield from conn.download(bundle)
             except UnsuccessfulResponse:
@@ -850,11 +946,13 @@ class BinaryStorageBackend(StorageBackend):
     def __getattr__(self, name):
         @asyncio.coroutine
         def myco(*args, **kwargs):
-            with (yield from self.manager.acquire_connection()) as conn:
+            with (yield from self._acquire_connection()) as conn:
                 result = yield from getattr(conn, name)(*args, **kwargs)
             return result
         return myco
 
     @asyncio.coroutine
     def close(self):
-        yield from self.manager.close()
+        pass
+        #yield from manager.close()
+
