@@ -81,7 +81,7 @@ class SyncryptAPI():
             return JSONResponse({
                 'status': 'error',
                 'text': 'Invalid authentification'
-            }, status=500)
+            }, status=401)
 
     @asyncio.coroutine
     @require_auth_token
