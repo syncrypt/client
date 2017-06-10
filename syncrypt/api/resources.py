@@ -228,24 +228,25 @@ class VaultResource(Resource):
 
     @asyncio.coroutine
     def post_obj(self, request):
+
+        @asyncio.coroutine
+        def pull_and_watch(vault):
+            yield from self.app.pull_vault(vault)
+            yield from self.app.watch(vault)
+
         content = yield from request.content.read()
         request_dict = json.loads(content.decode())
+
         if 'id' in request_dict:
             vault = yield from self.app.clone(request_dict['id'], request_dict['folder'])
-
-            @asyncio.coroutine
-            def pull_and_watch(vault):
-                yield from self.app.pull_vault(vault)
-                yield from self.app.watch(vault)
+            asyncio.get_event_loop().create_task(pull_and_watch(vault))
+        elif 'import_package' in request_dict:
+            vault = yield from self.app.import_package(
+                    request_dict['import_package'], request_dict['folder'])
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
             yield from self.app.open_or_init(vault)
-
-            @asyncio.coroutine
-            def push_and_watch(vault):
-                yield from self.app.push_vault(vault)
-                yield from self.app.watch(vault)
             asyncio.get_event_loop().create_task(push_and_watch(vault))
         return vault
 

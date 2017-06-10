@@ -555,9 +555,12 @@ class SyncryptApp(object):
 
         logger.info('Imported vault into "%s"', target_folder)
 
+        vault = Vault(target_folder)
+        yield from self.open_or_init(vault)
+
         if pull_vault:
-            vault = Vault(target_folder)
             yield from self.pull_vault(vault)
+        return vault
 
     @asyncio.coroutine
     def export_package(self, filename):
