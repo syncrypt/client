@@ -96,9 +96,11 @@ class MultipleVaultCmd(SyncryptCmd):
             self.vault_dirs = self.config.directory
         super(MultipleVaultCmd, self).setup()
 
+
 class NoVaultCmd(SyncryptCmd):
     '''command that operates without a vault'''
     pass
+
 
 class Clone(NoVaultCmd):
     command = 'clone'
@@ -128,6 +130,7 @@ class Clone(NoVaultCmd):
         if vault:
             self.loop.run_until_complete(self.app.pull_vault(vault))
 
+
 class Pull(MultipleVaultCmd):
     command = 'pull'
     description = 'pull all files from the latest revision'
@@ -140,6 +143,7 @@ class Pull(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.pull(full=self.config.full))
 
+
 class AddUser(SingleVaultCmd):
     command = 'add-user'
     description = 'add another user to this vault'
@@ -150,6 +154,7 @@ class AddUser(SingleVaultCmd):
 
     def run(self):
         self.loop.run_until_complete(self.app.add_user(self.config.email))
+
 
 class DeleteVault(MultipleVaultCmd):
     command = 'delete-vault'
@@ -211,6 +216,7 @@ class Push(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.push())
 
+
 class Watch(MultipleVaultCmd):
     command = 'watch'
     description = 'watch directory for changes'
@@ -218,6 +224,7 @@ class Watch(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.start())
         self.loop.run_forever()
+
 
 class Init(SingleVaultCmd):
     command = 'init'
@@ -233,12 +240,14 @@ class Init(SingleVaultCmd):
         self.loop.run_until_complete(self.app.init(host=self.config.host,
             upload_vault_key=self.config.upload_vault_key))
 
+
 class Info(MultipleVaultCmd):
     command = 'info'
     description = 'show vault information'
 
     def run(self):
         self.loop.run_until_complete(self.app.info())
+
 
 class ConfigSet(SingleVaultCmd):
     command = 'set'
@@ -253,6 +262,7 @@ class ConfigSet(SingleVaultCmd):
         self.loop.run_until_complete(
             self.app.set(self.config.setting, self.config.value)
         )
+
 
 class ConfigUnset(SingleVaultCmd):
     command = 'unset'

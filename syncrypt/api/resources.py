@@ -111,6 +111,7 @@ class Resource(object):
         return "/{version}/{name}/{id}/".format(version=self.version,
                 name=self.resource_name, id=self.get_id(obj))
 
+
 class VaultResource(Resource):
     resource_name = 'vault'
 
@@ -260,6 +261,7 @@ class VaultResource(Resource):
             yield from vault.backend.open()
             yield from vault.backend.set_vault_metadata()
         return vault
+
 
 class FlyingVaultResource(Resource):
     """
