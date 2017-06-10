@@ -309,6 +309,22 @@ class Export(SingleVaultCmd):
         self.loop.run_until_complete(self.app.export_package(self.config.filename))
 
 
+class Import(SingleVaultCmd):
+    command = 'import'
+    description = 'import vault package that has previously been exported'
+
+    def configure_parser(self, parser):
+        super(Import, self).configure_parser(parser)
+        parser.add_argument(dest='filename', help='filename of the package')
+        parser.add_argument(dest='target', help='vault folder to create')
+
+    def run(self):
+        self.loop.run_until_complete(
+                self.app.import_package(
+                    self.config.filename,
+                    self.config.target))
+
+
 class CheckUpdate(NoVaultCmd):
     command = 'check-update'
     description = 'compare the installed version to the latest one'
@@ -319,7 +335,7 @@ class CheckUpdate(NoVaultCmd):
 
 COMMANDS = [Login(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
         Watch(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(),
-        ConfigSet(), ConfigUnset(), Export(), Keys()]
+        ConfigSet(), ConfigUnset(), Export(), Import(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

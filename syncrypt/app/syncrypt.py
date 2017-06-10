@@ -1,28 +1,30 @@
+import asyncio
 import logging
 import os.path
 import socket
 import sys
-import asyncio
-import iso8601
+from distutils.version import LooseVersion
 from io import StringIO
+from zipfile import ZipFile
+
+import iso8601
+from tzlocal import get_localzone
 
 import syncrypt
+from syncrypt.api import APIClient, SyncryptAPI
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
-from syncrypt.exceptions import VaultNotInitialized, VaultFolderDoesNotExist
+from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.models import Identity, Vault, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
-from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
+from syncrypt.utils.format import (format_fingerprint, format_size,
+                                   size_with_unit)
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
-from tzlocal import get_localzone
 
-from syncrypt.api import SyncryptAPI, APIClient
-
-from .events import create_watchdog
 from ..utils.updates import is_update_available
-from distutils.version import LooseVersion
+from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
 
@@ -542,6 +544,20 @@ class SyncryptApp(object):
             vault = None
 
         return vault
+
+    @asyncio.coroutine
+    def import_package(self, filename, target_folder, pull_vault=False):
+        if os.path.exists(target_folder):
+            raise ValueError('Folder "{0}" already exists.'.format(target_folder))
+
+        with ZipFile(filename, 'r') as myzip:
+            myzip.extractall(target_folder)
+
+        logger.info('Imported vault into "%s"', target_folder)
+
+        if pull_vault:
+            vault = Vault(target_folder)
+            yield from self.pull_vault(vault)
 
     @asyncio.coroutine
     def export_package(self, filename):
