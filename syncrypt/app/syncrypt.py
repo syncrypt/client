@@ -543,7 +543,6 @@ class SyncryptApp(object):
 
         return vault
 
-
     @asyncio.coroutine
     def export(self, filename):
         vault = self.vaults[0]

@@ -277,12 +277,14 @@ class Log(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.print_log(self.config.verbose))
 
+
 class Login(NoVaultCmd):
     command = 'login'
     description = 'login to server and store auth token'
 
     def run(self):
         self.loop.run_until_complete(self.app.login())
+
 
 class Export(SingleVaultCmd):
     command = 'export'
