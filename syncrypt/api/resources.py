@@ -9,6 +9,7 @@ from aiohttp import web
 from .auth import require_auth_token
 from syncrypt.utils.format import format_size
 from syncrypt.models import Identity
+from aiohttp import MultiDict
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +117,12 @@ class VaultResource(Resource):
     def add_routes(self, router):
         super(VaultResource, self).add_routes(router)
         opts = {'version': self.version, 'name': self.resource_name}
-        router.add_route('GET', '/{version}/{name}/{{id}}/fingerprints/'.format(**opts), self.dispatch_fingerprints)
+        router.add_route('GET', 
+                '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
+                self.dispatch_fingerprints)
+        router.add_route('GET',
+                '/{version}/{name}/{{id}}/export/'.format(**opts),
+                self.dispatch_export)
 
     def get_id(self, v):
         return str(v.config.get('vault.id'))
@@ -196,6 +202,17 @@ class VaultResource(Resource):
         vault = self.find_vault_by_id(vault_id)
         fingerprint_list = yield from vault.backend.list_vault_user_key_fingerprints()
         return JSONResponse(fingerprint_list)
+
+    @asyncio.coroutine
+    def dispatch_export(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+        export_content = yield from vault.package_info().readall()
+        filename = '{0}.zip'.format(vault.config.id)
+        return web.Response(body=export_content,
+                headers=MultiDict({
+                    'Content-Disposition': 'Attachment; filename="{0}"'.format(filename)
+                }))
 
     @asyncio.coroutine
     def post_obj(self, request):
