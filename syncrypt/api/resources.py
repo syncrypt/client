@@ -120,7 +120,7 @@ class VaultResource(Resource):
         router.add_route('GET', 
                 '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
                 self.dispatch_fingerprints)
-        router.add_route('GET',
+        router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
 
@@ -207,12 +207,23 @@ class VaultResource(Resource):
     def dispatch_export(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
-        export_content = yield from vault.package_info().readall()
-        filename = '{0}.zip'.format(vault.config.id)
-        return web.Response(body=export_content,
-                headers=MultiDict({
-                    'Content-Disposition': 'Attachment; filename="{0}"'.format(filename)
-                }))
+
+        try:
+            content = yield from request.content.read()
+            request_dict = json.loads(content.decode())
+        except:
+            return web.Response(status=400, text='Need JSON request body.')
+
+        if not 'path' in request_dict:
+            return web.Response(status=400, text='Missing parameter "path".')
+
+        path = request_dict['path']
+        if os.path.isdir(path):
+            path = os.path.join(path, '{0}.zip'.format(vault.config.id))
+
+        yield from self.app.export_package(path)
+
+        return JSONResponse({'status': 'ok', 'filename': path})
 
     @asyncio.coroutine
     def post_obj(self, request):

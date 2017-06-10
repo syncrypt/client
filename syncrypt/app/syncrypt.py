@@ -544,7 +544,7 @@ class SyncryptApp(object):
         return vault
 
     @asyncio.coroutine
-    def export(self, filename):
+    def export_package(self, filename):
         vault = self.vaults[0]
         export_pipe = vault.package_info()
         if filename is None:

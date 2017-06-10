@@ -265,6 +265,7 @@ class ConfigUnset(SingleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.unset(self.config.setting))
 
+
 class Log(MultipleVaultCmd):
     command = 'log'
     description = 'show recent changes (file uploads, deletions, etc)'
@@ -295,7 +296,7 @@ class Export(SingleVaultCmd):
         parser.add_argument('-o', '--output', dest='filename', help='export filename')
 
     def run(self):
-        self.loop.run_until_complete(self.app.export(self.config.filename))
+        self.loop.run_until_complete(self.app.export_package(self.config.filename))
 
 
 class CheckUpdate(NoVaultCmd):
