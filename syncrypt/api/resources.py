@@ -9,7 +9,6 @@ from aiohttp import web
 from .auth import require_auth_token
 from syncrypt.utils.format import format_size
 from syncrypt.models import Identity
-from aiohttp import MultiDict
 
 logger = logging.getLogger(__name__)
 
