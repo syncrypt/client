@@ -139,7 +139,7 @@ setup(
             'pytest-runner',
             'pytest',
             'asynctest',
-            'hypothesis'
+            'hypothesis==3.8.2'
         ],
         'uvloop': [
             'uvloop'
