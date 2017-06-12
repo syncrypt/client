@@ -221,7 +221,7 @@ class VaultResource(Resource):
         if os.path.isdir(path):
             path = os.path.join(path, '{0}.zip'.format(vault.config.id))
 
-        yield from self.app.export_package(path)
+        yield from self.app.export_package(path, vault=vault)
 
         return JSONResponse({'status': 'ok', 'filename': path})
 
