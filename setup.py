@@ -137,9 +137,9 @@ setup(
         ],
         'test': [
             'pytest-runner',
-            'pytest',
+            'pytest>=2.8.0',
             'asynctest',
-            'hypothesis==3.8.2'
+            'hypothesis'
         ],
         'uvloop': [
             'uvloop'
