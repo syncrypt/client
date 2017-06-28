@@ -83,9 +83,8 @@ class BackendConfigMixin():
         'ssl': True,
         'ssl_verify': True,
 
-        # How many concurent uploads/downloads we want to
-        # support
-        'concurrency': 4
+        # Maximum number of concurent connections
+        'concurrency': 10,
     }
 
     @property
@@ -111,6 +110,7 @@ class BackendConfigMixin():
         else:
             del kwargs['ssl_verify']
         kwargs.pop('type')
+        kwargs['concurrency'] = self.DEFAULT_BACKEND_CFG['concurrency']
         return kwargs
 
 class VaultConfig(Config, BackendConfigMixin):
@@ -145,7 +145,7 @@ class VaultConfig(Config, BackendConfigMixin):
 class AppConfig(Config, BackendConfigMixin):
     default_config = {
         'app': {
-            'concurrency': 8,
+            'concurrency': 6,
             'vaults': ''
         },
         'api': {
