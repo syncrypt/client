@@ -1,14 +1,20 @@
 # tastypie-like asyncio-aware resources
+import asyncio
+import iso8601
+import itertools
 import json
 import logging
 import os.path
-import itertools
 
-import asyncio
 from aiohttp import web
-from .auth import require_auth_token
-from syncrypt.utils.format import format_size
+from tzlocal import get_localzone
+
 from syncrypt.models import Identity
+from syncrypt.utils.format import format_size
+
+from .auth import require_auth_token
+from ..models.bundle import VirtualBundle
+from ..pipes import Once
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +126,9 @@ class VaultResource(Resource):
         router.add_route('GET', 
                 '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
                 self.dispatch_fingerprints)
+        router.add_route('GET', 
+                '/{version}/{name}/{{id}}/log/'.format(**opts),
+                self.dispatch_log)
         router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
@@ -202,6 +211,32 @@ class VaultResource(Resource):
         vault = self.find_vault_by_id(vault_id)
         fingerprint_list = yield from vault.backend.list_vault_user_key_fingerprints()
         return JSONResponse(fingerprint_list)
+
+    @asyncio.coroutine
+    def dispatch_log(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+        local_tz = get_localzone()
+        queue = yield from vault.backend.changes(None, None, verbose=True)
+        log_items = []
+        while True:
+            item = yield from queue.get()
+            if item is None:
+                break
+            store_hash, metadata, server_info = item
+            bundle = VirtualBundle(None, vault, store_hash=store_hash)
+            yield from bundle.write_encrypted_metadata(Once(metadata))
+            rev_id = server_info['id'].decode(vault.config.encoding)
+            created_at = server_info['created_at'].decode(vault.config.encoding)
+            operation = server_info['operation'].decode(vault.config.encoding)
+            user_email = server_info['email'].decode(vault.config.encoding)
+            log_items.append({
+                'operation': operation,
+                'user_email': user_email,
+                'created_at': created_at,
+                'path': bundle.relpath
+            })
+        return JSONResponse({'items': log_items})
 
     @asyncio.coroutine
     def dispatch_export(self, request):
