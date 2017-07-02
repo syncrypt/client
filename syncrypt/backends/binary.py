@@ -728,8 +728,15 @@ class BinaryStorageManager(object):
                          self.concurrency, id(asyncio.get_event_loop()))
             self.slots = [BinaryStorageConnection(self) for i in range(self.concurrency)]
 
-    def get_active_connection_count(self):
-        return len([conn for conn in self.slots if conn.connected or conn.connecting])
+    def get_stats(self):
+        states = {}
+        if self.slots:
+            for conn in self.slots:
+                states[conn.state] = states.get(conn.state, 0) + 1
+            states['total'] = len(self.slots)
+        else:
+            states['total'] = 0
+        return states
 
     @asyncio.coroutine
     def close(self):
@@ -886,7 +893,8 @@ class BinaryStorageBackend(StorageBackend):
     def open(self):
         if self.vault and not self.vault.config.get('vault.id'):
             raise VaultNotInitialized()
-        if get_manager_instance().get_active_connection_count() == 0:
+        stats = get_manager_instance().get_stats()
+        if stats['closed'] == stats['total']:
             with (yield from self._acquire_connection()) as conn:
                 self.invalid_auth = False
                 version = yield from conn.version()

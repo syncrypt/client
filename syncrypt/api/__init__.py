@@ -1,17 +1,19 @@
+import asyncio
 import json
 import logging
 
-import asyncio
 from aiohttp import web
+
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.base import StorageBackendInvalidAuth
+from syncrypt.backends.binary import get_manager_instance
 
-from .resources import (BundleResource, JSONResponse, VaultResource,
-                        VaultUserResource, UserResource, FlyingVaultResource)
-from .auth import generate_api_auth_token, require_auth_token
 from ..utils.updates import is_update_available
+from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
+from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
+                        UserResource, VaultResource, VaultUserResource)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,8 @@ class SyncryptAPI():
         vault_states = {vault_resource.get_resource_uri(v): v.state for v in self.app.vaults}
         return JSONResponse({
             'stats': self.app.stats,
-            'states': vault_states
+            'states': vault_states,
+            'slots': get_manager_instance().get_stats()
         })
 
     @asyncio.coroutine

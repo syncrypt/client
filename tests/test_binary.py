@@ -195,6 +195,7 @@ class BinaryServerTests(VaultTestCase):
         self.assertTrue(not post_rev is None)
 
     def test_take_only_one_connection(self):
+        'this will test if connection slots are properly reused'
         vault = self.vault
 
         app = SyncryptApp(self.app_config)
@@ -206,7 +207,10 @@ class BinaryServerTests(VaultTestCase):
         yield from app.get_remote_size_for_vault(vault)
         yield from app.get_remote_size_for_vault(vault)
 
-        self.assertEqual(get_manager_instance().get_active_connection_count(), 1)
+        print(get_manager_instance().get_stats())
+
+        self.assertEqual(get_manager_instance().get_stats()['idle'], 1)
+        self.assertEqual(get_manager_instance().get_stats()['busy'], 0)
 
 if __name__ == '__main__':
     from syncrypt.utils.logging import setup_logging
