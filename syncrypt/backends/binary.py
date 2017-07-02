@@ -724,7 +724,8 @@ class BinaryStorageManager(object):
             self.loop = None
         self.loop = asyncio.get_event_loop()
         if not self.slots:
-            logger.info('Registering connection slots for id=%s', id(asyncio.get_event_loop()))
+            logger.debug('Registering %d connection slots for loop %s',
+                         self.concurrency, id(asyncio.get_event_loop()))
             self.slots = [BinaryStorageConnection(self) for i in range(self.concurrency)]
 
     def get_active_connection_count(self):
@@ -854,7 +855,7 @@ class BinaryStorageBackend(StorageBackend):
     def global_auth(self, value):
         manager = get_manager_instance()
         if not manager.global_auth or value is None:
-            logger.warning('Setting global_auth to %s', value)
+            logger.debug('Setting global_auth to %s', value)
             manager.global_auth = value
 
     def set_auth(self, username, password):
