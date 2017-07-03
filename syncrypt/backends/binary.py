@@ -65,16 +65,27 @@ def rewrite_atoms_dict(bert_dict):
     # rewriter
     return {str(k): bert_val(v) for (k, v) in bert_dict.items()}
 
+
 class BinaryStorageConnection(object):
+    '''
+    A connection slot which is instantiated by BinaryStorageManager.
+
+    The states of a slot are: 'closed', 'opening', 'busy', 'idle'. Additionally a slot can either
+    be general purpose or associated with a Vault (i.e. it is logged in to that Vault and can
+    execute commands related to it).
+    '''
+
     def __init__(self, manager):
         self.manager = manager
+        self.writer = None
+        self.reader = None
+
+        # State
         self.vault = None
         self.available = asyncio.Event()
         self.available.clear()
         self.connected = False
         self.connecting = False
-        self.writer = None
-        self.reader = None
 
     @property
     def state(self):
@@ -96,29 +107,35 @@ class BinaryStorageConnection(object):
     def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
         pl_read = (yield from self.reader.read(4))
-        #logger.debug('Read: %s (%d bytes)', pl_read, len(pl_read))
+
         if len(pl_read) != 4:
             raise ConnectionResetException()
+
         pl_tuple = struct.unpack('!I', pl_read)
         packet_length = pl_tuple[0]
         assert packet_length > 0
-        #logger.debug('Will read %d bytes', packet_length)
+
         packet = b''
         while len(packet) < packet_length:
             buf = yield from self.reader.read(packet_length - len(packet))
             if len(buf) == 0:
                 raise ConnectionResetException()
             packet += buf
+
         if BINARY_DEBUG:
             logger.debug('[READ] Serialized: %s', packet)
+
         decoded = bert.decode(packet)
+
         if BINARY_DEBUG:
             logger.debug('[READ] Unserialized: %s', decoded)
+
         if assert_ok and decoded[0] != Atom('ok'):
             if decoded[0] == Atom('error'):
                 raise ServerError(decoded[1:])
             else:
                 raise UnsuccessfulResponse(decoded)
+
         return decoded
 
     @asyncio.coroutine
@@ -282,6 +299,8 @@ class BinaryStorageConnection(object):
             self._clear_connection()
 
     def __enter__(self):
+        # This enables the connection to be used as a context manager. When the context is closed,
+        # the connection is automatically set to "idle" (available).
         return self
 
     def __exit__(self, ex_type, ex_value, ex_st):
@@ -698,7 +717,15 @@ class BinaryStorageConnection(object):
     def version(self):
         return self.server_version
 
+
 class BinaryStorageManager(object):
+    '''
+    The BinaryStorageManager will manage n connection slots of type BinaryStorageConnection.
+
+    It will automatically open new connections or find idle connections when a new connection
+    is requested through the "acquire_connection" function. It will also close connection that
+    have been idle for some time.
+    '''
 
     def __init__(self):
         self.host = None
@@ -825,6 +852,10 @@ def get_manager_instance():
 
 
 class BinaryStorageBackend(StorageBackend):
+    '''
+    Implements the actual backend for the vault. Each Vault will have its own BinaryStorageBackend
+    object associated with it, but all will use the same manager.
+    '''
 
     def __init__(self, vault=None, auth=None, host=None, port=None,
             concurrency=None, username=None, password=None, ssl=True,
