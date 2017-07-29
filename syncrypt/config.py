@@ -70,7 +70,10 @@ class Config(object):
 
     @property
     def config_dir(self):
-        return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
+        if 'app' in self._config and 'directory' in self._config['app']:
+            return self._config['app']['directory']
+        else:
+            return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
 
 class BackendConfigMixin():
     DEFAULT_BACKEND_CFG = {
