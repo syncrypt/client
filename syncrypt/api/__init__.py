@@ -66,6 +66,37 @@ class SyncryptAPI():
         cfg = self.app.config.as_dict()
 
         # prepare certain config values for json
+        # These guards/conversions should be done transparently in
+        # Config class
+        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1',)
+
+        return JSONResponse(cfg)
+
+    @asyncio.coroutine
+    @require_auth_token
+    def patch_config(self, request):
+
+        content = yield from request.content.read()
+        params = json.loads(content.decode())
+
+        with self.app.config.update_context():
+            for obj_key, obj in params.items():
+                for key, value in obj.items():
+                    setting = '{0}.{1}'.format(obj_key, key)
+                    logger.debug('Setting %s.%s to %s', obj_key, key, value)
+
+                    # These guards/conversions should be done transparently in
+                    # Config class
+                    if setting == 'gui.is_first_launch':
+                        value = '1' if value else '0'
+
+                    self.app.config.set(setting, value)
+
+        return (yield from self.get_config(request))
+
+        cfg = self.app.config.as_dict()
+
+        # prepare certain config values for json
         cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1', 'yes')
 
         return JSONResponse(cfg)
@@ -213,6 +244,7 @@ class SyncryptAPI():
 
         self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
+        self.web_app.router.add_route('PATCH', '/v1/config/', self.patch_config)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
         self.web_app.router.add_route('GET', '/v1/push', self.get_push)
 
