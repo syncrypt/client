@@ -6,6 +6,7 @@ import configparser
 
 logger = logging.getLogger(__name__)
 
+
 class Config(object):
     rsa_key_len = 4096
     encoding = 'utf-8'
@@ -75,6 +76,7 @@ class Config(object):
         else:
             return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
 
+
 class BackendConfigMixin():
     DEFAULT_BACKEND_CFG = {
         # Protocol to use
@@ -116,6 +118,7 @@ class BackendConfigMixin():
         kwargs['concurrency'] = self.DEFAULT_BACKEND_CFG['concurrency']
         return kwargs
 
+
 class VaultConfig(Config, BackendConfigMixin):
     aes_key_len = 256
     block_size = 16
@@ -144,6 +147,7 @@ class VaultConfig(Config, BackendConfigMixin):
     @property
     def ignore_patterns(self):
         return self._config['vault']['ignore'].split(',') + self.hard_ignore
+
 
 class AppConfig(Config, BackendConfigMixin):
     default_config = {
