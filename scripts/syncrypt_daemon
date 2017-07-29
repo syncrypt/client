@@ -36,8 +36,8 @@ setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.lo
 def run_syncrypt():
     app = SyncryptApp(app_config)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(app.initialize())
     loop.run_until_complete(app.start())
+    loop.run_until_complete(app.initialize())
     loop.run_until_complete(app.wait_for_shutdown())
     return app.restart_flag
 
