@@ -211,10 +211,10 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
-        self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
+        self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
+        self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
         self.web_app.router.add_route('GET', '/v1/push', self.get_push)
-        self.web_app.router.add_route('GET', '/v1/config', self.get_config)
 
         self.handler = self.web_app.make_handler()
         self.server = yield from loop.create_server(self.handler,
