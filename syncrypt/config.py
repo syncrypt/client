@@ -18,8 +18,10 @@ class Config(object):
 
     default_config = {}
 
-    def __init__(self, config_path):
+    def __init__(self, config_path=None):
         self._config = configparser.ConfigParser()
+        if config_path is None:
+            config_path = os.path.join(self.config_dir, 'config')
         self._config_path = config_path
         # set defaults
         for k in self.default_config.keys():
@@ -71,7 +73,8 @@ class Config(object):
 
     @property
     def config_dir(self):
-        if 'app' in self._config and 'directory' in self._config['app']:
+        if hasattr(self, '_config') and 'app' in self._config \
+                and 'directory' in self._config['app']:
             return self._config['app']['directory']
         else:
             return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
@@ -168,7 +171,7 @@ class AppConfig(Config, BackendConfigMixin):
     }
 
     def __init__(self, config_file=None):
-        super(AppConfig, self).__init__(config_file or os.path.join(self.config_dir, 'config'))
+        super(AppConfig, self).__init__(config_file)
         logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
 
     @property
