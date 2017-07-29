@@ -62,7 +62,13 @@ class SyncryptAPI():
     @asyncio.coroutine
     @require_auth_token
     def get_config(self, request):
-        return JSONResponse(self.app.config.as_dict())
+
+        cfg = self.app.config.as_dict()
+
+        # prepare certain config values for json
+        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1', 'yes')
+
+        return JSONResponse(cfg)
 
     @asyncio.coroutine
     @require_auth_token

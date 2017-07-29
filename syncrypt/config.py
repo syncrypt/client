@@ -156,7 +156,7 @@ class AppConfig(Config, BackendConfigMixin):
             'vaults': ''
         },
         'gui': {
-            'show_wizard': '1',
+            'is_first_launch': '1',
             'language': ''
         },
         'api': {
