@@ -1,22 +1,30 @@
 # tastypie-like asyncio-aware resources
 import asyncio
-import iso8601
+import enum
 import itertools
 import json
 import logging
 import os.path
 
+import iso8601
 from aiohttp import web
 from tzlocal import get_localzone
 
 from syncrypt.models import Identity
 from syncrypt.utils.format import format_size
 
-from .auth import require_auth_token
 from ..models.bundle import VirtualBundle
 from ..pipes import Once
+from .auth import require_auth_token
 
 logger = logging.getLogger(__name__)
+
+
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, enum.Enum):
+            return obj.value
+        return json.JSONEncoder.default(self, obj)
 
 
 class JSONResponse(web.Response):
@@ -28,7 +36,7 @@ class JSONResponse(web.Response):
 
     def __init__(self, obj, **kwargs):
         super(JSONResponse, self).__init__(
-                body=json.dumps(obj).encode('utf-8'),
+                body=json.dumps(obj, cls=EnumEncoder).encode('utf-8'),
                 content_type='application/json',
                 headers=self.cors_headers,
                 **kwargs)

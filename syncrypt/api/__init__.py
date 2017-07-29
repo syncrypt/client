@@ -34,6 +34,7 @@ class SyncryptAPI():
         vault_states = {vault_resource.get_resource_uri(v): v.state for v in self.app.vaults}
         return JSONResponse({
             'stats': self.app.stats,
+            'identity_state': self.app.identity.state,
             'states': vault_states,
             'slots': get_manager_instance().get_stats()
         })
