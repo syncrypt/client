@@ -248,6 +248,10 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
         self.web_app.router.add_route('GET', '/v1/push', self.get_push)
 
+        # The following routes are deprecated and will be removed shortly
+        self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
+        self.web_app.router.add_route('GET', '/v1/config', self.get_config)
+
         self.handler = self.web_app.make_handler()
         self.server = yield from loop.create_server(self.handler,
                 self.app.config.api['host'], self.app.config.api['port'])
