@@ -190,7 +190,7 @@ class BinaryStorageConnection(object):
             logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
 
         self.vault = vault
-        if vault:
+        if vault and vault.config.id:
             logger.debug('Login to vault %s', vault.config.id)
 
         auth = self.vault and self.vault.config.get('remote.auth')
