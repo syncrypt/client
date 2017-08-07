@@ -1,18 +1,46 @@
 # tastypie-like asyncio-aware resources
+import asyncio
+import enum
+import itertools
 import json
 import logging
 import os.path
-import itertools
 
-import asyncio
+import iso8601
 from aiohttp import web
+from tzlocal import get_localzone
+
+from syncrypt.models import Identity
+from syncrypt.utils.format import format_size
+
+from ..models.bundle import VirtualBundle
+from ..pipes import Once
 from .auth import require_auth_token
 from .responses import JSONResponse
-from syncrypt.utils.format import format_size
-from syncrypt.models import Identity
 
 logger = logging.getLogger(__name__)
 
+
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, enum.Enum):
+            return obj.value
+        return json.JSONEncoder.default(self, obj)
+
+
+class JSONResponse(web.Response):
+    cors_headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods" : "GET, POST, PUT, DELETE",
+        "Access-Control-Allow-Headers": "X-Authtoken, Content-Type, Origin, Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers"
+    }
+
+    def __init__(self, obj, **kwargs):
+        super(JSONResponse, self).__init__(
+                body=json.dumps(obj, cls=EnumEncoder).encode('utf-8'),
+                content_type='application/json',
+                headers=self.cors_headers,
+                **kwargs)
 
 
 class Resource(object):
@@ -29,6 +57,8 @@ class Resource(object):
         router.add_route('GET', '/{version}/{name}/'.format(**opts), self.dispatch_list)
         router.add_route('GET', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_get)
         router.add_route('GET', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_get)
+        router.add_route('OPTIONS', '/{version}/{name}/'.format(**opts), self.dispatch_options)
+        router.add_route('OPTIONS', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_options)
         router.add_route('DELETE', '/{version}/{name}/{{id}}/'.format(**opts), self.dispatch_delete)
         router.add_route('DELETE', '/{version}/{name}/{{id}}'.format(**opts), self.dispatch_delete)
 
@@ -50,6 +80,11 @@ class Resource(object):
     def dispatch_get(self, request):
         obj = yield from self.get_obj(request)
         return JSONResponse(self.dehydrate(obj))
+
+
+    @asyncio.coroutine
+    def dispatch_options(self, request):
+        return JSONResponse({})
 
     @asyncio.coroutine
     @require_auth_token
@@ -90,26 +125,55 @@ class Resource(object):
         return "/{version}/{name}/{id}/".format(version=self.version,
                 name=self.resource_name, id=self.get_id(obj))
 
+
 class VaultResource(Resource):
     resource_name = 'vault'
+
+    def add_routes(self, router):
+        super(VaultResource, self).add_routes(router)
+        opts = {'version': self.version, 'name': self.resource_name}
+        router.add_route('GET', 
+                '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
+                self.dispatch_fingerprints)
+        router.add_route('GET', 
+                '/{version}/{name}/{{id}}/log/'.format(**opts),
+                self.dispatch_log)
+        router.add_route('POST',
+                '/{version}/{name}/{{id}}/export/'.format(**opts),
+                self.dispatch_export)
 
     def get_id(self, v):
         return str(v.config.get('vault.id'))
 
     def dehydrate(self, v, vault_info={}):
         dct = super(VaultResource, self).dehydrate(v)
-        dct.update(folder=v.folder, status='ready', state=v.state, metadata=v.metadata)
+
+        dct.update(folder=v.folder, status='ready', state=v.state,
+                   metadata=v.metadata, ignore=v.config.get('vault.ignore').split(','))
+
         # Annotate each obj with information from the server
-        vault_size = format_size(vault_info.get('byte_size', 0))
+        vault_size = vault_info.get('byte_size', 0)
         modification_date = vault_info.get('modification_date')
         if isinstance(modification_date, bytes):
             modification_date = modification_date.decode()
+
+        # Compile some information about the underlying crypto system(s)
+        crypt_info = {
+            'aes_key_len': v.config.aes_key_len,
+            'rsa_key_len': v.config.rsa_key_len,
+            'key_algo': 'rsa',
+            'transfer_algo': 'aes',
+            'hash_algo': v.config.hash_algo,
+            'fingerprint': v.identity.get_fingerprint() if v.identity else None
+        }
+
         dct.update(
             size=vault_size,
             user_count=vault_info.get('user_count', 0),
             file_count=vault_info.get('file_count', 0),
             revision_count=vault_info.get('revision_count', 0),
-            modification_date=modification_date
+            modification_date=modification_date,
+            crypt_info=crypt_info
         )
         return dct
 
@@ -149,26 +213,88 @@ class VaultResource(Resource):
         yield from backend.close()
         return JSONResponse([self.dehydrate(obj, v_info.get(obj.config.get('vault.id'), {})) for obj in objs])
 
+
+    @asyncio.coroutine
+    def dispatch_fingerprints(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+        fingerprint_list = yield from vault.backend.list_vault_user_key_fingerprints()
+        return JSONResponse(fingerprint_list)
+
+    @asyncio.coroutine
+    def dispatch_log(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+        local_tz = get_localzone()
+        queue = yield from vault.backend.changes(None, None, verbose=True)
+        log_items = []
+        while True:
+            item = yield from queue.get()
+            if item is None:
+                break
+            store_hash, metadata, server_info = item
+            bundle = VirtualBundle(None, vault, store_hash=store_hash)
+            yield from bundle.write_encrypted_metadata(Once(metadata))
+            rev_id = server_info['id'].decode(vault.config.encoding)
+            created_at = server_info['created_at'].decode(vault.config.encoding)
+            operation = server_info['operation'].decode(vault.config.encoding)
+            user_email = server_info['email'].decode(vault.config.encoding)
+            log_items.append({
+                'operation': operation,
+                'user_email': user_email,
+                'created_at': created_at,
+                'path': bundle.relpath
+            })
+        return JSONResponse({'items': log_items})
+
+    @asyncio.coroutine
+    def dispatch_export(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+
+        try:
+            content = yield from request.content.read()
+            request_dict = json.loads(content.decode())
+        except:
+            return web.Response(status=400, text='Need JSON request body.')
+
+        if not 'path' in request_dict:
+            return web.Response(status=400, text='Missing parameter "path".')
+
+        path = request_dict['path']
+        if os.path.isdir(path):
+            path = os.path.join(path, '{0}.zip'.format(vault.config.id))
+
+        yield from self.app.export_package(path, vault=vault)
+
+        return JSONResponse({'status': 'ok', 'filename': path})
+
     @asyncio.coroutine
     def post_obj(self, request):
+
+        @asyncio.coroutine
+        def pull_and_watch(vault):
+            yield from self.app.pull_vault(vault)
+            yield from self.app.watch(vault)
+
+        @asyncio.coroutine
+        def push_and_watch(vault):
+            yield from self.app.push_vault(vault)
+            yield from self.app.watch(vault)
+
         content = yield from request.content.read()
         request_dict = json.loads(content.decode())
+
         if 'id' in request_dict:
             vault = yield from self.app.clone(request_dict['id'], request_dict['folder'])
-
-            @asyncio.coroutine
-            def pull_and_watch(vault):
-                yield from self.app.pull_vault(vault)
-                yield from self.app.watch(vault)
+            asyncio.get_event_loop().create_task(pull_and_watch(vault))
+        elif 'import_package' in request_dict:
+            vault = yield from self.app.import_package(
+                    request_dict['import_package'], request_dict['folder'])
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
             yield from self.app.open_or_init(vault)
-
-            @asyncio.coroutine
-            def push_and_watch(vault):
-                yield from self.app.push_vault(vault)
-                yield from self.app.watch(vault)
             asyncio.get_event_loop().create_task(push_and_watch(vault))
         return vault
 
@@ -185,6 +311,7 @@ class VaultResource(Resource):
             yield from vault.backend.set_vault_metadata()
         return vault
 
+
 class FlyingVaultResource(Resource):
     """
     A Flying Vault represents a Vault that the user has access to but is not
@@ -198,7 +325,7 @@ class FlyingVaultResource(Resource):
     def dehydrate(self, obj):
         deh_obj = super(FlyingVaultResource, self).dehydrate(obj)
         deh_obj['metadata'] = obj.get('metadata', {})
-        deh_obj['size'] = format_size(obj.get('byte_size'))
+        deh_obj['size'] = obj.get('byte_size')
         deh_obj['user_count'] = obj.get('user_count')
         deh_obj['file_count'] = obj.get('file_count')
         deh_obj['revision_count'] = obj.get('revision_count')
@@ -221,6 +348,8 @@ class FlyingVaultResource(Resource):
         for (vault, user_vault_key, encrypted_metadata) in \
                 (yield from backend.list_vaults_by_fingerprint(my_fingerprint)):
 
+            yield from asyncio.sleep(0.001)
+
             vault_id = vault['id'].decode('utf-8')
 
             logger.debug("Received vault: %s (with%s metadata)", vault_id, '' if encrypted_metadata else 'out')
@@ -231,7 +360,7 @@ class FlyingVaultResource(Resource):
                 metadata = None
 
             vault_info = v_info.get(vault_id, {})
-            vault_size = format_size(vault_info.get('byte_size', 0))
+            vault_size = vault_info.get('byte_size', 0)
             modification_date = vault_info.get('modification_date')
             if isinstance(modification_date, bytes):
                 modification_date = modification_date.decode()

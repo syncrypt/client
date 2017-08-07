@@ -58,7 +58,8 @@ class Vault(MetadataHolder):
 
     def __get_metadata(self):
         return {
-            'name': self.config.vault.get('name', '')
+            'name': self.config.vault.get('name', ''),
+            'icon': self.config.vault.get('icon', None)
         }
 
     def __set_metadata(self, metadata):
@@ -66,6 +67,10 @@ class Vault(MetadataHolder):
             self.logger.debug('Setting vault\'s name to "%s"', metadata['name'])
             with self.config.update_context():
                 self.config.vault['name'] = metadata['name']
+        if 'icon' in metadata and metadata['icon']:
+            logger.debug('Setting vault icon')
+            with self.config.update_context():
+                self.config.vault['icon'] = metadata['icon']
 
     metadata = property(__get_metadata, __set_metadata)
 
@@ -158,13 +163,6 @@ class Vault(MetadataHolder):
                 yield from self.walk_disk(subfolder=relpath)
             else:
                 yield self.bundle_for(relpath)
-
-    def set_auth(self, username, password):
-        self.backend.username = username
-        self.backend.password = password
-
-    def set_global_auth(self, global_auth):
-        self.backend.global_auth = global_auth
 
     def clear_bundle_cache(self):
         self._bundle_cache = {}

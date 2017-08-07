@@ -22,7 +22,11 @@ class TestAppConfig(AppConfig):
     def __init__(self, config_file):
         super(TestAppConfig, self).__init__(config_file)
         with self.update_context():
+            # Run tests against a local server
             self.set('remote.host', 'localhost')
+
+            # Change default API port so that tests can be run alongside the daemon
+            self.set('api.port', '28081')
 
 class VaultTestCase(asynctest.TestCase):
     folder = None

@@ -1,13 +1,20 @@
-import hashlib
 import asyncio
+import hashlib
 import logging
 import os
 import os.path
+from enum import Enum
 
-from Crypto.PublicKey import RSA
 import Crypto.Util.number
+from Crypto.PublicKey import RSA
 
 logger = logging.getLogger(__name__)
+
+
+class IdentityState(Enum):
+    UNINITIALIZED = "uninitialized"
+    INITIALIZING = "initializing"
+    INITIALIZED = "initialized"
 
 
 class Identity(object):
@@ -16,6 +23,7 @@ class Identity(object):
         self.id_rsa_path = id_rsa_path
         self.id_rsa_pub_path = id_rsa_pub_path
         self.config = config
+        self.state = IdentityState.UNINITIALIZED
 
     @classmethod
     def from_key(cls, key, config, private_key=None):
@@ -40,11 +48,14 @@ class Identity(object):
             return self._keypair[0]
 
     def read(self):
+        if self.state == IdentityState.INITIALIZING:
+            raise ProgrammingError('identity is currently initializing')
         with open(self.id_rsa_pub_path, 'rb') as id_rsa_pub:
             public_key = RSA.importKey(id_rsa_pub.read())
         with open(self.id_rsa_path, 'rb') as id_rsa:
             private_key = RSA.importKey(id_rsa.read())
         self._keypair = (public_key, private_key)
+        self.state = IdentityState.INITIALIZED
 
     def key_size(self):
         return Crypto.Util.number.size(self.private_key.n)
@@ -74,16 +85,19 @@ class Identity(object):
         return self.public_key.exportKey('DER')
 
     def generate_keys(self):
+        self.state = IdentityState.INITIALIZING
         if not os.path.exists(os.path.dirname(self.id_rsa_path)):
             os.makedirs(os.path.dirname(self.id_rsa_path))
         logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
         keys = RSA.generate(self.config.rsa_key_len)
+        logger.debug('Finished generating RSA key pair.')
         with open(self.id_rsa_pub_path, 'wb') as id_rsa_pub:
             id_rsa_pub.write(keys.publickey().exportKey())
         with open(self.id_rsa_path, 'wb') as id_rsa:
             id_rsa.write(keys.exportKey())
         self._keypair = (keys.publickey(), keys)
         assert self._keypair[0] is not None
+        self.state = IdentityState.INITIALIZED
 
     def get_fingerprint(self):
         assert self.public_key

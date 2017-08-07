@@ -65,7 +65,7 @@ get uploaded after a successful ``login`` (see above) or by typing:
 
     syncrypt keys --upload
 
-## Backup your keys
+## Backup your vault keys
 
 It is important to store your vault's keys at another place other than your
 computer. Otherwise, you won't be able to recover your files in case of a
@@ -81,11 +81,11 @@ by typing:
 We recommend to save this file on a USB stick or a similar disconnected
 storage and keep it in a safe place.
 
-In order to restore a backup or download your vault to another machine, copy
-this file into an empty folder, and type:
+In order to restore a backup or download your vault to another machine, type the
+following on the destination:
 
-    unzip vault-backup.zip
-    syncrypt init
+    syncrypt import vault-backup.zip /new/vault/folder
+    cd /new/vault/folder
     syncrypt pull
 
 ## Advanced Usage

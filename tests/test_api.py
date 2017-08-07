@@ -75,6 +75,8 @@ class APITests(VaultTestCase):
 
             vault_uri = c[0]['resource_uri']
 
+            self.assertEqual(c[0]['ignore'], ['.*'])
+
             r = yield from client.get(vault_uri)
             yield from r.release()
 

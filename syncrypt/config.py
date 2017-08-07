@@ -6,6 +6,7 @@ import configparser
 
 logger = logging.getLogger(__name__)
 
+
 class Config(object):
     rsa_key_len = 4096
     encoding = 'utf-8'
@@ -17,8 +18,10 @@ class Config(object):
 
     default_config = {}
 
-    def __init__(self, config_path):
+    def __init__(self, config_path=None):
         self._config = configparser.ConfigParser()
+        if config_path is None:
+            config_path = os.path.join(self.config_dir, 'config')
         self._config_path = config_path
         # set defaults
         for k in self.default_config.keys():
@@ -70,7 +73,12 @@ class Config(object):
 
     @property
     def config_dir(self):
-        return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
+        if hasattr(self, '_config') and 'app' in self._config \
+                and 'directory' in self._config['app']:
+            return self._config['app']['directory']
+        else:
+            return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
+
 
 class BackendConfigMixin():
     DEFAULT_BACKEND_CFG = {
@@ -83,9 +91,8 @@ class BackendConfigMixin():
         'ssl': True,
         'ssl_verify': True,
 
-        # How many concurent uploads/downloads we want to
-        # support
-        'concurrency': 4
+        # Maximum number of concurent connections
+        'concurrency': 10,
     }
 
     @property
@@ -111,7 +118,9 @@ class BackendConfigMixin():
         else:
             del kwargs['ssl_verify']
         kwargs.pop('type')
+        kwargs['concurrency'] = self.DEFAULT_BACKEND_CFG['concurrency']
         return kwargs
+
 
 class VaultConfig(Config, BackendConfigMixin):
     aes_key_len = 256
@@ -142,11 +151,16 @@ class VaultConfig(Config, BackendConfigMixin):
     def ignore_patterns(self):
         return self._config['vault']['ignore'].split(',') + self.hard_ignore
 
+
 class AppConfig(Config, BackendConfigMixin):
     default_config = {
         'app': {
-            'concurrency': 8,
+            'concurrency': 6,
             'vaults': ''
+        },
+        'gui': {
+            'is_first_launch': '1',
+            'language': ''
         },
         'api': {
             'host': '127.0.0.1',
@@ -157,7 +171,7 @@ class AppConfig(Config, BackendConfigMixin):
     }
 
     def __init__(self, config_file=None):
-        super(AppConfig, self).__init__(config_file or os.path.join(self.config_dir, 'config'))
+        super(AppConfig, self).__init__(config_file)
         logger.info('Syncrypt config has %d vault(s).', len(self.vault_dirs))
 
     @property

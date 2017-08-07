@@ -5,6 +5,8 @@ matrix:
       python: 3.4
     - os: linux
       python: 3.5
+    - os: linux
+      python: 3.6
     - os: osx
       sudo: required
       language: generic
@@ -19,13 +21,17 @@ install: |
   if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 
       brew update;
-      brew install python3;
       brew install snappy;
-      python3 -m venv venv;
+      PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.5.2;
+      pyenv local 3.5.2;
+      pyenv global 3.5.2;
+      $(pyenv root)/shims/python -m venv venv;
       source venv/bin/activate;
+      pip install setuptools==19.2
       pip install -e '.[dist]'
       pip install -e '.[test]'
   else
+      pip install setuptools==19.2
       pip install -e '.[dist]'
       pip install -e '.[test]'
   fi

@@ -1,17 +1,19 @@
+import asyncio
 import json
 import logging
 
-import asyncio
 from aiohttp import web
+
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.base import StorageBackendInvalidAuth
+from syncrypt.backends.binary import get_manager_instance
 
-from .resources import (BundleResource, JSONResponse, VaultResource,
-                        VaultUserResource, UserResource, FlyingVaultResource)
-from .auth import generate_api_auth_token, require_auth_token
 from ..utils.updates import is_update_available
+from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
+from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
+                        UserResource, VaultResource, VaultUserResource)
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,9 @@ class SyncryptAPI():
         vault_states = {vault_resource.get_resource_uri(v): v.state for v in self.app.vaults}
         return JSONResponse({
             'stats': self.app.stats,
-            'states': vault_states
+            'user_key_state': self.app.identity.state,
+            'states': vault_states,
+            'slots': get_manager_instance().get_stats()
         })
 
     @asyncio.coroutine
@@ -59,7 +63,44 @@ class SyncryptAPI():
     @asyncio.coroutine
     @require_auth_token
     def get_config(self, request):
-        return JSONResponse(self.app.config.as_dict())
+
+        cfg = self.app.config.as_dict()
+
+        # prepare certain config values for json
+        # These guards/conversions should be done transparently in
+        # Config class
+        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1',)
+
+        return JSONResponse(cfg)
+
+    @asyncio.coroutine
+    @require_auth_token
+    def patch_config(self, request):
+
+        content = yield from request.content.read()
+        params = json.loads(content.decode())
+
+        with self.app.config.update_context():
+            for obj_key, obj in params.items():
+                for key, value in obj.items():
+                    setting = '{0}.{1}'.format(obj_key, key)
+                    logger.debug('Setting %s.%s to %s', obj_key, key, value)
+
+                    # These guards/conversions should be done transparently in
+                    # Config class
+                    if setting == 'gui.is_first_launch':
+                        value = '1' if value else '0'
+
+                    self.app.config.set(setting, value)
+
+        return (yield from self.get_config(request))
+
+        cfg = self.app.config.as_dict()
+
+        # prepare certain config values for json
+        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1', 'yes')
+
+        return JSONResponse(cfg)
 
     @asyncio.coroutine
     @require_auth_token
@@ -82,7 +123,7 @@ class SyncryptAPI():
             return JSONResponse({
                 'status': 'error',
                 'text': 'Invalid authentification'
-            }, status=500)
+            }, status=401)
 
     @asyncio.coroutine
     @require_auth_token
@@ -160,8 +201,7 @@ class SyncryptAPI():
     @require_auth_token
     def get_user_info(self, request):
         '''
-        Logging out the user simply works by removing the global auth
-        token.
+        Return information about the currently logged in user (First name, Last name, ...)
         '''
         backend = yield from self.app.open_backend()
         user_info = yield from backend.user_info()
@@ -202,9 +242,14 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
-        self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
+        self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
+        self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
+        self.web_app.router.add_route('PATCH', '/v1/config/', self.patch_config)
         self.web_app.router.add_route('GET', '/v1/pull', self.get_pull)
         self.web_app.router.add_route('GET', '/v1/push', self.get_push)
+
+        # The following routes are deprecated and will be removed shortly
+        self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config', self.get_config)
 
     @asyncio.coroutine

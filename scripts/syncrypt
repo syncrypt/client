@@ -14,7 +14,7 @@ from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
 
 COPYRIGHT = '''Syncrypt v{version}
-(c) 2016 Syncrypt UG | https://syncrypt.space
+(c) 2016-2017 Syncrypt UG | https://syncrypt.space
 Licensed under the GPLv3 | Source: https://github.com/syncrypt/client'''\
     .format(version=__version__)
 
@@ -96,9 +96,11 @@ class MultipleVaultCmd(SyncryptCmd):
             self.vault_dirs = self.config.directory
         super(MultipleVaultCmd, self).setup()
 
+
 class NoVaultCmd(SyncryptCmd):
     '''command that operates without a vault'''
     pass
+
 
 class Clone(NoVaultCmd):
     command = 'clone'
@@ -128,6 +130,7 @@ class Clone(NoVaultCmd):
         if vault:
             self.loop.run_until_complete(self.app.pull_vault(vault))
 
+
 class Pull(MultipleVaultCmd):
     command = 'pull'
     description = 'pull all files from the latest revision'
@@ -140,6 +143,7 @@ class Pull(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.pull(full=self.config.full))
 
+
 class AddUser(SingleVaultCmd):
     command = 'add-user'
     description = 'add another user to this vault'
@@ -150,6 +154,7 @@ class AddUser(SingleVaultCmd):
 
     def run(self):
         self.loop.run_until_complete(self.app.add_user(self.config.email))
+
 
 class DeleteVault(MultipleVaultCmd):
     command = 'delete-vault'
@@ -211,6 +216,7 @@ class Push(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.push())
 
+
 class Watch(MultipleVaultCmd):
     command = 'watch'
     description = 'watch directory for changes'
@@ -218,6 +224,7 @@ class Watch(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.start())
         self.loop.run_forever()
+
 
 class Init(SingleVaultCmd):
     command = 'init'
@@ -233,12 +240,14 @@ class Init(SingleVaultCmd):
         self.loop.run_until_complete(self.app.init(host=self.config.host,
             upload_vault_key=self.config.upload_vault_key))
 
+
 class Info(MultipleVaultCmd):
     command = 'info'
     description = 'show vault information'
 
     def run(self):
         self.loop.run_until_complete(self.app.info())
+
 
 class ConfigSet(SingleVaultCmd):
     command = 'set'
@@ -254,6 +263,7 @@ class ConfigSet(SingleVaultCmd):
             self.app.set(self.config.setting, self.config.value)
         )
 
+
 class ConfigUnset(SingleVaultCmd):
     command = 'unset'
     description = 'unset a vault config parameter'
@@ -264,6 +274,7 @@ class ConfigUnset(SingleVaultCmd):
 
     def run(self):
         self.loop.run_until_complete(self.app.unset(self.config.setting))
+
 
 class Log(MultipleVaultCmd):
     command = 'log'
@@ -277,12 +288,14 @@ class Log(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.print_log(self.config.verbose))
 
+
 class Login(NoVaultCmd):
     command = 'login'
     description = 'login to server and store auth token'
 
     def run(self):
         self.loop.run_until_complete(self.app.login())
+
 
 class Export(SingleVaultCmd):
     command = 'export'
@@ -293,7 +306,23 @@ class Export(SingleVaultCmd):
         parser.add_argument('-o', '--output', dest='filename', help='export filename')
 
     def run(self):
-        self.loop.run_until_complete(self.app.export(self.config.filename))
+        self.loop.run_until_complete(self.app.export_package(self.config.filename))
+
+
+class Import(SingleVaultCmd):
+    command = 'import'
+    description = 'import vault package that has previously been exported'
+
+    def configure_parser(self, parser):
+        super(Import, self).configure_parser(parser)
+        parser.add_argument(dest='filename', help='filename of the package')
+        parser.add_argument(dest='target', help='vault folder to create')
+
+    def run(self):
+        self.loop.run_until_complete(
+                self.app.import_package(
+                    self.config.filename,
+                    self.config.target))
 
 
 class CheckUpdate(NoVaultCmd):
@@ -306,7 +335,7 @@ class CheckUpdate(NoVaultCmd):
 
 COMMANDS = [Login(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
         Watch(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(),
-        ConfigSet(), ConfigUnset(), Export(), Keys()]
+        ConfigSet(), ConfigUnset(), Export(), Import(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(
@@ -328,6 +357,13 @@ if __name__ == '__main__':
     # locale when formatting datetime objects.
     import locale
     locale.setlocale(locale.LC_TIME, '')
+
+    try:
+        # Use uvloop if available (currently only on *nix and py 3.5)
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except ImportError:
+        pass
 
     args = global_parser.parse_args(sys.argv[1:2])
 

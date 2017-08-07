@@ -42,11 +42,11 @@ def run_syncrypt():
     smokesignal.emit('pre_setup', app=app)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(app.initialize(with_api=True))
+    loop.run_until_complete(app.start())
+    loop.run_until_complete(app.initialize())
 
     smokesignal.emit('post_setup', app=app)
 
-    loop.run_until_complete(app.start())
     loop.run_until_complete(app.wait_for_shutdown())
 
     smokesignal.emit('shutdown', app=app)

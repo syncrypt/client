@@ -8,7 +8,7 @@ from os import path
 from setuptools import find_packages, setup
 
 __name__ = 'syncrypt'
-__version__ = '0.3.9'
+__version__ = '0.4.0'
 
 here = path.abspath(path.dirname(__file__))
 
@@ -121,6 +121,8 @@ setup(
         'pycrypto',
         'python-snappy',
         'smokesignal',
+        'erlastic',
+        'certifi',
         'tzlocal',
         'umsgpack'
     ],
@@ -137,10 +139,13 @@ setup(
         ],
         'test': [
             'pytest-runner',
-            'pytest',
+            'pytest>=2.8.0',
             'asynctest',
             'hypothesis'
         ],
+        'uvloop': [
+            'uvloop'
+        ]
     },
 
     cmdclass=cmdclass
