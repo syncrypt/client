@@ -36,6 +36,7 @@ log_dir = os.path.join(app_config.config_dir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
+
 def run_syncrypt():
     app = SyncryptApp(app_config)
 
@@ -52,6 +53,7 @@ def run_syncrypt():
     smokesignal.emit('shutdown', app=app)
 
     return app.restart_flag
+
 
 if config.detach:
     class SyncryptDaemon(Daemon):

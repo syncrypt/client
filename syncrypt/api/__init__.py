@@ -254,7 +254,8 @@ class SyncryptAPI():
 
     @asyncio.coroutine
     def start(self):
-        assert self.web_app is not None
+        if self.web_app is None:
+            raise RuntimeError('Start requested without initialization')
 
         loop = asyncio.get_event_loop()
 

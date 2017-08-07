@@ -31,6 +31,7 @@ from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
 
+
 class SyncryptApp(object):
     '''
     The main controller class for Syncrypt commands. It can orchestrate
@@ -81,10 +82,8 @@ class SyncryptApp(object):
         super(SyncryptApp, self).__init__()
 
     @asyncio.coroutine
-    def initialize(self, with_api=False):
+    def initialize(self):
         yield from self.identity.init()
-        if with_api:
-            self.api.initialize()
 
     def add_vault_by_path(self, path):
         return self.add_vault(Vault(path))
@@ -206,6 +205,7 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def start(self):
         try:
+            self.api.initialize()
             yield from self.api.start()
         except OSError:
             logger.error('Port is blocked, could not start API REST server')
