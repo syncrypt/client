@@ -232,12 +232,12 @@ class BinaryStorageConnection(object):
 
                 response = yield from self.read_term(assert_ok=False)
 
-                if len(response) == 2:
-                    self.manager.global_auth = response[1].decode()
-
                 if response[0] != Atom('ok'):
                     yield from self.disconnect()
                     raise StorageBackendInvalidAuth(response)
+
+                if len(response) == 2:
+                    self.manager.global_auth = response[1].decode()
 
                 key = vault.identity.export_public_key()
 
