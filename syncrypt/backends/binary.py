@@ -67,9 +67,9 @@ def rewrite_atoms_dict(bert_dict):
 
 
 class BinaryStorageConnectionLoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, connection, *args):
+    def __init__(self, connection, logger):
         self.connection = connection
-        super(BinaryStorageConnectionLoggerAdapter, self).__init__(*args, {})
+        super(BinaryStorageConnectionLoggerAdapter, self).__init__(logger, {})
 
     def process(self, msg, kwargs):
         if self.connection.vault and self.connection.vault.config.id:

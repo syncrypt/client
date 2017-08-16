@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 IGNORE_EMPTY_FILES = ['.DS_Store']
 
 class VaultLoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, vault, *args):
+    def __init__(self, vault, logger):
         self.vault = vault
-        super(VaultLoggerAdapter, self).__init__(*args, {})
+        super(VaultLoggerAdapter, self).__init__(logger, {})
 
     def process(self, msg, kwargs):
         return (msg, dict(kwargs, extra={
