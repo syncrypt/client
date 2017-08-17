@@ -13,10 +13,12 @@ from syncrypt.backends.binary import get_manager_instance
 from ..utils.updates import is_update_available
 from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
+from .log import ws_global_log
 from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
                         UserResource, VaultResource, VaultUserResource)
 
 logger = logging.getLogger(__name__)
+
 
 class SyncryptAPI():
     def __init__(self, app):
@@ -243,6 +245,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
+        self.web_app.router.add_route('GET', '/v1/log/', ws_global_log)
         self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
         self.web_app.router.add_route('PATCH', '/v1/config/', self.patch_config)
