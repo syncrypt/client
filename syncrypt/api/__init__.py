@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 
+import smokesignal
 from aiohttp import web
 
 import syncrypt
@@ -251,6 +252,8 @@ class SyncryptAPI():
         # The following routes are deprecated and will be removed shortly
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config', self.get_config)
+
+        smokesignal.emit('post_api_initialize', app=self.app, api=self)
 
     @asyncio.coroutine
     def start(self):

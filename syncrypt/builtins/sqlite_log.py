@@ -65,11 +65,11 @@ def pre_setup(app):
                      vault text)''')
     root_logger.addHandler(SqliteHandler(conn=conn, capacity=30))
 
-@smokesignal.on('post_setup')
-def post_setup(app):
+@smokesignal.on('post_api_initialize')
+def post_api_initialize(app, api):
     filename = os.path.join(app.config.config_dir, 'vault_log.db')
     conn = sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
-    router = app.api.web_app.router
+    router = api.web_app.router
     router.add_route('GET', '/v1/log-by-vault/{vault_id}/',
             create_dispatch_log_list(conn))
 
