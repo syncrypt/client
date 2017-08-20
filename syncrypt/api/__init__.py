@@ -13,7 +13,7 @@ from syncrypt.backends.binary import get_manager_instance
 from ..utils.updates import is_update_available
 from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
-from .log import ws_global_log
+from .log import ws_stream_log
 from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
                         UserResource, VaultResource, VaultUserResource)
 
@@ -214,7 +214,7 @@ class SyncryptAPI():
     @asyncio.coroutine
     # TODO @require_auth_token
     def stream_log(self, request):
-        yield from ws_global_log(self, request)
+        yield from ws_stream_log(request, self.app)
 
     @asyncio.coroutine
     @require_auth_token
