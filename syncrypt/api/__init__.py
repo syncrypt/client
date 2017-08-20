@@ -212,6 +212,11 @@ class SyncryptAPI():
         return JSONResponse(user_info)
 
     @asyncio.coroutine
+    # TODO @require_auth_token
+    def stream_log(self, request):
+        yield from ws_global_log(self, request)
+
+    @asyncio.coroutine
     @require_auth_token
     def post_user_feedback(self, request):
         '''
@@ -245,7 +250,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
-        self.web_app.router.add_route('GET', '/v1/log/', ws_global_log)
+        self.web_app.router.add_route('GET', '/v1/log/', self.stream_log)
         self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
         self.web_app.router.add_route('PATCH', '/v1/config/', self.patch_config)
