@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 from .auth import AUTH_TOKEN_HEADER
 
+
 class APIClient:
     def __init__(self, app_config):
         self.host = app_config.get('api.host')

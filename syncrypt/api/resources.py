@@ -379,6 +379,7 @@ class FlyingVaultResource(Resource):
     def get_obj(self, request):
         return find_vault_by_id(request.match_info['id'])
 
+
 class UserResource(Resource):
     resource_name = 'user'
 
@@ -399,6 +400,7 @@ class UserResource(Resource):
         } for key in key_list])
         yield from backend.close()
         return response
+
 
 class VaultUserResource(Resource):
     resource_name = 'users'
