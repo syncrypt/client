@@ -136,11 +136,14 @@ class VaultResource(Resource):
                 '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
                 self.dispatch_fingerprints)
         router.add_route('GET', 
-                '/{version}/{name}/{{id}}/log/'.format(**opts),
-                self.dispatch_log)
+                '/{version}/{name}/{{id}}/history/'.format(**opts),
+                self.dispatch_history)
         router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
+        router.add_route('GET', 
+                '/{version}/{name}/{{id}}/log/'.format(**opts),
+                self.dispatch_log)
         router.add_route('GET', 
                 '/{version}/{name}/{{id}}/logstream/'.format(**opts),
                 self.dispatch_stream_log)
@@ -232,7 +235,7 @@ class VaultResource(Resource):
         yield from ws_stream_log(request, self.app, [VaultFilter(vault)])
 
     @asyncio.coroutine
-    def dispatch_log(self, request):
+    def dispatch_history(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
         local_tz = get_localzone()
@@ -256,6 +259,10 @@ class VaultResource(Resource):
                 'path': bundle.relpath
             })
         return JSONResponse({'items': log_items})
+
+    @asyncio.coroutine
+    def dispatch_log(self, request):
+        raise NotImplementedError()
 
     @asyncio.coroutine
     def dispatch_export(self, request):
