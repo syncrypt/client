@@ -3,10 +3,11 @@ import logging
 import os.path
 import sqlite3
 from datetime import datetime
-from syncrypt.api.responses import JSONResponse
 from logging.handlers import BufferingHandler
 
 import smokesignal
+
+from syncrypt.api.responses import JSONResponse
 
 
 class SqliteHandler(BufferingHandler):
@@ -29,6 +30,7 @@ class SqliteHandler(BufferingHandler):
 
     def close(self):
         self.conn.commit()
+
 
 def create_dispatch_log_list(conn):
     # Change connection's row_factory to a dict factory so we can
@@ -53,6 +55,7 @@ def create_dispatch_log_list(conn):
 
     return dispatch_log_list
 
+
 @smokesignal.once('pre_setup')
 def pre_setup(app):
     root_logger = logging.getLogger()
@@ -64,6 +67,7 @@ def pre_setup(app):
                      level text,
                      vault text)''')
     root_logger.addHandler(SqliteHandler(conn=conn, capacity=30))
+
 
 @smokesignal.on('post_api_initialize')
 def post_api_initialize(app, api):
