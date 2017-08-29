@@ -141,9 +141,7 @@ class VaultResource(Resource):
         router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
-        router.add_route('GET', 
-                '/{version}/{name}/{{id}}/log/'.format(**opts),
-                self.dispatch_log)
+        # Note: For now, '/{version}/{name}/{{id}}/log/' is implemented in builtins.sqlite_log
         router.add_route('GET', 
                 '/{version}/{name}/{{id}}/logstream/'.format(**opts),
                 self.dispatch_stream_log)
@@ -259,10 +257,6 @@ class VaultResource(Resource):
                 'path': bundle.relpath
             })
         return JSONResponse({'items': log_items})
-
-    @asyncio.coroutine
-    def dispatch_log(self, request):
-        raise NotImplementedError()
 
     @asyncio.coroutine
     def dispatch_export(self, request):

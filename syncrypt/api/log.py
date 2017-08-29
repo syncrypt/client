@@ -44,7 +44,7 @@ class JSONFormatter(logging.Formatter):
         return json.dumps({
             'level': record.levelname,
             'time': record.asctime,
-            'text': super(JSONFormatter, self).format(record),
+            'message': super(JSONFormatter, self).format(record),
             'vault': vault_uri
         })
 
