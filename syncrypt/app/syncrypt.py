@@ -741,7 +741,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def pull_vault(self, vault, full=False):
-        logger.info('Pulling %s', vault)
+        vault.logger.info('Pulling %s', vault)
         latest_revision = None
         total = 0
         successful = []
@@ -768,8 +768,8 @@ class SyncryptApp(object):
                 bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
                 task = yield from self.pull_bundle(bundle)
                 task.add_done_callback(cb)
-            except ValueError as e:
-                logger.exception(e)
+            except Exception as e:
+                vault.logger.exception(e)
             latest_revision = server_info.get('id') or latest_revision
         yield from self.wait()
 
@@ -777,13 +777,13 @@ class SyncryptApp(object):
 
         if success:
             if total == 0:
-                logger.info('No changes in %s', vault)
+                vault.logger.info('No changes in %s', vault)
             else:
-                logger.info('Successfully pulled %d revisions for %s', total, vault)
+                vault.logger.info('Successfully pulled %d revisions for %s', total, vault)
                 if latest_revision:
                     vault.update_revision(latest_revision)
         else:
-            logger.error('%s failure(s) occured while pulling %d revisions for %s',
+            vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
                     total - len(successful), total, vault)
 
     @asyncio.coroutine
