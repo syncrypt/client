@@ -764,9 +764,12 @@ class SyncryptApp(object):
                 break
             total += 1
             store_hash, metadata, server_info = item
-            bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
-            task = yield from self.pull_bundle(bundle)
-            task.add_done_callback(cb)
+            try:
+                bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
+                task = yield from self.pull_bundle(bundle)
+                task.add_done_callback(cb)
+            except ValueError as e:
+                logger.exception(e)
             latest_revision = server_info.get('id') or latest_revision
         yield from self.wait()
 
@@ -780,7 +783,7 @@ class SyncryptApp(object):
                 if latest_revision:
                     vault.update_revision(latest_revision)
         else:
-            logger.error('%s failures occured while pulling %d revisions for %s',
+            logger.error('%s failure(s) occured while pulling %d revisions for %s',
                     total - len(successful), total, vault)
 
     @asyncio.coroutine
