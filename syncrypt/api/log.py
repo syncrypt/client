@@ -4,8 +4,6 @@ import logging
 
 from aiohttp import web
 
-from .resources import VaultResource
-
 logger = logging.getLogger(__name__)
 
 
@@ -34,18 +32,11 @@ class JSONFormatter(logging.Formatter):
         super(JSONFormatter, self).__init__()
 
     def format(self, record):
-        vault_uri = None
-
-        if hasattr(record, 'vault_id'):
-            vault_resource = VaultResource(self.app)
-            vault = vault_resource.find_vault_by_id(record.vault_id)
-            vault_uri = vault_resource.get_resource_uri(vault)
-
         return json.dumps({
             'level': record.levelname,
             'time': record.asctime,
             'message': super(JSONFormatter, self).format(record),
-            'vault': vault_uri
+            'vault_id': getattr(record, 'vault_id', None)
         })
 
 

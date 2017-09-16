@@ -34,7 +34,7 @@ class SqliteHandler(BufferingHandler):
 
 
 def create_dispatch_log_list(conn, app):
-    vault_resource = VaultResource(app)
+    #vault_resource = VaultResource(app)
 
     # Change connection's row_factory to a log entry so we can
     # plug the fetch results directly into a JSONResponse
@@ -46,28 +46,13 @@ def create_dispatch_log_list(conn, app):
             if name in ('level', 'message'):
                 d[name] = row[idx]
             elif name == 'vault':
-                vault = vault_resource.find_vault_by_id(row[idx])
-                d[name] = vault_resource.get_resource_uri(vault)
+                #vault = vault_resource.find_vault_by_id(row[idx])
+                #d[name] = vault_resource.get_resource_uri(vault)
+                d['vault_id'] = row[idx]
             elif name == 'date':
                 d['time'] = row[idx]
         return d
     conn.row_factory = log_factory
-
-    #def row_to_log(row):
-    #    if 'vault' in row:
-    #        vault_resource = VaultResource(app)
-    #        vault = vault_resource.find_vault_by_id(row['vault'])
-    #        vault_uri = vault_resource.get_resource_uri(vault)
-    #    else:
-    #        vault_uri = None
-
-    #return {
-    #    'level': row['level'],
-    #    'time': row['date'],
-    #    'message': row['message'],
-    #    'vault': vault_uri
-    #}
-
 
     @asyncio.coroutine
     def dispatch_log_list(request):
