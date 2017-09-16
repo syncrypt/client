@@ -1,4 +1,7 @@
+'This module implements log streaming and persistence'
+
 import asyncio
+import json
 import logging
 import os.path
 import sqlite3
@@ -6,9 +9,45 @@ from datetime import datetime
 from logging.handlers import BufferingHandler
 
 import smokesignal
+from aiohttp import web
 
-from syncrypt.api.responses import JSONResponse
 from syncrypt.api.resources import VaultResource
+from syncrypt.api.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
+
+
+class WebSocketHandler(logging.StreamHandler):
+    def __init__(self, ws, app, *args, **kwargs):
+        self.ws = ws
+        super(WebSocketHandler, self).__init__(*args, **kwargs)
+        self.setFormatter(JSONFormatter(app))
+
+    def emit(self, record):
+        if not self.ws.closed:
+            self.ws.send_str(self.format(record))
+
+
+class VaultFilter(logging.Filter):
+    def __init__(self, vault):
+        self._vault = vault
+
+    def filter(self, record):
+        return 1 if getattr(record, 'vault_id', None) == self._vault.config.id else 0
+
+
+class JSONFormatter(logging.Formatter):
+    def __init__(self, app):
+        self.app = app
+        super(JSONFormatter, self).__init__()
+
+    def format(self, record):
+        return json.dumps({
+            'level': record.levelname,
+            'time': record.asctime,
+            'message': super(JSONFormatter, self).format(record),
+            'vault_id': getattr(record, 'vault_id', None)
+        })
 
 
 class SqliteHandler(BufferingHandler):
@@ -33,45 +72,97 @@ class SqliteHandler(BufferingHandler):
         self.conn.commit()
 
 
-def create_dispatch_log_list(conn, app):
-    #vault_resource = VaultResource(app)
+# Change connection's row_factory to a log entry so we can
+# plug the fetch results directly into a JSONResponse
+# https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.row_factory
+def log_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        name = col[0]
+        if name in ('level', 'message'):
+            d[name] = row[idx]
+        elif name == 'vault':
+            d['vault_id'] = row[idx]
+        elif name == 'date':
+            d['time'] = row[idx]
+    return d
 
-    # Change connection's row_factory to a log entry so we can
-    # plug the fetch results directly into a JSONResponse
-    # https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.row_factory
-    def log_factory(cursor, row):
-        d = {}
-        for idx, col in enumerate(cursor.description):
-            name = col[0]
-            if name in ('level', 'message'):
-                d[name] = row[idx]
-            elif name == 'vault':
-                #vault = vault_resource.find_vault_by_id(row[idx])
-                #d[name] = vault_resource.get_resource_uri(vault)
-                d['vault_id'] = row[idx]
-            elif name == 'date':
-                d['time'] = row[idx]
-        return d
+
+def open_database(app):
+    filename = os.path.join(app.config.config_dir, 'vault_log.db')
+    return sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
+
+
+def select_recent_log_items(app, vault_id=None, limit=100, conn=None):
+    'return ``limit`` most recent log items'
+    if not conn:
+        conn = open_database(app)
+
     conn.row_factory = log_factory
+    if vault_id:
+        cursor = conn.execute('SELECT * FROM log WHERE vault = ? ORDER BY date DESC LIMIT ?',
+                              (vault_id, limit))
+    else:
+        cursor = conn.execute('SELECT * FROM log ORDER BY date DESC LIMIT ?',
+                              (limit, ))
+    return cursor.fetchall()
+
+
+@asyncio.coroutine
+def ws_stream_log(request, app, vault_id=None, limit=None, filters=None):
+    'Stream Python logs via WebSockets'
+
+    ws = web.WebSocketResponse()
+    yield from ws.prepare(request)
+
+    for item in select_recent_log_items(app, vault_id, 100):
+        ws.send_str(json.dumps(item))
+
+    root_logger = logging.getLogger()
+    wshandler = WebSocketHandler(ws, app)
+
+    if vault_id:
+        wshandler.addFilter(VaultFilter(app.find_vault_by_id(vault_id)))
+
+    if filters:
+        for fltr in filters:
+            wshandler.addFilter(fltr)
+
+    root_logger.addHandler(wshandler)
+    while not ws.closed:
+        msg = yield from ws.receive()
+        logger.debug(msg)
+    root_logger.removeHandler(wshandler)
+
+    logger.debug('WebSocket connection closed')
+
+
+def create_dispatch_log_list(app):
+    conn = open_database(app)
 
     @asyncio.coroutine
     def dispatch_log_list(request):
-        cursor = conn.execute('''
-                SELECT * FROM log
-                    WHERE vault = ?
-                    ORDER BY date DESC
-                    LIMIT 100''',
-                (request.match_info['vault_id'], ))
-        return JSONResponse(cursor.fetchall())
+        vault_id = request.match_info.get('vault_id', None)
+        limit = int(request.GET.get('limit', 100))
+        return JSONResponse(select_recent_log_items(app, vault_id, limit, conn=conn))
 
     return dispatch_log_list
+
+
+def create_dispatch_stream_log(app):
+    @asyncio.coroutine
+    def dispatch_stream_log(request):
+        vault_id = request.match_info.get('vault_id', None)
+        limit = int(request.GET.get('limit', 100))
+        yield from ws_stream_log(request, app, vault_id=vault_id, limit=limit)
+
+    return dispatch_stream_log
 
 
 @smokesignal.once('pre_setup')
 def pre_setup(app):
     root_logger = logging.getLogger()
-    filename = os.path.join(app.config.config_dir, 'vault_log.db')
-    conn = sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
+    conn = open_database(app)
     conn.execute('''CREATE TABLE IF NOT EXISTS log
                     (date datetime,
                      message text,
@@ -82,9 +173,8 @@ def pre_setup(app):
 
 @smokesignal.on('post_api_initialize')
 def post_api_initialize(app, api):
-    filename = os.path.join(app.config.config_dir, 'vault_log.db')
-    conn = sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
     router = api.web_app.router
-    router.add_route('GET', '/v1/vault/{vault_id}/log/',
-                     create_dispatch_log_list(conn, app))
-
+    router.add_route('GET', '/v1/vault/{vault_id}/log/', create_dispatch_log_list(app))
+    router.add_route('GET', '/v1/vault/{vault_id}/logstream/', create_dispatch_stream_log(app))
+    router.add_route('GET', '/v1/log/', create_dispatch_log_list(app))
+    router.add_route('GET', '/v1/logstream/', create_dispatch_stream_log(app))

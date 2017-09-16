@@ -94,6 +94,12 @@ class SyncryptApp(object):
             self.config.add_vault_dir(os.path.abspath(vault.folder))
         return vault
 
+    def find_vault_by_id(self, vault_id):
+        for v in self.vaults:
+            if str(v.config.get('vault.id')) == vault_id:
+                return v
+        raise ValueError('Vault not found: {}'.format(vault_id))
+
     @asyncio.coroutine
     def remove_vault(self, vault):
         with self.config.update_context():

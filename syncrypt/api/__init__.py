@@ -13,7 +13,6 @@ from syncrypt.backends.binary import get_manager_instance
 from ..utils.updates import is_update_available
 from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
-from .log import ws_stream_log
 from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
                         UserResource, VaultResource, VaultUserResource)
 
@@ -199,7 +198,6 @@ class SyncryptAPI():
                 'installed_version': syncrypt.__version__
             })
 
-
     @asyncio.coroutine
     @require_auth_token
     def get_user_info(self, request):
@@ -210,11 +208,6 @@ class SyncryptAPI():
         user_info = yield from backend.user_info()
         yield from backend.close()
         return JSONResponse(user_info)
-
-    @asyncio.coroutine
-    # TODO @require_auth_token
-    def stream_log(self, request):
-        yield from ws_stream_log(request, self.app)
 
     @asyncio.coroutine
     @require_auth_token
@@ -250,7 +243,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
-        self.web_app.router.add_route('GET', '/v1/log/', self.stream_log)
+        #self.web_app.router.add_route('GET', '/v1/log/', self.stream_log)
         self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
         self.web_app.router.add_route('PATCH', '/v1/config/', self.patch_config)

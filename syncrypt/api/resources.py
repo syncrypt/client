@@ -141,10 +141,6 @@ class VaultResource(Resource):
         router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
-        # Note: For now, '/{version}/{name}/{{id}}/log/' is implemented in builtins.sqlite_log
-        router.add_route('GET', 
-                '/{version}/{name}/{{id}}/logstream/'.format(**opts),
-                self.dispatch_stream_log)
 
     def get_id(self, v):
         return str(v.config.get('vault.id'))
@@ -186,9 +182,8 @@ class VaultResource(Resource):
         return self.app.vaults
 
     def find_vault_by_id(self, vault_id):
-        for v in self.app.vaults:
-            if self.get_id(v) == vault_id:
-                return v
+        'deprecated'
+        return self.app.find_vault_by_id(vault_id)
 
     @asyncio.coroutine
     def get_obj(self, request):
@@ -224,13 +219,6 @@ class VaultResource(Resource):
         vault = self.find_vault_by_id(vault_id)
         fingerprint_list = yield from vault.backend.list_vault_user_key_fingerprints()
         return JSONResponse(fingerprint_list)
-
-    @asyncio.coroutine
-    def dispatch_stream_log(self, request):
-        from .log import ws_stream_log, VaultFilter
-        vault_id = request.match_info['id']
-        vault = self.find_vault_by_id(vault_id)
-        yield from ws_stream_log(request, self.app, [VaultFilter(vault)])
 
     @asyncio.coroutine
     def dispatch_history(self, request):
