@@ -1,4 +1,4 @@
-'This module implements log streaming and persistence'
+'This builtin module implements log streaming and log persistence'
 
 import asyncio
 import json
@@ -7,6 +7,7 @@ import os.path
 import sqlite3
 from datetime import datetime
 from logging.handlers import BufferingHandler
+from logging import StreamHandler
 
 import smokesignal
 from aiohttp import web
@@ -17,7 +18,7 @@ from syncrypt.api.responses import JSONResponse
 logger = logging.getLogger(__name__)
 
 
-class WebSocketHandler(logging.StreamHandler):
+class WebSocketHandler(StreamHandler):
     def __init__(self, ws, app, *args, **kwargs):
         self.ws = ws
         super(WebSocketHandler, self).__init__(*args, **kwargs)

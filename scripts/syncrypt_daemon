@@ -15,7 +15,7 @@ from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
 
 # Register builtins
-import syncrypt.builtins.sqlite_log
+import syncrypt.builtins.log
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
