@@ -109,6 +109,9 @@ install:
   # Install dist deps as well
   - "pip install -e \".[dist]\""
 
+  # Install win deps as well
+  - "pip install -e \".[win]\""
+
 build_script:
   # Build the compiled extension
   - "pyinstaller --onefile scripts/syncrypt"

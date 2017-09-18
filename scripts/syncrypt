@@ -13,12 +13,20 @@ from syncrypt.config import AppConfig
 from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
 
+try:
+    import win_unicode_console; win_unicode_console.enable()
+except ImportError:
+    pass
+
+
 COPYRIGHT = '''Syncrypt v{version}
 (c) 2016-2017 Syncrypt UG | https://syncrypt.space
 Licensed under the GPLv3 | Source: https://github.com/syncrypt/client'''\
     .format(version=__version__)
 
+
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
+
 
 class SyncryptCmd():
     command = None

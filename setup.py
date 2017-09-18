@@ -137,6 +137,9 @@ setup(
             'six',
             'packaging'
         ],
+        'win': [
+            'win_unicode_console'
+        ],
         'test': [
             'pytest-runner',
             'pytest>=2.8.0',

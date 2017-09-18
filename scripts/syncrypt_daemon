@@ -14,6 +14,11 @@ from syncrypt.models import Vault
 from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
 
+try:
+    import win_unicode_console; win_unicode_console.enable()
+except ImportError:
+    pass
+
 # Register builtins
 import syncrypt.builtins.log
 
