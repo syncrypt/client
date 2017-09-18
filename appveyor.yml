@@ -114,8 +114,8 @@ install:
 
 build_script:
   # Build the compiled extension
-  - "pyinstaller --onefile --hiddenimport six --hiddenimport packaging --hiddenimport packaging.version --hidenimport packaging.specifiers --hiddenimport packaging.requirements --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt"
-  - "pyinstaller --onefile --hiddenimport six --hiddenimport packaging --hiddenimport packaging.version --hidenimport packaging.specifiers --hiddenimport packaging.requirements --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt_daemon"
+  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt"
+  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt_daemon"
   - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 #test_script:
