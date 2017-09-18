@@ -35,20 +35,19 @@ environment:
       WHEEL_ARCH: "win_amd64"
       WHEEL_PLATFORM: "cp35-cp35m"
 
-    # Python 3.6 is disabled for now because PyInstaller does not support it yet
-    # - PYTHON: "C:\\Python36"
-    #  PYTHON_VERSION: "3.6.x"
-    #  PYTHON_ARCH: "32"
-    #  DIST_PLATFORM: "win-i386"
-    #  WHEEL_ARCH: "win32"
-    #  WHEEL_PLATFORM: "cp36-cp36m"
-    #
-    # - PYTHON: "C:\\Python36-x64"
-    #  PYTHON_VERSION: "3.6.x"
-    #  PYTHON_ARCH: "64"
-    #  DIST_PLATFORM: "win-x86_64"
-    #  WHEEL_ARCH: "win_amd64"
-    #  WHEEL_PLATFORM: "cp36-cp36m"
+    - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "32"
+      DIST_PLATFORM: "win-i386"
+      WHEEL_ARCH: "win32"
+      WHEEL_PLATFORM: "cp36-cp36m"
+
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
+      DIST_PLATFORM: "win-x86_64"
+      WHEEL_ARCH: "win_amd64"
+      WHEEL_PLATFORM: "cp36-cp36m"
 
 init:
   # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
@@ -112,10 +111,16 @@ install:
   # Install win deps as well
   - "pip install -e \".[win]\""
 
+  # Install development version of pyinstaller when Python 3.6
+  - ps: >-
+      if ($env:PYTHON_VERSION -eq "3.6.x") {
+        & pip install --upgrade https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+      }
+
 build_script:
   # Build the compiled extension
-  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt"
-  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt_daemon"
+  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt"
+  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt_daemon"
   - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 #test_script:
