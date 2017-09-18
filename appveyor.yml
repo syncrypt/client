@@ -35,19 +35,20 @@ environment:
       WHEEL_ARCH: "win_amd64"
       WHEEL_PLATFORM: "cp35-cp35m"
 
-    - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.x"
-      PYTHON_ARCH: "32"
-      DIST_PLATFORM: "win-i386"
-      WHEEL_ARCH: "win32"
-      WHEEL_PLATFORM: "cp36-cp36m"
-
-    - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6.x"
-      PYTHON_ARCH: "64"
-      DIST_PLATFORM: "win-x86_64"
-      WHEEL_ARCH: "win_amd64"
-      WHEEL_PLATFORM: "cp36-cp36m"
+    # Python 3.6 is disabled for now because PyInstaller does not support it yet
+    # - PYTHON: "C:\\Python36"
+    #  PYTHON_VERSION: "3.6.x"
+    #  PYTHON_ARCH: "32"
+    #  DIST_PLATFORM: "win-i386"
+    #  WHEEL_ARCH: "win32"
+    #  WHEEL_PLATFORM: "cp36-cp36m"
+    #
+    # - PYTHON: "C:\\Python36-x64"
+    #  PYTHON_VERSION: "3.6.x"
+    #  PYTHON_ARCH: "64"
+    #  DIST_PLATFORM: "win-x86_64"
+    #  WHEEL_ARCH: "win_amd64"
+    #  WHEEL_PLATFORM: "cp36-cp36m"
 
 init:
   # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
