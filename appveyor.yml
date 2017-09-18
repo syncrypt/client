@@ -12,12 +12,42 @@ environment:
       PYTHON_ARCH: "32"
       DIST_PLATFORM: "win-i386"
       WHEEL_ARCH: "win32"
+      WHEEL_PLATFORM: "cp34-cp34m"
 
     - PYTHON: "C:\\Python34-x64"
       PYTHON_VERSION: "3.4.x" # currently 3.4.3
       PYTHON_ARCH: "64"
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
+      WHEEL_PLATFORM: "cp34-cp34m"
+
+    - PYTHON: "C:\\Python35"
+      PYTHON_VERSION: "3.5.x"
+      PYTHON_ARCH: "32"
+      DIST_PLATFORM: "win-i386"
+      WHEEL_ARCH: "win32"
+      WHEEL_PLATFORM: "cp35-cp35m"
+
+    - PYTHON: "C:\\Python35-x64"
+      PYTHON_VERSION: "3.5.x"
+      PYTHON_ARCH: "64"
+      DIST_PLATFORM: "win-x86_64"
+      WHEEL_ARCH: "win_amd64"
+      WHEEL_PLATFORM: "cp35-cp35m"
+
+    - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "32"
+      DIST_PLATFORM: "win-i386"
+      WHEEL_ARCH: "win32"
+      WHEEL_PLATFORM: "cp36-cp36m"
+
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
+      DIST_PLATFORM: "win-x86_64"
+      WHEEL_ARCH: "win_amd64"
+      WHEEL_PLATFORM: "cp36-cp36m"
 
 init:
   # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
@@ -67,10 +97,7 @@ install:
   - "pip install --disable-pip-version-check --user --upgrade pip"
 
   # Install python-snappy from wheel
-  - "pip install https://syncrypt.space/build/python_snappy-0.5-cp34-none-%WHEEL_ARCH%.whl"
-
-  # Install PyCrypto from wheel
-  - "pip install https://syncrypt.space/build/pycrypto-2.6.1-cp34-none-%WHEEL_ARCH%.whl"
+  - "pip install https://syncrypt.space/build/python_snappy-0.5.1-%WHEEL_PLATFORM%-%WHEEL_ARCH%.whl"
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,

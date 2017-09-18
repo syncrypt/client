@@ -118,7 +118,7 @@ setup(
         'hachiko',
         'iso8601',
         'msgpack-python>=0.4.0',
-        'pycrypto',
+        'pycryptodome',
         'python-snappy',
         'smokesignal',
         'erlastic',
