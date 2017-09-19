@@ -111,6 +111,9 @@ install:
   # Install win deps as well
   - "pip install -e \".[win]\""
 
+  # Install test deps as well
+  - "pip install -e \".[test]\""
+
   # Install development version of pyinstaller when Python 3.6
   - ps: >-
       if ($env:PYTHON_VERSION -eq "3.6.x") {
@@ -123,16 +126,10 @@ build_script:
   - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt_daemon"
   - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
-#test_script:
-  # Run the project tests
-  #  - "python setup.py test"
-
-#after_test:
-  # If tests are successful, create binary packages for the project.
-  #  - "python setup.py bdist_wheel"
-  #- "python setup.py bdist_wininst"
-  #- "python setup.py bdist_msi"
-  #- ps: "ls dist"
+test_script:
+  - "py.test -m \"not (requires_server or external_resources)\""
+  - "dist\\syncrypt.exe --version"
+  - "dist\\syncrypt_daemon.exe -h"
 
 artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
