@@ -1,4 +1,5 @@
 import hashlib
+import sys
 import logging
 import os
 import posixpath
@@ -208,7 +209,13 @@ class Bundle(MetadataHolder):
         yield from self.vault.semaphores['update'].release(self)
 
     def __str__(self):
-        return "<Bundle: {0.relpath}>".format(self)
+        relpath = self.relpath
+        if sys.platform == 'win32':
+            # On windows, we will encode relpath with 'replace' (converts unknown character
+            # codes to '?'), so that we will have no problem logging in to a limit charmap
+            # terminal :(
+            relpath = relpath.encode('cp1252', 'replace').decode()
+        return "<Bundle: {0}>".format(relpath)
 
     @property
     def path_metadata(self):
