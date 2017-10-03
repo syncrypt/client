@@ -498,8 +498,7 @@ class SyncryptApp(object):
                 if not auth_provider:
                     raise ValueError('Can not login, do not have auth provider')
                 username, password = yield from auth_provider.get_auth(backend)
-                backend.username = username
-                backend.password = password
+                backend.set_auth(username, password)
                 backend.auth = None
             try:
                 if not backend.global_auth:
@@ -510,8 +509,8 @@ class SyncryptApp(object):
                     with cfg.update_context():
                         cfg.update('remote', {'auth': backend.global_auth})
                 return backend
-            except StorageBackendInvalidAuth:
-                logger.error('Invalid login')
+            except StorageBackendInvalidAuth as e:
+                logger.error('Invalid login: %s' % e)
                 if (try_num + 1) < num_tries:
                     continue
                 else:
