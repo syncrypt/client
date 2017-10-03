@@ -149,10 +149,13 @@ class SyncryptAPI():
     @require_auth_token
     def get_auth_logout(self, request):
         '''
-        Logging out the user simply works by removing the global auth
-        token.
+        Log out the user and remove global_auth information
         '''
         cfg = self.app.config
+        backend = yield from self.app.open_backend()
+        backend.global_auth = None
+        backend.set_auth(None, None)
+        yield from get_manager_instance().close()
         with cfg.update_context():
             cfg.update('remote', {'auth': ''})
         return JSONResponse({'status': 'ok'})

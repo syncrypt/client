@@ -789,7 +789,7 @@ class BinaryStorageManager(object):
         for conn in self.slots:
             if conn.connected or conn.connecting:
                 if not logged:
-                    self.backend.logger.debug('Disconnecting from server')
+                    logger.debug('Disconnecting from server')
                     logged = True
                 yield from conn.disconnect()
         if not self._monitor_task is None:
