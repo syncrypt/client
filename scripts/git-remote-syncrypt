@@ -45,6 +45,7 @@ def readline():
     """
     return sys.stdin.readline().strip()  # remove trailing newline
 
+
 def git_command_output(*args, **kwargs):
     """
     Return the result of running a git command.
@@ -235,7 +236,7 @@ class GitBundle(Bundle):
 
     @classmethod
     def from_sha(cls, sha, **kwargs):
-        bundle = cls(os.path.join('.git', _object_path(sha)),
+        bundle = cls(os.path.join(os.environ['GIT_DIR'], _object_path(sha)),
                 relpath=_object_path(sha), **kwargs)
         return bundle
 
@@ -417,7 +418,8 @@ class SyncryptGitBridge(SyncryptApp):
                     pending.add(sha)
 
                     path = _object_path(sha)
-                    git_path = os.path.abspath(os.path.join('.git', path))
+                    git_path = os.path.abspath(
+                            os.path.join(os.environ['GIT_DIR'], path))
                     sc_path = os.path.join(self._vault.folder, path)
                     #os.path.join('.git', path))
                     # bundle = self._vault.bundle_for(path)
@@ -548,7 +550,7 @@ class SyncryptGitBridge(SyncryptApp):
             if for_push:
                 bundle.path = os.path.join('/tmp/xxxx', bundle.relpath)
             else:
-                bundle.path = os.path.join('.git', bundle.relpath)
+                bundle.path = os.path.join(os.environ['GIT_DIR'], bundle.relpath)
             if bundle.is_ref():
                 logger.warn("IS_REF!! for_push=%s %s %s", for_push, bundle.relpath, bundle.path)
                 bundle.persist = not for_push
@@ -582,7 +584,7 @@ class SyncryptGitBridge(SyncryptApp):
         Update a ref on the remote.
         """
         bundle = self._vault.bundle_for(path)
-        bundle.path = os.path.abspath(os.path.join('.git', path))
+        bundle.path = os.path.abspath(os.path.join(os.environ['GIT_DIR'], path))
 
         stderr('writing: %s (%d bytes)\n' % (bundle, len(data)))
 

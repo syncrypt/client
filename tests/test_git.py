@@ -87,7 +87,6 @@ class GitTests(VaultTestCase):
         os.chdir(git_folder_dst)
         call(["git", "clone", git_remote, '.'])
 
-
         self.assertTrue(os.path.exists(os.path.join(git_folder_dst, 'hello.txt')))
         self.assertTrue(os.path.exists(os.path.join(git_folder_dst, 'content.txt')))
 
@@ -102,6 +101,40 @@ class GitTests(VaultTestCase):
 
         with open(os.path.join(git_folder, 'content.txt'), 'r') as f:
             self.assertEqual(f.read(), 'Hello from test_git_push!\nHello from git_folder_dst!\n')
+
+    def test_git_clone(self):
+        app = self.app
+        yield from app.open_or_init(self.vault)
+        backend = self.vault.backend
+
+        git_folder = os.path.join(self.working_dir, 'gitrepo')
+        git_folder_dst = os.path.join(self.working_dir, 'gitrepo2')
+
+        if os.path.exists(git_folder):
+            shutil.rmtree(git_folder)
+        if os.path.exists(git_folder_dst):
+            shutil.rmtree(git_folder_dst)
+
+        git_remote = 'syncrypt://' + self.vault.folder
+
+        os.makedirs(git_folder)
+        with open(os.path.join(git_folder, 'content.txt'), 'w') as f:
+            f.write('Hello from test_git_push!\n')
+
+        os.chdir(git_folder)
+        call(["git", "init"])
+        self.assertTrue(os.path.exists(os.path.join(git_folder, '.git')))
+        call(["touch", "hello.txt"])
+        call(["git", "add", "."])
+        call(["git", "commit", "-a", "-m", "Initial commit"])
+        call(["git", "remote", "add", "origin", git_remote])
+        call(["git", "push", "-u", "origin", "master"])
+
+        os.chdir(self.working_dir)
+        call(["git", "clone", git_remote, git_folder_dst])
+
+        self.assertTrue(os.path.exists(os.path.join(git_folder_dst, 'hello.txt')))
+        self.assertTrue(os.path.exists(os.path.join(git_folder_dst, 'content.txt')))
 
 
     def test_git_ls_remote(self):
