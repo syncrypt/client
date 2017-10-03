@@ -23,6 +23,7 @@ logger = logging.getLogger('syncrypt.plugins.git')
 
 DEVNULL = open(os.devnull, 'w')
 
+
 def stdout(line):
     """
     Write line to standard output.
@@ -198,15 +199,17 @@ def _object_path(name):
     suffix = name[2:]
     return posixpath.join('objects', prefix, suffix)
 
-class Level(object):
-    """
-    A class for severity levels.
-    """
 
-    ERROR = 0
-    WARNING = 1
-    INFO = 2
-    DEBUG = 3
+def git_verbosity_to_loglevel(verbosity):
+    if verbosity >= 4:
+        return logging.DEBUG
+    elif verbosity == 3:
+        return logging.INFO
+    elif verbosity == 2:
+        return logging.WARNING
+    elif verbosity == 1:
+        return logging.ERROR
+    return logging.ERROR
 
 
 class GitBundle(Bundle):
@@ -243,14 +246,17 @@ class GitBundle(Bundle):
     def get_sha(self):
         return self.get_content().decode().strip()
 
+
 class SyncryptGitBridge(SyncryptApp):
-    def __init__(self, git_folder):
-        self._vault = Vault(git_folder, bundle_cls=GitBundle)
-        self._verbosity = Level.WARNING  # default verbosity
+    def __init__(self):
         self._refs = {}  # map from remote ref name => (rev number, sha)
         self._url = 'sample-url'
+        self._vault = None
         self._pushed = {}  # map from remote ref name => sha
         super(SyncryptGitBridge, self).__init__(AppConfig(), vault_dirs=[])
+
+    def set_vault_folder(self, git_folder):
+        self._vault = Vault(git_folder, bundle_cls=GitBundle)
         self.add_vault(self._vault)
 
     def _write(self, message=None):
@@ -262,26 +268,11 @@ class SyncryptGitBridge(SyncryptApp):
         else:
             stdout('\n')
 
-    def _trace(self, message, level=Level.DEBUG):
-        """
-        Log a message with a given severity level.
-        """
-        #if level > self._verbosity:
-        #    return
-        if level <= Level.ERROR:
-            stderr('error: %s\n' % message)
-        elif level == Level.WARNING:
-            stderr('warning: %s\n' % message)
-        elif level == Level.INFO:
-            stderr('info: %s\n' % message)
-        elif level == Level.DEBUG:
-            stderr('debug: %s\n' % message)
-
     def _fatal(self, message):
         """
         Log a fatal error and exit.
         """
-        self._trace(message, Level.ERROR)
+        logger.error('%s', message)
         exit(1)
 
     def run(self):
@@ -290,7 +281,7 @@ class SyncryptGitBridge(SyncryptApp):
         """
         while True:
             line = readline()
-            stderr('read: %s\n' % line)
+            logger.debug('[READ] %s', line)
             if line == 'capabilities':
                 self._write('option')
                 self._write('push')
@@ -322,7 +313,8 @@ class SyncryptGitBridge(SyncryptApp):
         Handle the option command.
         """
         if line.startswith('option verbosity'):
-            self._verbosity = int(line[len('option verbosity '):])
+            verbosity = int(line[len('option verbosity '):])
+            setup_logging(git_verbosity_to_loglevel(verbosity))
             self._write('ok')
         else:
             self._write('unsupported')
@@ -394,10 +386,10 @@ class SyncryptGitBridge(SyncryptApp):
         downloaded = set()
 
         def pull_finished(sha, future):
-            stderr('PULL FINISHED %s => %s\n' % (sha, future.result()))
+            logger.debug('Pull finished of object with sha %s', sha)
             bundle = future.result()
             queue.extend(git_referenced_objects(sha))
-            logger.info('Extending queue by %s', git_referenced_objects(sha))
+            logger.debug('Extending queue by %s', git_referenced_objects(sha))
             pending.remove(sha)
 
         while queue or pending:
@@ -410,10 +402,10 @@ class SyncryptGitBridge(SyncryptApp):
                     if not git_history_exists(sha):
                         # this can only happen in the case of aborted fetches
                         # that are resumed later
-                        self._trace('missing part of history from %s' % sha)
+                        logger.warn('missing part of history from %s', sha)
                         queue.extend(git_referenced_objects(sha))
                     else:
-                        self._trace('%s already downloaded' % sha)
+                        logger.warn('%s already downloaded', sha)
                 else:
                     pending.add(sha)
 
@@ -423,7 +415,7 @@ class SyncryptGitBridge(SyncryptApp):
                     sc_path = os.path.join(self._vault.folder, path)
                     #os.path.join('.git', path))
                     # bundle = self._vault.bundle_for(path)
-                    logger.warn('downloading %s -> %s', sha, git_path)
+                    logger.debug('downloading %s -> %s', sha, git_path)
                     bundle = GitBundle.from_sha(sha, vault=self._vault)
 
                     # We want this bundle to stream to disk
@@ -486,7 +478,7 @@ class SyncryptGitBridge(SyncryptApp):
         present.extend(self._pushed.values())
         # before updating the ref, write all objects that are referenced
         objects = git_list_objects(src, present)
-        stderr('writing %d...\n' % len(objects))
+        logger.debug('writing %d...', len(objects))
 
         asyncio.get_event_loop()\
             .run_until_complete(self._put_objects(objects))
@@ -521,7 +513,7 @@ class SyncryptGitBridge(SyncryptApp):
                 # perform an atomic add, which fails if a concurrent writer
                 # writes before this does
                 mode = 'add'# dropbox.files.WriteMode('add')
-        self._trace('writing ref %s with mode %s' % (dst, mode))
+        logger.debug('writing ref %s with mode %s', dst, mode)
         data = ('%s\n' % new_sha).encode('utf8')
         asyncio.get_event_loop()\
             .run_until_complete(self._put_ref(data, dst))
@@ -533,7 +525,7 @@ class SyncryptGitBridge(SyncryptApp):
                 for ref_bundle in ref_bundles
                 if hasattr(ref_bundle, 'get_sha') # temporary workaround
                 ]
-        logger.warn("RREFS %s", ret)
+        logger.debug("RREFS %s", ret)
         return ret
 
     @asyncio.coroutine
@@ -552,12 +544,12 @@ class SyncryptGitBridge(SyncryptApp):
             else:
                 bundle.path = os.path.join(os.environ['GIT_DIR'], bundle.relpath)
             if bundle.is_ref():
-                logger.warn("IS_REF!! for_push=%s %s %s", for_push, bundle.relpath, bundle.path)
+                logger.debug("IS_REF!! for_push=%s %s %s", for_push, bundle.relpath, bundle.path)
                 bundle.persist = not for_push
                 yield from self.pull_bundle(bundle)
                 refs.append(bundle)
         yield from self.wait()
-        logger.warn("REFS %s", refs)
+        logger.debug("REFS %s", refs)
         return refs
 
     @asyncio.coroutine
@@ -574,7 +566,7 @@ class SyncryptGitBridge(SyncryptApp):
 
         bundle = GitBundle.from_sha(sha, vault=self._vault)
         data = git_encode_object(sha)
-        stderr('writing: %s (%d bytes)\n' % (bundle, len(data)))
+        logger.debug('writing: %s (%d bytes)', bundle, len(data))
 
         yield from self.push_bundle(bundle)
 
@@ -586,7 +578,7 @@ class SyncryptGitBridge(SyncryptApp):
         bundle = self._vault.bundle_for(path)
         bundle.path = os.path.abspath(os.path.join(os.environ['GIT_DIR'], path))
 
-        stderr('writing: %s (%d bytes)\n' % (bundle, len(data)))
+        logger.debug('writing: %s (%d bytes)', bundle, len(data))
 
         yield from self.push_bundle(bundle)
         yield from self.wait()
@@ -596,14 +588,21 @@ def main():
     name, url = sys.argv[1:3]
     url = url.lower()
     if url.startswith('syncrypt://'):
-        url = url[len('syncrypt:/'):]  # keep single leading slash
-    if not url.startswith('/') or url.endswith('/'):
-        stderr('error: URL must have leading slash and no trailing slash\n')
-        exit(1)
+        url = url[len('syncrypt://'):]  # keep single leading slash
 
-    git_folder = url
-    app = SyncryptGitBridge(git_folder)
+    source = url
+    app = SyncryptGitBridge()
+    if os.path.exists(source): # assert abs path
+        app.set_vault_folder(source)
+    else:
+        vault_folder = os.path.join(os.environ['GIT_DIR'], 'shallow-vault')
+        if not os.path.exists(vault_folder):
+            stderr('Shallow-cloning vault to "%s"...\n' % vault_folder)
+            asyncio.get_event_loop()\
+                .run_until_complete(app.clone(source, vault_folder))
+        app.set_vault_folder(vault_folder)
     try:
+        stderr('Downloading bundles from Syncrypt...\n')
         app.run()
     finally:
         app.close()
@@ -613,6 +612,6 @@ if __name__ == '__main__':
     if sys.platform == 'win32':
         import msvcrt
         msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
-    setup_logging(logging.DEBUG)
+    setup_logging(logging.WARNING)
     main()
 

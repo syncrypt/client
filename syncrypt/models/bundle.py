@@ -41,10 +41,6 @@ class Bundle(MetadataHolder):
             h = hashlib.new(self.vault.config.hash_algo)
             h.update(self.encode_path(self.relpath))
             self.store_hash = h.hexdigest()
-            logger.info('STORE HASH\n\t%s\n\t%s\n\t%s',
-                    self.relpath,
-                    self.vault.folder,
-                    self.store_hash)
         if store_hash is not None:
             self.store_hash = store_hash
 
