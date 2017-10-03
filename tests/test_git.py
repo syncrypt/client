@@ -1,20 +1,21 @@
+import asyncio
 import logging
-from glob import glob
 import os
 import os.path
 import shutil
 import unittest
-
-import pytest
-import asyncio
-import asynctest
-from syncrypt.models import Bundle, Vault
-from syncrypt.app import SyncryptApp
-from syncrypt.backends import BinaryStorageBackend
-from tests.base import VaultTestCase
+from glob import glob
 from subprocess import call
 
-__all__ = ('BinaryServerTests',)
+import pytest
+
+import asynctest
+from syncrypt.app import SyncryptApp
+from syncrypt.backends import BinaryStorageBackend
+from syncrypt.models import Bundle, Vault
+from tests.base import VaultTestCase
+
+
 @pytest.mark.requires_server
 @pytest.mark.requires_git
 class GitTests(VaultTestCase):
@@ -27,11 +28,26 @@ class GitTests(VaultTestCase):
     def setUp(self):
         super(GitTests, self).setUp()
 
+        self.original_env = dict(os.environ)
+        self.original_dir = os.getcwd()
+
         os.environ['PATH'] = '{0}:{1}'.format(
                 os.path.abspath(os.path.join(os.path.dirname(__file__), '../scripts/')),
                 os.environ.get('PATH', ''))
         os.environ['PYTHONPATH'] = \
                 os.path.abspath(os.path.join(os.path.dirname(__file__), '../'))
+
+    def tearDown(self):
+        super(GitTests, self).tearDown()
+
+        # Reset paths
+        os.environ['PATH'] = self.original_env['PATH']
+        if 'PYTHONPATH' in self.original_env:
+            os.environ['PYTHONPATH'] = self.original_env['PYTHONPATH']
+        else:
+            del os.environ['PYTHONPATH']
+
+        os.chdir(self.original_dir)
 
     def test_git_push(self):
         app = self.app
