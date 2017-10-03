@@ -7,6 +7,7 @@ import asyncio
 import asynctest
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
+from syncrypt.backends.binary import get_manager_instance
 from syncrypt.models import Vault
 from syncrypt.config import AppConfig
 from syncrypt.app.auth import CredentialsAuthenticationProvider
@@ -51,4 +52,8 @@ class VaultTestCase(asynctest.TestCase):
         self.app_config = TestAppConfig(app_config_file)
         self.app = SyncryptApp(self.app_config, auth_provider=TestAuthenticationProvider())
         asyncio.get_event_loop().run_until_complete(self.app.initialize())
+
+    def tearDown(self):
+        asyncio.get_event_loop().run_until_complete(self.app.close())
+        asyncio.get_event_loop().run_until_complete(get_manager_instance().close())
 

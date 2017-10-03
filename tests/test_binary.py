@@ -207,13 +207,10 @@ class BinaryServerTests(VaultTestCase):
         yield from app.get_remote_size_for_vault(vault)
         yield from app.get_remote_size_for_vault(vault)
 
-        print(get_manager_instance().get_stats())
-
         self.assertEqual(get_manager_instance().get_stats()['idle'], 1)
-        self.assertEqual(get_manager_instance().get_stats()['busy'], 0)
+
 
 if __name__ == '__main__':
     from syncrypt.utils.logging import setup_logging
     setup_logging(logging.DEBUG)
     unittest.main()
-

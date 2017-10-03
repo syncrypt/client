@@ -23,6 +23,7 @@ def count_files(folder):
     return len([name for name in os.listdir(folder) if name != '.vault'])
 
 @pytest.mark.requires_server
+@pytest.mark.hypothesis
 class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 
