@@ -16,6 +16,7 @@ from syncrypt.utils.format import format_size
 from ..models.bundle import VirtualBundle
 from ..pipes import Once
 from .auth import require_auth_token
+from .responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -135,8 +136,8 @@ class VaultResource(Resource):
                 '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
                 self.dispatch_fingerprints)
         router.add_route('GET', 
-                '/{version}/{name}/{{id}}/log/'.format(**opts),
-                self.dispatch_log)
+                '/{version}/{name}/{{id}}/history/'.format(**opts),
+                self.dispatch_history)
         router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
@@ -181,9 +182,8 @@ class VaultResource(Resource):
         return self.app.vaults
 
     def find_vault_by_id(self, vault_id):
-        for v in self.app.vaults:
-            if self.get_id(v) == vault_id:
-                return v
+        'deprecated'
+        return self.app.find_vault_by_id(vault_id)
 
     @asyncio.coroutine
     def get_obj(self, request):
@@ -221,7 +221,7 @@ class VaultResource(Resource):
         return JSONResponse(fingerprint_list)
 
     @asyncio.coroutine
-    def dispatch_log(self, request):
+    def dispatch_history(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
         local_tz = get_localzone()
@@ -378,6 +378,7 @@ class FlyingVaultResource(Resource):
     def get_obj(self, request):
         return find_vault_by_id(request.match_info['id'])
 
+
 class UserResource(Resource):
     resource_name = 'user'
 
@@ -398,6 +399,7 @@ class UserResource(Resource):
         } for key in key_list])
         yield from backend.close()
         return response
+
 
 class VaultUserResource(Resource):
     resource_name = 'users'

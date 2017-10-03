@@ -23,10 +23,22 @@ logger = logging.getLogger(__name__)
 
 IGNORE_EMPTY_FILES = ['.DS_Store']
 
+class VaultLoggerAdapter(logging.LoggerAdapter):
+    def __init__(self, vault, logger):
+        self.vault = vault
+        super(VaultLoggerAdapter, self).__init__(logger, {})
+
+    def process(self, msg, kwargs):
+        return (msg, dict(kwargs, extra={
+                'vault_id': self.vault.config.id
+            }))
+
 class Vault(MetadataHolder):
     def __init__(self, folder):
         self.folder = folder
         self._bundle_cache = {}
+
+        self.logger = VaultLoggerAdapter(self, logger)
 
         self.semaphores = {
             'update': JoinableSetSemaphore(32),
@@ -52,7 +64,7 @@ class Vault(MetadataHolder):
 
     def __set_metadata(self, metadata):
         if 'name' in metadata:
-            logger.debug('Setting vault\'s name to "%s"', metadata['name'])
+            self.logger.debug('Setting vault\'s name to "%s"', metadata['name'])
             with self.config.update_context():
                 self.config.vault['name'] = metadata['name']
         if 'icon' in metadata and metadata['icon']:
@@ -84,7 +96,7 @@ class Vault(MetadataHolder):
 
     @property
     def active(self):
-        #logger.debug('Sema count: %s', [sema.count for sema in self.semaphores.values()])
+        #self.logger.debug('Sema count: %s', [sema.count for sema in self.semaphores.values()])
         return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
@@ -179,7 +191,7 @@ class Vault(MetadataHolder):
     def update_revision(self, revision_id):
         if isinstance(revision_id, bytes):
             revision_id = revision_id.decode(self.config.encoding)
-        logger.debug('Update vault revision to "%s"', revision_id)
+        self.logger.debug('Update vault revision to "%s"', revision_id)
         with self.config.update_context():
             self.config.update('vault', {'revision': revision_id})
 
@@ -223,7 +235,7 @@ class Vault(MetadataHolder):
         try:
             os.makedirs(local_directory)
         except FileExistsError:
-            logger.debug("Directory exists, checking if empty")
+            self.logger.debug("Directory exists, checking if empty")
             entities = os.listdir(local_directory)
             for entity in entities:
                 entity_path = os.path.join(local_directory, entity)

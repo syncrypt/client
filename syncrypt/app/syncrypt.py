@@ -10,6 +10,9 @@ from zipfile import ZipFile
 import iso8601
 from tzlocal import get_localzone
 
+import iso8601
+from tzlocal import get_localzone
+
 import syncrypt
 from syncrypt.api import APIClient, SyncryptAPI
 from syncrypt.backends.base import StorageBackendInvalidAuth
@@ -27,6 +30,7 @@ from ..utils.updates import is_update_available
 from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
+
 
 class SyncryptApp(object):
     '''
@@ -89,6 +93,12 @@ class SyncryptApp(object):
         with self.config.update_context():
             self.config.add_vault_dir(os.path.abspath(vault.folder))
         return vault
+
+    def find_vault_by_id(self, vault_id):
+        for v in self.vaults:
+            if str(v.config.get('vault.id')) == vault_id:
+                return v
+        raise ValueError('Vault not found: {}'.format(vault_id))
 
     @asyncio.coroutine
     def remove_vault(self, vault):
@@ -201,6 +211,7 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def start(self):
         try:
+            self.api.initialize()
             yield from self.api.start()
         except OSError:
             logger.error('Port is blocked, could not start API REST server')
@@ -736,7 +747,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def pull_vault(self, vault, full=False):
-        logger.info('Pulling %s', vault)
+        vault.logger.info('Pulling %s', vault)
         latest_revision = None
         total = 0
         successful = []
@@ -759,9 +770,12 @@ class SyncryptApp(object):
                 break
             total += 1
             store_hash, metadata, server_info = item
-            bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
-            task = yield from self.pull_bundle(bundle)
-            task.add_done_callback(cb)
+            try:
+                bundle = yield from vault.add_bundle_by_metadata(store_hash, metadata)
+                task = yield from self.pull_bundle(bundle)
+                task.add_done_callback(cb)
+            except Exception as e:
+                vault.logger.exception(e)
             latest_revision = server_info.get('id') or latest_revision
         yield from self.wait()
 
@@ -769,13 +783,13 @@ class SyncryptApp(object):
 
         if success:
             if total == 0:
-                logger.info('No changes in %s', vault)
+                vault.logger.info('No changes in %s', vault)
             else:
-                logger.info('Successfully pulled %d revisions for %s', total, vault)
+                vault.logger.info('Successfully pulled %d revisions for %s', total, vault)
                 if latest_revision:
                     vault.update_revision(latest_revision)
         else:
-            logger.error('%s failures occured while pulling %d revisions for %s',
+            vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
                     total - len(successful), total, vault)
 
     @asyncio.coroutine

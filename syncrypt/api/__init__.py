@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 
+import smokesignal
 from aiohttp import web
 
 import syncrypt
@@ -17,9 +18,11 @@ from .resources import (BundleResource, FlyingVaultResource, JSONResponse,
 
 logger = logging.getLogger(__name__)
 
+
 class SyncryptAPI():
     def __init__(self, app):
         self.app = app
+        self.web_app = None
         self.server = None
 
         if not self.app.config.get('api.auth_token'):
@@ -195,7 +198,6 @@ class SyncryptAPI():
                 'installed_version': syncrypt.__version__
             })
 
-
     @asyncio.coroutine
     @require_auth_token
     def get_user_info(self, request):
@@ -222,8 +224,7 @@ class SyncryptAPI():
         yield from backend.close()
         return JSONResponse({'status': 'ok'})
 
-    @asyncio.coroutine
-    def start(self):
+    def initialize(self):
         loop = asyncio.get_event_loop()
         self.web_app = web.Application(loop=loop)
 
@@ -242,6 +243,7 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
 
+        #self.web_app.router.add_route('GET', '/v1/log/', self.stream_log)
         self.web_app.router.add_route('GET', '/v1/stats/', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config/', self.get_config)
         self.web_app.router.add_route('PATCH', '/v1/config/', self.patch_config)
@@ -251,6 +253,15 @@ class SyncryptAPI():
         # The following routes are deprecated and will be removed shortly
         self.web_app.router.add_route('GET', '/v1/stats', self.get_stats)
         self.web_app.router.add_route('GET', '/v1/config', self.get_config)
+
+        smokesignal.emit('post_api_initialize', app=self.app, api=self)
+
+    @asyncio.coroutine
+    def start(self):
+        if self.web_app is None:
+            raise RuntimeError('Start requested without initialization')
+
+        loop = asyncio.get_event_loop()
 
         self.handler = self.web_app.make_handler()
         self.server = yield from loop.create_server(self.handler,

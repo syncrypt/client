@@ -111,18 +111,20 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'pycrypto',
         'aiofiles',
         'aiohttp',
-        'umsgpack',
-        'msgpack-python>=0.4.0',
         'colorlog',
+        'erlastic',
         'hachiko',
+        'iso8601',
+        'msgpack-python>=0.4.0',
+        'pycryptodome',
         'python-snappy',
+        'smokesignal',
         'erlastic',
         'certifi',
         'tzlocal',
-        'iso8601'
+        'umsgpack'
     ],
 
     # List additional groups of dependencies here (e.g. development
@@ -134,6 +136,9 @@ setup(
             'pyinstaller==3.1',
             'six',
             'packaging'
+        ],
+        'win': [
+            'win_unicode_console'
         ],
         'test': [
             'pytest-runner',

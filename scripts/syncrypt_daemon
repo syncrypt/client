@@ -1,17 +1,26 @@
 #!/usr/bin/env python
 import argparse
+import asyncio
 import logging
 import logging.config
 import os.path
 import sys
 import time
 
-import asyncio
-from syncrypt.models import Vault
+import smokesignal
 from syncrypt.app import SyncryptApp
 from syncrypt.config import AppConfig, Config
+from syncrypt.models import Vault
 from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
+
+try:
+    import win_unicode_console; win_unicode_console.enable()
+except ImportError:
+    pass
+
+# Register builtins
+import syncrypt.builtins.log
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
@@ -35,11 +44,21 @@ setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.lo
 
 def run_syncrypt():
     app = SyncryptApp(app_config)
+
+    smokesignal.emit('pre_setup', app=app)
+
     loop = asyncio.get_event_loop()
     loop.run_until_complete(app.start())
     loop.run_until_complete(app.initialize())
+
+    smokesignal.emit('post_setup', app=app)
+
     loop.run_until_complete(app.wait_for_shutdown())
+
+    smokesignal.emit('shutdown', app=app)
+
     return app.restart_flag
+
 
 if config.detach:
     class SyncryptDaemon(Daemon):
