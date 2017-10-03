@@ -757,7 +757,7 @@ class BinaryStorageManager(object):
         self.concurrency = None
 
         self._monitor_task = None
-        self.slots = None
+        self.slots = []
         self.loop = None
 
     def init(self):
