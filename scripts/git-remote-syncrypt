@@ -348,6 +348,7 @@ class SyncryptGitBridge(SyncryptApp):
         """
         Handle the push command.
         """
+        stderr('Pushing objects to Syncrypt...\n')
         while True:
             src, dst = line.split(' ')[1].split(':')
             if src == '':
@@ -363,6 +364,7 @@ class SyncryptGitBridge(SyncryptApp):
         """
         Handle the fetch command.
         """
+        stderr('Downloading objects from Syncrypt...\n')
         while True:
             _, sha, value = line.split(' ')
 
@@ -393,7 +395,7 @@ class SyncryptGitBridge(SyncryptApp):
             pending.remove(sha)
 
         while queue or pending:
-            yield from asyncio.sleep(1)
+            yield from asyncio.sleep(0.1)
             if queue:
                 sha = queue.pop()
                 if sha in downloaded or sha in pending:
@@ -602,7 +604,6 @@ def main():
                 .run_until_complete(app.clone(source, vault_folder))
         app.set_vault_folder(vault_folder)
     try:
-        stderr('Downloading bundles from Syncrypt...\n')
         app.run()
     finally:
         app.close()
