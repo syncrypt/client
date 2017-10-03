@@ -592,7 +592,7 @@ def main():
 
     source = url
     app = SyncryptGitBridge()
-    if os.path.exists(source): # assert abs path
+    if os.path.isabs(source) and os.path.exists(source):
         app.set_vault_folder(source)
     else:
         vault_folder = os.path.join(os.environ['GIT_DIR'], 'shallow-vault')
