@@ -235,7 +235,7 @@ class Vault(MetadataHolder):
         try:
             os.makedirs(local_directory)
         except FileExistsError:
-            self.logger.debug("Directory exists, checking if empty")
+            logger.debug("Directory exists, checking if empty")
             entities = os.listdir(local_directory)
             for entity in entities:
                 entity_path = os.path.join(local_directory, entity)
