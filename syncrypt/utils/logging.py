@@ -1,14 +1,28 @@
 import logging.config
+import sys
 import colorlog
+
+if sys.platform == 'win32':
+    class SafeColoredFormatter(colorlog.ColoredFormatter):
+        # On windows, we will encode the string with 'replace' (converts unknown character
+        # codes to '?'), so that we will have no problem logging in to a limit charmap
+        # terminal :(
+        def format(self, record):
+            formatted = super(SafeColoredFormatter, self).format(record)
+            return formatted.encode('cp1252', 'replace').decode()
+
+    ColoredFormatter = SafeColoredFormatter
+else:
+    ColoredFormatter = colorlog.ColoredFormatter
+
 
 def setup_logging(loglevel, logfile=None):
     config = {
         'version': 1,
         'formatters': {
             'colored': {
-                '()': colorlog.ColoredFormatter,
-                'format':
-                    '%(log_color)s[%(levelname)-8s] %(message)s',
+                '()': ColoredFormatter,
+                'format': '%(log_color)s[%(levelname)-8s] %(message)s',
             },
             'precise': {
                 'format': '%(asctime)s %(levelname)s [%(name)s] %(message)s',

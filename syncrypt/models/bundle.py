@@ -209,13 +209,7 @@ class Bundle(MetadataHolder):
         yield from self.vault.semaphores['update'].release(self)
 
     def __str__(self):
-        relpath = self.relpath
-        if sys.platform == 'win32':
-            # On windows, we will encode relpath with 'replace' (converts unknown character
-            # codes to '?'), so that we will have no problem logging in to a limit charmap
-            # terminal :(
-            relpath = relpath.encode('cp1252', 'replace').decode()
-        return "<Bundle: {0}>".format(relpath)
+        return "<Bundle: {0}>".format(self.relpath)
 
     @property
     def path_metadata(self):
