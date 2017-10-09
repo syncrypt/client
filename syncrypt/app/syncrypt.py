@@ -42,8 +42,11 @@ class SyncryptApp(object):
         self.auth_provider = auth_provider
         self.vaults = []
 
-        # map from Bundle -> Future
-        self.update_handles = {}
+        # A map from Bundle -> Future that contains all bundles scheduled for a push
+        self._scheduled_pushes = {}
+
+        # A map from Bundle -> Task that contains all running pushes
+        self._running_pushes = {}
 
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
@@ -59,7 +62,9 @@ class SyncryptApp(object):
             'stats': 0
             }
 
-        def handler(*args, **kwargs):
+        def handler(loop, **kwargs):
+            if 'exception' in kwargs and isinstance(kwargs['exception'], asyncio.CancelledError):
+                return
             logger.error("Exception in event loop: %s, %s", args, kwargs)
         asyncio.get_event_loop().set_exception_handler(handler)
 
@@ -117,21 +122,26 @@ class SyncryptApp(object):
         for vault in self.vaults:
             yield from self.delete_vault(vault)
 
-    def update_and_upload(self, bundle):
-        del self.update_handles[bundle]
-        def _update(bundle):
-            logger.debug('Scheduled update is executing for %s', bundle)
-            yield from bundle.update()
-            yield from bundle.vault.backend.stat(bundle)
-            if bundle.remote_hash_differs:
-                yield from bundle.vault.backend.upload(bundle)
-        asyncio.ensure_future(_update(bundle))
+    def cancel_push(self, bundle):
+        if bundle in self._scheduled_pushes:
+            self._scheduled_pushes[bundle].cancel()
+            del self._scheduled_pushes[bundle]
+        if bundle in self._running_pushes:
+            logger.warn('Update/upload for %s is running, aborting it now.', bundle)
+            self._running_pushes[bundle].cancel()
+            del self._running_pushes[bundle]
 
-    def schedule_update(self, bundle):
-        if bundle in self.update_handles:
-            self.update_handles[bundle].cancel()
+    def schedule_push(self, bundle):
+        self.cancel_push(bundle)
         loop = asyncio.get_event_loop()
-        self.update_handles[bundle] = loop.call_later(1.0, self.update_and_upload, bundle)
+        logger.debug('Scheduling update for %s', bundle)
+
+        def push_scheduled(bundle):
+            del self._scheduled_pushes[bundle]
+            logger.debug('Scheduled update is executing for %s', bundle)
+            asyncio.ensure_future(self.push_bundle(bundle))
+
+        self._scheduled_pushes[bundle] = loop.call_later(1.0, push_scheduled, bundle)
 
     @asyncio.coroutine
     def check_update(self):
@@ -240,14 +250,18 @@ class SyncryptApp(object):
 
                 self.shutdown_event.set()
                 return
-        yield from self.push()
+
         for vault in self.vaults:
             try:
                 yield from self.watch(vault)
-                yield from self.autopull_vault(vault)
             except VaultFolderDoesNotExist:
                 logger.error('%s does not exist, removing vault from list.' % vault)
                 yield from self.remove_vault(vault)
+
+        yield from self.push()
+
+        for vault in self.vaults:
+            yield from self.autopull_vault(vault)
 
     @asyncio.coroutine
     def stop(self):
@@ -309,13 +323,24 @@ class SyncryptApp(object):
     def push_bundle(self, bundle):
         yield from self.bundle_action_semaphore.acquire()
         task = asyncio.get_event_loop().create_task(self._push_bundle(bundle))
+
         def cb(_task):
+            if bundle in self._running_pushes:
+                del self._running_pushes[bundle]
+
+            if _task.cancelled():
+                logger.info("Upload of %s got canceled.", bundle)
+
             if task.exception():
-                from traceback import format_tb
                 ex = task.exception()
+
+                from traceback import format_tb
                 logger.warn("Got exception: %s %s %s", ex, type(ex),
                         format_tb(ex.__traceback__))
+
             asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
+
+        self._running_pushes[bundle] = task
         task.add_done_callback(cb)
 
     @asyncio.coroutine

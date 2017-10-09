@@ -24,8 +24,8 @@ class VaultEventHandler(AIOEventHandler):
     def on_file_changed(self, path):
         bundle = self.vault.bundle_for(os.path.relpath(path, self.vault.folder))
         if not bundle is None:
-            logger.info('File creation detected (%s)', bundle)
-            self.app.schedule_update(bundle)
+            logger.info('File modification detected (%s)', bundle)
+            self.app.schedule_push(bundle)
         else:
             logger.debug('Ignoring file creation: %s', path)
 
@@ -33,6 +33,7 @@ class VaultEventHandler(AIOEventHandler):
     def on_file_removed(self, path):
         bundle = self.vault.bundle_for(os.path.relpath(path, self.vault.folder))
         if not bundle is None:
+            self.app.cancel_push(bundle)
             logger.info('File delete detected (%s)', bundle)
         else:
             logger.debug('Ignoring file delete: %s', path)

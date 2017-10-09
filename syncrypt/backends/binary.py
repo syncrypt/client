@@ -322,8 +322,11 @@ class BinaryStorageConnection(object):
         if ex_value:
             # When an exception happened, let's force a disconnect and clear
             # the slot
-            self.logger.debug('Exception %s has been raised in with-block, clearing connection.',
-                ex_value)
+            if isinstance(ex_value, asyncio.CancelledError):
+                self.logger.debug('Task has been cancelled within context, clearing connection.')
+            else:
+                self.logger.debug('Exception %s has been raised within context, clearing connection.',
+                    ex_value)
             self._clear_connection()
         else:
             # Let's assume there was no problem
