@@ -41,6 +41,10 @@ class SyncryptApp(object):
     def __init__(self, config, auth_provider=None, vault_dirs=None):
         self.auth_provider = auth_provider
         self.vaults = []
+        self.config = config
+        self.concurrency = int(self.config.app['concurrency'])
+        self.shutdown_event = asyncio.Event()
+        self.restart_flag = False
 
         # A map from Bundle -> Future that contains all bundles scheduled for a push
         self._scheduled_pushes = {}
@@ -48,13 +52,15 @@ class SyncryptApp(object):
         # A map from Bundle -> Task that contains all running pushes
         self._running_pushes = {}
 
-        self.config = config
-        self.concurrency = int(self.config.app['concurrency'])
-        self.shutdown_event = asyncio.Event()
-        self.restart_flag = False
-        self.bundle_action_semaphore = JoinableSemaphore(self.concurrency)
-        self.watchdogs = {}
-        self.pull_tasks = {}
+        # This semaphore enforces the global concurrency limit for both pushes and pulls.
+        self._bundle_actions = JoinableSemaphore(self.concurrency)
+
+        # A map from folder -> Watchdog. Used by the daemon and the "watch" command.
+        self._watchdogs = {}
+
+        # A map from folder -> Task. Used by the daemon to autopull vault periodically.
+        self._autopull_tasks = {}
+
         self.api = SyncryptAPI(self)
         self.stats = {
             'uploads': 0,
@@ -292,36 +298,36 @@ class SyncryptApp(object):
         vault.check_existence()
         folder = os.path.abspath(vault.folder)
         logger.info('Watching %s', folder)
-        self.watchdogs[folder] = create_watchdog(self, vault)
-        self.watchdogs[folder].start()
+        self._watchdogs[folder] = create_watchdog(self, vault)
+        self._watchdogs[folder].start()
 
     @asyncio.coroutine
     def autopull_vault(self, vault):
         vault.check_existence()
         folder = os.path.abspath(vault.folder)
         logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
-        self.pull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
+        self._autopull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
 
     @asyncio.coroutine
     def unwatch_vault(self, vault):
         'Remove watchdog and auto-pulls'
         folder = os.path.abspath(vault.folder)
         logger.info('Unwatching %s', os.path.abspath(folder))
-        if folder in self.watchdogs:
-            self.watchdogs[folder].stop()
-            del self.watchdogs[folder]
+        if folder in self._watchdogs:
+            self._watchdogs[folder].stop()
+            del self._watchdogs[folder]
 
     @asyncio.coroutine
     def unautopull_vault(self, vault):
         folder = os.path.abspath(vault.folder)
         logger.info('Disable auto-pull on %s', os.path.abspath(folder))
-        if folder in self.pull_tasks:
-            self.pull_tasks[folder].cancel()
-            del self.pull_tasks[folder]
+        if folder in self._autopull_tasks:
+            self._autopull_tasks[folder].cancel()
+            del self._autopull_tasks[folder]
 
     @asyncio.coroutine
     def push_bundle(self, bundle):
-        yield from self.bundle_action_semaphore.acquire()
+        yield from self._bundle_actions.acquire()
         task = asyncio.get_event_loop().create_task(self._push_bundle(bundle))
 
         def cb(_task):
@@ -338,14 +344,14 @@ class SyncryptApp(object):
                 logger.warn("Got exception: %s %s %s", ex, type(ex),
                         format_tb(ex.__traceback__))
 
-            asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
+            asyncio.get_event_loop().create_task(self._bundle_actions.release())
 
         self._running_pushes[bundle] = task
         task.add_done_callback(cb)
 
     @asyncio.coroutine
     def pull_bundle(self, bundle):
-        yield from self.bundle_action_semaphore.acquire()
+        yield from self._bundle_actions.acquire()
         task = asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
         def cb(_task):
             if task.exception():
@@ -353,7 +359,7 @@ class SyncryptApp(object):
                 ex = task.exception()
                 logger.warn("Got exception: %s %s %s", ex, type(ex),
                         format_tb(ex.__traceback__))
-            asyncio.get_event_loop().create_task(self.bundle_action_semaphore.release())
+            asyncio.get_event_loop().create_task(self._bundle_actions.release())
         task.add_done_callback(cb)
         return task
 
@@ -818,7 +824,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def wait(self):
-        yield from self.bundle_action_semaphore.join()
+        yield from self._bundle_actions.join()
 
     @asyncio.coroutine
     def close(self):
