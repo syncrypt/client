@@ -776,7 +776,7 @@ class BinaryStorageManager(object):
             self.slots = [BinaryStorageConnection(self) for i in range(self.concurrency)]
 
     def get_stats(self):
-        states = {}
+        states = {'closed': 0}
         if self.slots:
             for conn in self.slots:
                 states[conn.state] = states.get(conn.state, 0) + 1
