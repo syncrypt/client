@@ -19,7 +19,6 @@ addons:
 # Manually install python on osx
 install: |
   if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-
       brew update;
       brew install snappy;
       PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.5.2;
@@ -34,6 +33,9 @@ install: |
       pip install setuptools==19.2
       pip install -e '.[dist]'
       pip install -e '.[test]'
+      if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]]; then
+          pip install --upgrade https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+      fi
   fi
 
 # command to build
