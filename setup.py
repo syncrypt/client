@@ -15,13 +15,6 @@ here = path.abspath(path.dirname(__file__))
 
 cmdclass = {}
 
-# import build_ui
-try:
-    from pyqt_distutils.build_ui import build_ui
-    cmdclass['build_ui'] = build_ui
-except ImportError:
-    build_ui = None  # user won't have pyqt_distutils when deploying
-
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -60,7 +53,41 @@ class DistCommand(Command):
             os.system('cd dist; shasum -a 256 {0} > {0}.sha256'.format(zipname))
         print("Generated {0}".format(os.path.join('dist', zipname)))
 
+
+class DeployCommand(Command):
+    description = "deploys package to syncrypt artifact tray"
+    user_options = []
+
+    def initialize_options(self): pass
+
+    def finalize_options(self):
+        self.cwd = os.getcwd()
+
+    def run(self):
+        import platform
+
+        assert os.getcwd() == self.cwd, 'Must be in package root: %s' % self.cwd
+        dist_name = '{name}-{version}.{platform}-{machine}.zip'.format(
+                name=__name__,
+                version=__version__,
+                platform=platform.system().lower(),
+                machine=platform.machine()
+        )
+        store_name = '{name}-{platform}-{machine}.zip'.format(
+                name=__name__,
+                platform=platform.system().lower(),
+                machine=platform.machine()
+        )
+        store_endpoint = os.environ.get('ARTIFACT_TRAY_STORE_URL')
+        os.system(('curl -X POST'
+            ' --header "Content-Type: application/octet-stream"'
+            ' --data-binary "@dist/{dist_name}"'
+            ' "{store_endpoint}{store_name}/{version}/"'
+            ).format(dist_name=dist_name, store_endpoint=store_endpoint,
+                     store_name=store_name, version=__version__))
+
 cmdclass['dist'] = DistCommand
+cmdclass['deploy'] = DeployCommand
 
 setup(
     name=__name__,

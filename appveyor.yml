@@ -5,21 +5,24 @@ environment:
     # See: http://stackoverflow.com/a/13751649/163740
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\appveyor\\run_with_env.cmd"
 
+  artifact_try_url:
+    secure: h2sg2AnnOCv7Ds/1HCbC3znT8HCoUHeGBAMwDqMNbil7ydRpTYx+zagdTNkcG/N6
+
   matrix:
 
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    - PYTHON: "C:\\Python36"
+      PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "32"
       DIST_PLATFORM: "win-i386"
       WHEEL_ARCH: "win32"
-      WHEEL_PLATFORM: "cp34-cp34m"
+      WHEEL_PLATFORM: "cp36-cp36m"
 
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4.x" # currently 3.4.3
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
-      WHEEL_PLATFORM: "cp34-cp34m"
+      WHEEL_PLATFORM: "cp36-cp36m"
 
     - PYTHON: "C:\\Python35"
       PYTHON_VERSION: "3.5.x"
@@ -35,19 +38,20 @@ environment:
       WHEEL_ARCH: "win_amd64"
       WHEEL_PLATFORM: "cp35-cp35m"
 
-    - PYTHON: "C:\\Python36"
-      PYTHON_VERSION: "3.6.x"
+    - PYTHON: "C:\\Python34"
+      PYTHON_VERSION: "3.4.x"
       PYTHON_ARCH: "32"
       DIST_PLATFORM: "win-i386"
       WHEEL_ARCH: "win32"
-      WHEEL_PLATFORM: "cp36-cp36m"
+      WHEEL_PLATFORM: "cp34-cp34m"
 
-    - PYTHON: "C:\\Python36-x64"
-      PYTHON_VERSION: "3.6.x"
+    - PYTHON: "C:\\Python34-x64"
+      PYTHON_VERSION: "3.4.x"
       PYTHON_ARCH: "64"
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
-      WHEEL_PLATFORM: "cp36-cp36m"
+      WHEEL_PLATFORM: "cp34-cp34m"
+
 
 init:
   # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
@@ -135,9 +139,13 @@ artifacts:
   # Archive the generated packages in the ci.appveyor.com build report.
   - path: \*.zip
 
-#on_success:
-#  - TODO: upload the content of dist/*.whl to a public wheelhouse
-#
+on_success:
+  - "curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_try_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%SYNCRYPT_VER%/\""
+  # The following thing does not work:
+  #- ps: >-
+  #  if ($env:PYTHON_VERSION -eq "3.6.x") {
+  #    & curl -X POST --header "Content-Type: application/octet-stream" --data-binary "@syncrypt-$($env:SYNCRYPT_VER)).$($env:DIST_PLATFORM)).zip" "$($env:artifact_try_url))syncrypt-$($env:DIST_PLATFORM)).zip/$($env:SYNCRYPT_VER))/"
+  #  }
 
 deploy:
   provider: GitHub
