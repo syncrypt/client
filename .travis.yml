@@ -47,7 +47,7 @@ deploy:
     on:
       all_branches: true
       condition: |
-        ( $TRAVIS_PYTHON_VERSION == '3.5' ) || ( $TRAVIS_OS_NAME == 'osx' )
+        ( $TRAVIS_PYTHON_VERSION == '3.6' ) || ( $TRAVIS_OS_NAME == 'osx' )
   - provider: pypi
     user: lordi
     password:
@@ -55,5 +55,5 @@ deploy:
     on:
       tags: true
       condition: |
-        ( $TRAVIS_PYTHON_VERSION == '3.5' ) && ( $TRAVIS_OS_NAME == 'linux' )
+        ( $TRAVIS_PYTHON_VERSION == '3.6' ) && ( $TRAVIS_OS_NAME == 'linux' )
 
