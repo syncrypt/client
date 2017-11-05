@@ -48,18 +48,6 @@ deploy:
       all_branches: true
       condition: |
         ( $TRAVIS_PYTHON_VERSION == '3.5' ) || ( $TRAVIS_OS_NAME == 'osx' )
-  - provider: releases
-    api_key:
-      secure: ObkjUvDXj0VOrY3/rjUjBOj4NPtKB3XgYnZlaerDtNW1pxRF2fd0y1hBbeqg+P/NPXixORShI3MOrIlgZmzkNelDBdDnCB16nI1QUVDnFU42Y+h7zkiPO8/mWJhApm5/s1Hjs3QgRnjERoskj7fdjF22CVbuiE+LffYJamagHyE61sYjI6lBUrUD2QK6kjiNE7jrVfdQgbKYWkVnbsSyB4Xsg6+8G+rPfGuZk5IqE+KOCs0ynbVHyUGC9xv/VufLSJxA9KPrMJyX5pKPEOEEcT6hkrPQDnZqP/2qa6Vbl//hdFvNJj40e+bNc6WYlj4jfVrQ6QBpL6ag6iXXSLVSLKnNpTSBirBggMfRlS8AgbYBOPoJzCblvp9ao/2GqDVfnbI59SxRncu5DObK/eoxukedfMohi3xitPTxfUNiy5oB0o4Y7/SkJfpcLRsBOpMnWjA63GTbUsky5u2+npbbQVBipgJhsr6trioEJkaKMxCrWmBRJg5oVhjvP7Eq/jFM6mVi2/rWnBZXceiBNKwoKMrODFWtPEoA9hABxl14YRleN/XLtjwjT45M4HjnZLdEg2g7b9EpcONw99RqTNevqw2Naa2UeSe2APPgbgs/HKyjcmAeJMsk4yne7GyBbGbInpyvmHyd3L3u1FigFUPZn1NVHOhCBvD19qduLMZiSDc=
-    file:
-      - "dist/syncrypt-*.darwin-x86_64.zip"
-      - "dist/syncrypt-*.linux-x86_64.zip"
-    file_glob: true
-    skip_cleanup: true
-    on:
-      tags: true
-      condition: |
-        ( $TRAVIS_PYTHON_VERSION == '3.5' ) || ( $TRAVIS_OS_NAME == 'osx' )
   - provider: pypi
     user: lordi
     password:
