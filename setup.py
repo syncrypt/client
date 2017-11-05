@@ -6,9 +6,10 @@ from distutils.core import Command, setup
 from os import path
 
 from setuptools import find_packages, setup
+from syncrypt.utils.version import get_git_version
 
 __name__ = 'syncrypt'
-__version__ = '0.4.0'
+__version__ = get_git_version()
 
 here = path.abspath(path.dirname(__file__))
 
