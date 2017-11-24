@@ -623,7 +623,6 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def login(self):
-        logger.info('AAA')
         backend = yield from self.open_backend(always_ask_for_creds=True)
         yield from backend.close()
         yield from self.upload_identity()
