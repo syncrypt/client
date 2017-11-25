@@ -97,8 +97,6 @@ class BERTEncoder(object):
             return (Atom("bert"), Atom("false"))
         elif obj is None:
             return (Atom("bert"), Atom("nil"))
-        elif isinstance(obj, basestring) and not self.__is_ascii(obj):
-            return (Atom("bert"), Atom("string"), Atom(self.encoding.upper()), obj.encode(self.encoding))
         elif isinstance(obj, dict):
             return (Atom("bert"), Atom("dict"), [(self.convert(k), self.convert(v)) for k, v in obj.items()])
         elif isinstance(obj, datetime.datetime):
@@ -122,6 +120,3 @@ class BERTEncoder(object):
                 options.append(Atom('dotall'))
             return (Atom("bert"), Atom("regex"), obj.pattern, tuple(options))
         return obj
-
-    def __is_ascii(self, s):
-        return all(ord(c) < 128 for c in s)
