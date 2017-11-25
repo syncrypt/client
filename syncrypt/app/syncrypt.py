@@ -162,7 +162,7 @@ class SyncryptApp(object):
             print('\nYou are up to date.')
 
     @asyncio.coroutine
-    def init(self, vault=None, host=None, upload_vault_key=False, upload_identity=True):
+    def init(self, vault=None, host=None, upload_vault_key=True, upload_identity=True):
         for vault in (self.vaults if vault is None else [vault]):
 
             if host:
