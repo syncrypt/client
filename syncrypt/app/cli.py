@@ -8,6 +8,6 @@ class CLIAuthenticationProvider(AuthenticationProvider):
     def get_auth(self, backend):
         username = None
         while not username:
-            username = input('Email for {}: '.format(backend.host))
+            username = input('Email: ')
         password = getpass()
         return username, password
