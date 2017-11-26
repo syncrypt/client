@@ -48,6 +48,7 @@ class DistCommand(Command):
             os.system('cp README.md LICENSE ./dist/syncrypt')
             os.system('cp dist/syncrypt-bin ./dist/syncrypt/syncrypt')
             os.system('cp dist/syncrypt_daemon ./dist/syncrypt/syncrypt_daemon')
+            os.system('chmod u+x ./dist/syncrypt/syncrypt ./dist/syncrypt/syncrypt_daemon')
             os.system('cp dist-files/* ./dist/syncrypt/')
             os.system('cd dist; rm -f {0}'.format(zipname))
             os.system('cd dist/syncrypt/; zip ../{0} -r .'.format(zipname))
