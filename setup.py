@@ -84,7 +84,7 @@ class DeployCommand(Command):
             ' --data-binary "@dist/{dist_name}"'
             ' "{store_endpoint}{store_name}/{version}/"'
             ).format(dist_name=dist_name, store_endpoint=store_endpoint,
-                     store_name=store_name, version=__version__))
+                     store_name=store_name, version=__version__.replace('+', '%2b')))
 
 cmdclass['dist'] = DistCommand
 cmdclass['deploy'] = DeployCommand
