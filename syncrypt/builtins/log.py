@@ -110,10 +110,9 @@ def select_recent_log_items(app, vault_id=None, limit=100, conn=None):
 
 
 @asyncio.coroutine
-def ws_stream_log(request, app, vault_id=None, limit=None, filters=None):
+def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=None):
     'Stream Python logs via WebSockets'
 
-    ws = web.WebSocketResponse()
     yield from ws.prepare(request)
 
     for item in select_recent_log_items(app, vault_id, 100):
@@ -155,7 +154,10 @@ def create_dispatch_stream_log(app):
     def dispatch_stream_log(request):
         vault_id = request.match_info.get('vault_id', None)
         limit = int(request.GET.get('limit', 100))
-        yield from ws_stream_log(request, app, vault_id=vault_id, limit=limit)
+
+        ws = web.WebSocketResponse()
+        yield from ws_stream_log(request, ws, app, vault_id=vault_id, limit=limit)
+        return ws
 
     return dispatch_stream_log
 
