@@ -21,7 +21,7 @@ except ImportError:
 
 # Register builtins
 import syncrypt.builtins.log
-import syncrypt.builtins.chaos_monkey
+#import syncrypt.builtins.chaos_monkey
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
