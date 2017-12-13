@@ -227,9 +227,29 @@ class SyncryptAPI():
         yield from backend.close()
         return JSONResponse({'status': 'ok'})
 
+    def json_error(self,  message):
+        return web.Response(
+            status=500,
+            body=json.dumps({'status': 'error', 'reason': message}).encode('utf-8'),
+            content_type='application/json')
+
+    @web.middleware
+    @asyncio.coroutine
+    def error_middleware(self, request, handler):
+        try:
+            response = yield from handler(request)
+            return response
+        except web.HTTPException as ex:
+            if ex.status == 404:
+                return self.json_error(ex.reason)
+            raise
+        except Exception as ex:
+            logger.exception(ex)
+            return self.json_error(str(ex))
+
     def initialize(self):
         loop = asyncio.get_event_loop()
-        self.web_app = web.Application(loop=loop)
+        self.web_app = web.Application(loop=loop, middlewares=[self.error_middleware])
 
         VaultResource(self.app).add_routes(self.web_app.router)
         BundleResource(self.app).add_routes(self.web_app.router)

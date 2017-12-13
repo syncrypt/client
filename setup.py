@@ -143,7 +143,7 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
         'aiofiles',
-        'aiohttp',
+        'aiohttp>=2.3.0',
         'colorlog',
         'erlastic',
         'hachiko',
