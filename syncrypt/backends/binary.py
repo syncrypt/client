@@ -9,9 +9,9 @@ import sys
 import time
 from getpass import getpass
 
+import certifi
 from erlastic import Atom
 
-import certifi
 import syncrypt
 from syncrypt import __project__, __version__
 from syncrypt.exceptions import VaultNotInitialized
@@ -19,6 +19,7 @@ from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once,
                             StreamReader, StreamWriter, URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
+from tenacity import retry, wait_exponential, stop_after_attempt
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -814,6 +815,7 @@ class BinaryStorageManager(object):
                     yield from conn.disconnect()
                     break
 
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
     @asyncio.coroutine
     def acquire_connection(self, vault):
         'return an available connection or block until one is free'
@@ -827,7 +829,11 @@ class BinaryStorageManager(object):
                 if conn.vault != vault:
                     logger.debug('Found an available connection, but we need to switch the vault to %s', vault)
                     conn.connecting = True
-                    yield from conn.connect(vault)
+                    try:
+                        yield from conn.connect(vault)
+                    except:
+                        conn._clear_connection()
+                        raise
                 elif vault:
                     logger.debug('Found an available connection for %s', vault)
                 else:
@@ -839,7 +845,11 @@ class BinaryStorageManager(object):
         for conn in self.slots:
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
-                yield from conn.connect(vault)
+                try:
+                    yield from conn.connect(vault)
+                except:
+                    conn._clear_connection()
+                    raise
                 break
 
         # wait until one slot is available

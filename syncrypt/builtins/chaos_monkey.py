@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 CHAOS_TABLE = [
     # Function names, Probability, Exception
-    (('write', 'read'), 0.005, IOError)
+    (('write_term', 'read_term'), 0.005, IOError),
+    (('open_connection',), 0.3, IOError)
 ]
 
 def chaos_trace(frame, event, arg):
@@ -24,6 +25,8 @@ def chaos_trace(frame, event, arg):
         for (function_names, probability, exc) in CHAOS_TABLE:
             if tb.function in function_names:
                 if random.random() < probability:
+                    logger.warn('Chaos monkey triggered for %s @ %s:%s',
+                                tb.function, tb.filename, tb.lineno)
                     raise exc('Chaos Monkey at it')
     return chaos_trace
 

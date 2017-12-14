@@ -144,6 +144,7 @@ setup(
     install_requires=[
         'aiofiles',
         'aiohttp>=2.3.0',
+        'certifi',
         'colorlog',
         'erlastic',
         'hachiko',
@@ -152,10 +153,9 @@ setup(
         'pycryptodome',
         'python-snappy',
         'smokesignal',
-        'erlastic',
-        'certifi',
+        'tenacity',
         'tzlocal',
-        'umsgpack'
+        'umsgpack',
     ],
 
     # List additional groups of dependencies here (e.g. development
