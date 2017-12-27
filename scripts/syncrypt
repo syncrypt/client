@@ -7,8 +7,7 @@ import sys
 
 import asyncio
 from syncrypt import __project__, __version__
-from syncrypt.app import SyncryptApp
-from syncrypt.app.cli import CLIAuthenticationProvider
+from syncrypt.app.cli import CLIAuthenticationProvider, CLISyncryptApp
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
@@ -55,7 +54,7 @@ class SyncryptCmd():
         self.app_config = AppConfig(self.config.config)
         setup_logging(self.config.loglevel)
         self.loop = asyncio.get_event_loop()
-        self.app = SyncryptApp(self.app_config,
+        self.app = CLISyncryptApp(self.app_config,
                 auth_provider=CLIAuthenticationProvider(),
                 vault_dirs=self.vault_dirs)
         self.loop.run_until_complete(self.app.initialize())
@@ -171,12 +170,14 @@ class DeleteVault(MultipleVaultCmd):
     def run(self):
         self.loop.run_until_complete(self.app.delete_vaults())
 
+
 class UploadVaultKey(SingleVaultCmd):
     command = 'upload-vault-key'
     description = 'upload the vault key encrypted with my user key'
 
     def run(self):
         self.loop.run_until_complete(self.app.upload_vault_key())
+
 
 class Vaults(NoVaultCmd):
     command = 'vaults'
@@ -189,9 +190,10 @@ class Vaults(NoVaultCmd):
 
     def run(self):
         if self.config.all:
-            self.loop.run_until_complete(self.app.list_all_vaults())
+            self.loop.run_until_complete(self.app.print_list_of_all_vaults())
         else:
-            self.loop.run_until_complete(self.app.list_vaults())
+            self.loop.run_until_complete(self.app.print_list_of_vaults())
+
 
 class Keys(NoVaultCmd):
     command = 'keys'

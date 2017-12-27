@@ -343,6 +343,7 @@ class BinaryStorageConnection(object):
             self.writer = None
         self.connected = False
         self.connecting = False
+        self.vault = None
         self.available.clear()
 
     @asyncio.coroutine

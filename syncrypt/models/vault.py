@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 IGNORE_EMPTY_FILES = ['.DS_Store']
 
+
 class VaultLoggerAdapter(logging.LoggerAdapter):
     def __init__(self, vault, logger):
         self.vault = vault
@@ -32,6 +33,7 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
         return (msg, dict(kwargs, extra={
                 'vault_id': self.vault.config.id
             }))
+
 
 class Vault(MetadataHolder):
     def __init__(self, folder):

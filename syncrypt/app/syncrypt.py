@@ -8,9 +8,7 @@ from io import StringIO
 from zipfile import ZipFile
 
 import iso8601
-from tzlocal import get_localzone
-
-import iso8601
+from tenacity import retry, stop_after_attempt, wait_exponential
 from tzlocal import get_localzone
 
 import syncrypt
@@ -26,7 +24,7 @@ from syncrypt.utils.format import (format_fingerprint, format_size,
 from syncrypt.utils.semaphores import JoinableSemaphore
 from syncrypt.vendor.keyart import draw_art
 
-from ..utils.updates import is_update_available
+from .asynccontext import AsyncContext
 from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
@@ -51,6 +49,9 @@ class SyncryptApp(object):
 
         # A map from Bundle -> Task that contains all running pushes
         self._running_pushes = {}
+
+        # A map from Bundle -> Exception that contains all failed pushes
+        self._failed_pushes = {}
 
         # This semaphore enforces the global concurrency limit for both pushes and pulls.
         self._bundle_actions = JoinableSemaphore(self.concurrency)
@@ -148,18 +149,6 @@ class SyncryptApp(object):
             asyncio.ensure_future(self.push_bundle(bundle))
 
         self._scheduled_pushes[bundle] = loop.call_later(1.0, push_scheduled, bundle)
-
-    @asyncio.coroutine
-    def check_update(self):
-        logger.debug('Retrieving available version...')
-        can_update, available = yield from is_update_available()
-        print('Installed:   {0}'.format(syncrypt.__version__))
-        print('Available:   {0}'.format(available))
-        if can_update:
-            print('\nAn update to version {0} is available, please download it at'.format(available))
-            print('\thttp://alpha.syncrypt.space/releases/')
-        else:
-            print('\nYou are up to date.')
 
     @asyncio.coroutine
     def init(self, vault=None, host=None, upload_vault_key=True, upload_identity=True):
@@ -264,7 +253,11 @@ class SyncryptApp(object):
                 logger.error('%s does not exist, removing vault from list.' % vault)
                 yield from self.remove_vault(vault)
 
-        yield from self.push()
+        try:
+            yield from self.push()
+        except Exception as e:
+            logger.exception(e)
+            logger.warn('The above exception occured while pushing vaults, we will try to continue anyway')
 
         for vault in self.vaults:
             yield from self.autopull_vault(vault)
@@ -340,9 +333,11 @@ class SyncryptApp(object):
             if task.exception():
                 ex = task.exception()
 
-                from traceback import format_tb
-                logger.warn("Got exception: %s %s %s", ex, type(ex),
-                        format_tb(ex.__traceback__))
+                #from traceback import format_tb
+                logger.exception(ex)
+                #"Got exception: %s %s %s", ex, type(ex),
+                #        format_tb(ex.__traceback__))
+                self._failed_pushes[bundle] = ex
 
             asyncio.get_event_loop().create_task(self._bundle_actions.release())
 
@@ -389,23 +384,6 @@ class SyncryptApp(object):
         yield from self.pull()
 
     @asyncio.coroutine
-    def list_all_vaults(self):
-        backend = yield from self.open_backend()
-        for vault in (yield from backend.list_vaults()):
-            logger.debug("Received vault: %s", vault)
-            size, size_unit = size_with_unit(vault['byte_size'])
-            fmt_str = "{0} | Users: {1:2} | Files: {2:4} | Revisions: {3:4} | Size: {4:8} {5}".format(
-                vault['id'].decode('utf-8'),
-                vault['user_count'],
-                vault['file_count'],
-                vault['revision_count'],
-                size,
-                size_unit
-            )
-            print(fmt_str)
-        yield from backend.close()
-
-    @asyncio.coroutine
     def _list_vaults_with_name(self):
         logger.debug('Retrieving vault list...')
         backend = yield from self.open_backend()
@@ -432,11 +410,6 @@ class SyncryptApp(object):
         return vaults
 
     @asyncio.coroutine
-    def list_vaults(self):
-        for (vault_id, name) in (yield from self._list_vaults_with_name()):
-            print("{0} {1}".format(vault_id, name))
-
-    @asyncio.coroutine
     def _decrypt_metadata(self, encrypted_metadata, user_vault_key):
         import zipfile
         from io import BytesIO
@@ -448,7 +421,6 @@ class SyncryptApp(object):
             >> DecryptRSA_PKCS1_OAEP(self.identity.private_key)
 
         package_info = yield from export_pipe.readall()
-
 
         zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
 
@@ -463,47 +435,6 @@ class SyncryptApp(object):
 
         serialized_metadata = metadata = yield from sink.readall()
         return umsgpack.unpackb(serialized_metadata)
-
-    @asyncio.coroutine
-    def list_keys(self, user=None, with_art=False):
-        backend = yield from self.open_backend()
-        key_list = (yield from backend.list_keys(user))
-        self.print_key_list(key_list, with_art=with_art)
-        yield from backend.close()
-
-    def print_key_list(self, key_list, with_art=False):
-        for key in key_list:
-            fingerprint = key['fingerprint']
-            description = key['description']
-            created_at = key['created_at']
-            if with_art:
-                print(draw_art(None, '1', fingerprint))
-            print("{0:24}\t{1}\t{2}".format(format_fingerprint(fingerprint), description, created_at))
-
-    @asyncio.coroutine
-    def info(self):
-        for (index, vault) in enumerate(self.vaults):
-            yield from self.retrieve_metadata(vault)
-            remote_size = yield from self.get_remote_size_for_vault(vault)
-            print("="*78, end='\n\n')
-            print("Vault {0}".format(index + 1))
-            print()
-            print(draw_art(None, '1', vault.identity.get_fingerprint()))
-            print()
-            print("Vault name:       \t{0}".format(vault.config.vault.get('name', 'Unnamed')))
-            print("Vault ID:         \t{0}".format(vault.config.id))
-            print("Vault revision:   \t{0}".format(vault.revision or '?'))
-            print("Vault fingerprint:\t{0}".format(format_fingerprint(
-                    vault.identity.get_fingerprint())))
-            print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
-            print("Local size:       \t{0} (includes metadata)".format(format_size(
-                    vault.get_local_size())))
-            print("Remote size:      \t{0} (includes versioned copies)".format(format_size(
-                    remote_size)))
-            print("Your fingerprint: \t{0}".format(format_fingerprint(
-                    self.identity.get_fingerprint())))
-            print()
-        print("="*78)
 
     @asyncio.coroutine
     def set(self, setting, value):
@@ -573,25 +504,6 @@ class SyncryptApp(object):
         return vault
 
     @asyncio.coroutine
-    def clone_by_name(self, vault_name, local_directory):
-
-        logger.info('Trying to find vault with name "%s"...', vault_name)
-        vault_id = None
-        for (vid, name) in (yield from self._list_vaults_with_name()):
-            vault_id = vid
-            if name == vault_name:
-                break
-            vault_id = None
-
-        if vault_id:
-            vault = yield from self.clone(vault_id, local_directory)
-        else:
-            logger.error('No vault found with name "%s"', vault_name)
-            vault = None
-
-        return vault
-
-    @asyncio.coroutine
     def import_package(self, filename, target_folder, pull_vault=False):
         if os.path.exists(target_folder):
             raise ValueError('Folder "{0}" already exists.'.format(target_folder))
@@ -628,29 +540,6 @@ class SyncryptApp(object):
         yield from self.upload_identity()
 
     @asyncio.coroutine
-    def add_user(self, email):
-        vault = self.vaults[0]
-        yield from vault.backend.open()
-        logger.info('Adding user "%s" to %s', email, vault)
-        yield from vault.backend.add_vault_user(email)
-
-        key_list = yield from vault.backend.list_keys(email)
-        key_list = list(key_list)
-
-        self.print_key_list(key_list)
-        print('\nPlease verify the above keys.')
-        yesno = input('Do you really want to send the keys to all of the fingerprints listed above? [y/N] ')
-
-        if yesno in ('y', 'Y'):
-            for key in key_list:
-                # retrieve key and verify fingerrint
-                fingerprint = key['fingerprint']
-                public_key = key['public_key']
-                identity = Identity.from_key(public_key, vault.config)
-                assert identity.get_fingerprint() == fingerprint
-                yield from self.add_user_vault_key(vault, email, identity)
-
-    @asyncio.coroutine
     def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package
         export_pipe = vault.package_info() \
@@ -673,37 +562,6 @@ class SyncryptApp(object):
         yield from self.add_user_vault_key(vault, email, self.identity)
 
     @asyncio.coroutine
-    def print_log(self, verbose=False):
-        local_tz = get_localzone()
-        for vault in self.vaults:
-            try:
-                yield from vault.backend.open()
-            except VaultNotInitialized:
-                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-                continue
-            queue = yield from vault.backend.changes(None, None, verbose=verbose)
-            while True:
-                item = yield from queue.get()
-                if item is None:
-                    break
-                store_hash, metadata, server_info = item
-                bundle = VirtualBundle(None, vault, store_hash=store_hash)
-                yield from bundle.write_encrypted_metadata(Once(metadata))
-                rev_id = server_info['id'].decode(vault.config.encoding)
-                created_at = iso8601.parse_date(server_info['created_at'].decode())\
-                        .astimezone(local_tz)\
-                        .strftime('%x %X')
-                operation = server_info['operation'].decode(vault.config.encoding)
-                if verbose:
-                    user_email = server_info['email'].decode(vault.config.encoding)
-                    print("%s | %s | %s | %-9s %s" % (created_at, rev_id, user_email,
-                        operation, bundle.relpath))
-                else:
-                    print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
-
-        yield from self.wait()
-
-    @asyncio.coroutine
     def get_remote_size_for_vault(self, vault):
         yield from vault.backend.open()
         return (yield from vault.backend.vault_size(vault))
@@ -713,35 +571,42 @@ class SyncryptApp(object):
         yield from vault.backend.open()
         return (yield from vault.backend.vault_metadata())
 
+    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     @asyncio.coroutine
     def push(self):
-        '''
-        Push all vaults
+        "Push all registered vaults"
+        with AsyncContext() as ctx:
+            for vault in self.vaults:
+                try:
+                    logger.info('Pushing %s', vault)
+                    yield from vault.backend.open()
+                    yield from vault.backend.set_vault_metadata()
+                    for bundle in vault.walk_disk():
+                        yield from ctx.create_task(bundle, self._push_bundle(bundle))
+                except VaultNotInitialized:
+                    logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+                    continue
+                except VaultFolderDoesNotExist:
+                    logger.error('%s does not exist, removing vault from list.' % vault)
+                    yield from self.remove_vault(vault)
+                    continue
+            yield from ctx.wait()
 
-        High level command that will catch exceptions and log errors
-        '''
-        for vault in self.vaults:
-            try:
-                yield from self.push_vault(vault)
-            except VaultNotInitialized:
-                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-                continue
-            except VaultFolderDoesNotExist:
-                logger.error('%s does not exist, removing vault from list.' % vault)
-                yield from self.remove_vault(vault)
-                continue
-            except Exception as e:
-                logger.exception(e)
-                continue
-        yield from self.wait()
+    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
+    @asyncio.coroutine
+    def push_vault(self, vault):
+        "Push a single vault"
+        logger.info('Pushing %s', vault)
+        with AsyncContext() as ctx:
+            yield from vault.backend.open()
+            yield from vault.backend.set_vault_metadata()
+            for bundle in vault.walk_disk():
+                yield from ctx.create_task(bundle, self._push_bundle(bundle))
+            yield from ctx.wait()
 
     @asyncio.coroutine
     def pull(self, full=False):
-        '''
-        Pull all vaults
-
-        High level command that will catch exceptions and log errors
-        '''
+        "Pull all registered vaults"
         for vault in self.vaults:
             try:
                 yield from self.pull_vault(vault, full=full)
@@ -756,14 +621,6 @@ class SyncryptApp(object):
                 logger.exception(e)
                 continue
         yield from self.wait()
-
-    @asyncio.coroutine
-    def push_vault(self, vault):
-        logger.info('Pushing %s', vault)
-        yield from vault.backend.open()
-        yield from vault.backend.set_vault_metadata()
-        for bundle in vault.walk_disk():
-            yield from self.push_bundle(bundle)
 
     @asyncio.coroutine
     def pull_vault_periodically(self, vault):
@@ -831,6 +688,7 @@ class SyncryptApp(object):
         for vault in self.vaults:
             yield from vault.close()
 
+    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     @asyncio.coroutine
     def _push_bundle(self, bundle):
         'update bundle and maybe upload'
