@@ -38,20 +38,26 @@ V_MODIFICATION_DATE = Atom('modification_date')
 
 ALL_VAULT_FIELDS = [V_BYTE_SIZE, V_FILE_COUNT, V_REVISION_COUNT, V_USER_COUNT, V_MODIFICATION_DATE]
 
+
 class BinaryStorageException(Exception):
     pass
+
 
 class UnsuccessfulResponse(BinaryStorageException):
     pass
 
+
 class ServerError(UnsuccessfulResponse):
     pass
+
 
 class ConnectionResetException(BinaryStorageException):
     pass
 
+
 class UnexpectedResponseException(BinaryStorageException):
     pass
+
 
 def bert_val(bert_term):
     # Convert a nil atom to None
@@ -59,6 +65,7 @@ def bert_val(bert_term):
         return None
     else:
         return bert_term
+
 
 def rewrite_atoms_dict(bert_dict):
     # Convert a dict with Atom keys to a str keys
@@ -116,8 +123,9 @@ class BinaryStorageConnection(object):
             return 'closed'
 
     def __repr__(self):
-        return "<%s%s>" % (self.state,
-                           self.vault and ' v={0}'.format(str(self.vault.config.id)[:4]) or '')
+        return "<Connection %s%s>" % (
+               self.state,
+               self.vault and ' vault={0}'.format(str(self.vault.config.id)) or '')
 
     @asyncio.coroutine
     def read_term(self, assert_ok=True):
@@ -809,7 +817,18 @@ class BinaryStorageManager(object):
         '''
         while True:
             yield from asyncio.sleep(30.0)
-            logger.debug('Slots: %s', self.slots)
+            def sign_for_state(state):
+                if state == 'idle':
+                    return '*'
+                elif state == 'busy':
+                    return 'B'
+                elif state == 'opening':
+                    return 'o'
+                elif state == 'closed':
+                    return '-'
+                return ' '
+            logger.debug('Slots: [%s]',
+                         ''.join([sign_for_state(slot.state) for slot in self.slots]))
             for conn in self.slots:
                 if conn.connected and conn.available.is_set():
                     logger.debug('Closing due to idleness: %s', conn)
