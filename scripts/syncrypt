@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import argparse
+import asyncio
 import logging
 import logging.config
 import os.path
 import sys
 
-import asyncio
 from syncrypt import __project__, __version__
-from syncrypt.app.cli import CLIAuthenticationProvider, CLISyncryptApp
+from syncrypt.app import SyncryptCLIApp
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
@@ -54,9 +54,7 @@ class SyncryptCmd():
         self.app_config = AppConfig(self.config.config)
         setup_logging(self.config.loglevel)
         self.loop = asyncio.get_event_loop()
-        self.app = CLISyncryptApp(self.app_config,
-                auth_provider=CLIAuthenticationProvider(),
-                vault_dirs=self.vault_dirs)
+        self.app = SyncryptCLIApp(self.app_config, vault_dirs=self.vault_dirs)
         self.loop.run_until_complete(self.app.initialize())
 
     def shutdown(self):

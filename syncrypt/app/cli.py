@@ -1,9 +1,13 @@
 import asyncio
 import logging
+import os
 from getpass import getpass
 
 import syncrypt
 from syncrypt.app.auth import AuthenticationProvider
+from syncrypt.utils.format import (format_fingerprint, format_size,
+                                   size_with_unit)
+from syncrypt.vendor.keyart import draw_art
 
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp
@@ -21,7 +25,13 @@ class CLIAuthenticationProvider(AuthenticationProvider):
         password = getpass()
         return username, password
 
-class CLISyncryptApp(SyncryptApp):
+
+class SyncryptCLIApp(SyncryptApp):
+
+    def __init__(self, config, **kwargs):
+        super(SyncryptCLIApp, self).__init__(config,
+                                             auth_provider=CLIAuthenticationProvider(),
+                                             **kwargs)
 
     @asyncio.coroutine
     def check_update(self):

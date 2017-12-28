@@ -8,7 +8,7 @@ import sys
 import time
 
 import smokesignal
-from syncrypt.app import SyncryptApp
+from syncrypt.app import SyncryptDaemonApp
 from syncrypt.config import AppConfig, Config
 from syncrypt.models import Vault
 from syncrypt.utils.daemon import Daemon
@@ -21,7 +21,7 @@ except ImportError:
 
 # Register builtins
 import syncrypt.builtins.log
-#import syncrypt.builtins.chaos_monkey
+import syncrypt.builtins.chaos_monkey
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
 
@@ -44,7 +44,7 @@ setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.lo
 
 
 def run_syncrypt():
-    app = SyncryptApp(app_config)
+    app = SyncryptDaemonApp(app_config)
 
     smokesignal.emit('pre_setup', app=app)
 
