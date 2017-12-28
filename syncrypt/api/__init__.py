@@ -298,4 +298,4 @@ class SyncryptAPI():
             logger.info("Shutting down REST API Server")
             self.server.close()
             yield from self.server.wait_closed()
-            yield from self.handler.finish_connections(1.0)
+            yield from self.handler.shutdown(1.0)
