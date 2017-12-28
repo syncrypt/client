@@ -21,7 +21,10 @@ CHAOS_TABLE = [
 
 def chaos_trace(frame, event, arg):
     if event == 'call':
-        tb = inspect.getframeinfo(frame)
+        try:
+            tb = inspect.getframeinfo(frame)
+        except AttributeError:
+            return chaos_trace
         for (function_names, probability, exc) in CHAOS_TABLE:
             if tb.function in function_names:
                 if random.random() < probability:
