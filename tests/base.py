@@ -31,6 +31,7 @@ class TestAppConfig(AppConfig):
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
+    app_cls = SyncryptApp
 
     # If available, use filesystem mounted shared memory in order to save
     # disk IO operations during testing
@@ -50,7 +51,7 @@ class VaultTestCase(asynctest.TestCase):
             os.remove(app_config_file)
 
         self.app_config = TestAppConfig(app_config_file)
-        self.app = SyncryptApp(self.app_config, auth_provider=TestAuthenticationProvider())
+        self.app = self.app_cls(self.app_config, auth_provider=TestAuthenticationProvider())
         asyncio.get_event_loop().run_until_complete(self.app.initialize())
 
     def tearDown(self):

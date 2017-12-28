@@ -146,48 +146,48 @@ class SyncryptApp(object):
         self._scheduled_pushes[bundle] = loop.call_later(1.0, push_scheduled, bundle)
 
     @asyncio.coroutine
-    def init(self, vault=None, host=None, upload_vault_key=True, upload_identity=True):
-        for vault in (self.vaults if vault is None else [vault]):
+    def init_vault(self, vault, host=None, upload_vault_key=True, upload_identity=True):
+        if host:
+            # If host was explicitly given, use it
+            vault.config.set('remote.host', host)
+            vault.backend.host = host
+        else:
+            # otherwise, use host from global config
+            vault.config.set('remote.host', self.config.get('remote.host'))
+            vault.backend.host = self.config.get('remote.host')
 
-            if host:
-                # If host was explicitly given, use it
-                vault.config.set('remote.host', host)
-                vault.backend.host = host
-            else:
-                # otherwise, use host from global config
-                vault.config.set('remote.host', self.config.get('remote.host'))
-                vault.backend.host = self.config.get('remote.host')
+        try:
+            yield from vault.backend.open()
+            logger.warn('Vault %s already initialized', vault.folder)
+            return
+        except (StorageBackendInvalidAuth, VaultNotInitialized):
+            pass
+        logger.info("Initializing %s", vault)
+        yield from vault.identity.init()
+        global_auth = self.config.remote.get('auth')
+        if global_auth:
+            logger.debug('Using user auth token to initialize vault.')
+            vault.backend.global_auth = global_auth
+        try:
+            yield from vault.backend.init()
+        except StorageBackendInvalidAuth:
+            vault.backend.global_auth = None
+            username, password = yield from self.auth_provider.get_auth(vault.backend)
+            vault.backend.set_auth(username, password)
+            yield from vault.backend.init()
 
-            try:
-                yield from vault.backend.open()
-                logger.warn('Vault %s already initialized', vault.folder)
-                continue
-            except (StorageBackendInvalidAuth, VaultNotInitialized):
-                pass
-            logger.info("Initializing %s", vault)
-            yield from vault.identity.init()
-            global_auth = self.config.remote.get('auth')
-            if global_auth:
-                logger.debug('Using user auth token to initialize vault.')
-                vault.backend.global_auth = global_auth
-            try:
-                yield from vault.backend.init()
-            except StorageBackendInvalidAuth:
-                vault.backend.global_auth = None
-                username, password = yield from self.auth_provider.get_auth(vault.backend)
-                vault.backend.set_auth(username, password)
-                try:
-                    yield from vault.backend.init()
-                except StorageBackendInvalidAuth:
-                    logger.error('Invalid authentification')
-                    continue
-            with vault.config.update_context():
-                vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
-            yield from vault.backend.set_vault_metadata()
-            if upload_identity:
-                yield from vault.backend.upload_identity(self.identity)
-            if upload_vault_key:
-                yield from self.upload_vault_key(vault)
+        with vault.config.update_context():
+            vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
+        yield from vault.backend.set_vault_metadata()
+        if upload_identity:
+            yield from vault.backend.upload_identity(self.identity)
+        if upload_vault_key:
+            yield from self.upload_vault_key(vault)
+
+    @asyncio.coroutine
+    def init(self, **kwargs):
+        for vault in self.vaults:
+            yield from self.init_vault(vault, **kwargs)
 
     @asyncio.coroutine
     def upload_identity(self):
@@ -205,7 +205,7 @@ class SyncryptApp(object):
         except (StorageBackendInvalidAuth, VaultNotInitialized):
             # retry after logging in & getting auth token
             # use the host from the app config
-            yield from self.init(vault, host=self.config.remote.get('host'))
+            yield from self.init_vault(vault, host=self.config.remote.get('host'))
             yield from vault.backend.open()
 
     @asyncio.coroutine

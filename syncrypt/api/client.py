@@ -9,12 +9,19 @@ class APIClient:
         self.host = app_config.get('api.host')
         self.port = app_config.get('api.port')
         self.auth_token = app_config.get('api.auth_token')
+        self._session = None
 
     def login(self, **kwargs):
         return self.post('/v1/auth/login/', data=json.dumps(kwargs))
 
     def logout(self, **kwargs):
         return self.get('/v1/auth/logout/')
+
+    @property
+    def session(self):
+        if not self._session:
+            self._session = aiohttp.ClientSession()
+        return self._session
 
     def __getattr__(self, http_method):
         @asyncio.coroutine
@@ -26,5 +33,6 @@ class APIClient:
             # Build URL
             url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
 
-            return getattr(aiohttp, http_method)(url, *args, **kwargs)
+            return getattr(self.session, http_method)(url, *args, **kwargs)
         return api_call
+

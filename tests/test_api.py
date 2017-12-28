@@ -14,6 +14,7 @@ import hypothesis.strategies as st
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault
+from syncrypt.app import SyncryptDaemonApp
 from tests.base import VaultTestCase
 
 from syncrypt.api import APIClient
@@ -21,6 +22,7 @@ import syncrypt
 
 @pytest.mark.requires_server
 class APITests(VaultTestCase):
+    app_cls = SyncryptDaemonApp
     folder = 'tests/testbinaryvault/'
     login_data = {
         'email': 'test@syncrypt.space',
@@ -63,7 +65,7 @@ class APITests(VaultTestCase):
         app.add_vault(self.vault)
         client = APIClient(self.app_config)
 
-        yield from app.init(self.vault)
+        yield from app.init_vault(self.vault)
         yield from app.start()
 
         try:
@@ -136,7 +138,7 @@ class APITests(VaultTestCase):
         app = self.app
         client = APIClient(self.app_config)
 
-        yield from app.init(self.vault)
+        yield from app.init_vault(self.vault)
         yield from app.start()
 
         clone_folder = os.path.join(self.working_dir, 'cloned')
@@ -240,7 +242,7 @@ class APITests(VaultTestCase):
 
         app.add_vault(self.vault)
 
-        yield from app.init(self.vault)
+        yield from app.init_vault(self.vault)
         yield from app.start()
 
         try:
@@ -287,7 +289,7 @@ class APITests(VaultTestCase):
 
         app.add_vault(self.vault)
 
-        yield from app.init(self.vault)
+        yield from app.init_vault(self.vault)
         yield from app.start()
 
         try:
