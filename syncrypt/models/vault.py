@@ -66,9 +66,10 @@ class Vault(MetadataHolder):
 
     def __set_metadata(self, metadata):
         if 'name' in metadata:
-            self.logger.debug('Setting vault\'s name to "%s"', metadata['name'])
-            with self.config.update_context():
-                self.config.vault['name'] = metadata['name']
+            if self.config.vault['name'] != metadata['name']:
+                self.logger.debug('Setting vault\'s name to "%s"', metadata['name'])
+                with self.config.update_context():
+                    self.config.vault['name'] = metadata['name']
         if 'icon' in metadata and metadata['icon']:
             logger.debug('Setting vault icon')
             with self.config.update_context():
