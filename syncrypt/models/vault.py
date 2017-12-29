@@ -139,8 +139,8 @@ class Vault(MetadataHolder):
     def get_remote_size(self):
         return 0
 
-    def close(self):
-        yield from self.backend.close()
+    async def close(self):
+        await self.backend.close()
 
     def walk(self):
         '''
@@ -171,10 +171,9 @@ class Vault(MetadataHolder):
     def clear_bundle_cache(self):
         self._bundle_cache = {}
 
-    @asyncio.coroutine
-    def add_bundle_by_metadata(self, store_hash, metadata):
+    async def add_bundle_by_metadata(self, store_hash, metadata):
         bundle = Bundle(None, vault=self, store_hash=store_hash)
-        yield from bundle.write_encrypted_metadata(Once(metadata))
+        await bundle.write_encrypted_metadata(Once(metadata))
         return bundle
 
     def bundle_for(self, relpath):

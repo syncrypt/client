@@ -29,71 +29,71 @@ class APITests(VaultTestCase):
         'password': 'test!password'
     }
 
-    def test_api_login(self):
+    async def test_api_login(self):
         'try to get a list of files via API'
         app = self.app
         client = APIClient(self.app_config)
-        yield from app.start()
+        await app.start()
         try:
-            r = yield from client.login(**self.login_data)
-            yield from r.release()
+            r = await client.login(**self.login_data)
+            await r.release()
             self.assertEqual(r.status, 200)
 
-            r = yield from client.get('/v1/auth/check/')
-            c = yield from r.json()
-            yield from r.release()
+            r = await client.get('/v1/auth/check/')
+            c = await r.json()
+            await r.release()
             self.assertEqual(r.status, 200)
             self.assertEqual(c['connected'], True)
 
-            r = yield from client.logout()
-            c = yield from r.json()
+            r = await client.logout()
+            c = await r.json()
             self.assertEqual(r.status, 200)
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get('/v1/auth/check/')
-            c = yield from r.json()
+            r = await client.get('/v1/auth/check/')
+            c = await r.json()
             self.assertEqual(r.status, 200)
-            yield from r.release()
+            await r.release()
             self.assertEqual(c['connected'], False)
 
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_bundle(self):
+    async def test_api_bundle(self):
         'try to get a list of files via API'
         app = self.app
         app.add_vault(self.vault)
         client = APIClient(self.app_config)
 
-        yield from app.init_vault(self.vault)
-        yield from app.start()
+        await app.init_vault(self.vault)
+        await app.start()
 
         try:
-            r = yield from client.get('/v1/vault/')
+            r = await client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
+            c = await r.json()
             self.assertEqual(len(c), 1) # only one vault
-            yield from r.release()
+            await r.release()
 
             vault_uri = c[0]['resource_uri']
 
             self.assertEqual(c[0]['ignore'], ['.*'])
 
-            r = yield from client.get(vault_uri)
-            yield from r.release()
+            r = await client.get(vault_uri)
+            await r.release()
 
             # get a list of bundles
             bundle_list_uri = '%sbundle/' % vault_uri
 
-            r = yield from client.get(bundle_list_uri)
-            c = yield from r.json()
+            r = await client.get(bundle_list_uri)
+            c = await r.json()
             self.assertEqual(len(c), 8)
             #from pprint import pprint; pprint(c)
-            yield from r.release()
+            await r.release()
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_init_vault(self):
+    async def test_api_init_vault(self):
         app = self.app
         client = APIClient(self.app_config)
 
@@ -102,113 +102,113 @@ class APITests(VaultTestCase):
             shutil.rmtree(new_vault_folder)
         os.makedirs(new_vault_folder)
 
-        yield from app.start()
+        await app.start()
 
         try:
-            r = yield from client.login(**self.login_data)
-            yield from r.release()
+            r = await client.login(**self.login_data)
+            await r.release()
             self.assertEqual(r.status, 200)
 
-            yield from asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-            r = yield from client.post('/v1/vault/',
+            r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
-            c = yield from r.json()
+            c = await r.json()
             self.assertGreater(len(c['resource_uri']), 5)
-            yield from r.release()
+            await r.release()
 
-            #r = yield from client.get('/v1/vault/')
-            #c = yield from r.json()
+            #r = await client.get('/v1/vault/')
+            #c = await r.json()
             #self.assertEqual(len(c), 1) # one vault
             #self.assertEqual(c[0]['state'], 'initializing')
-            #yield from r.release()
+            #await r.release()
 
-            #yield from asyncio.sleep(6.0)
+            #await asyncio.sleep(6.0)
 
-            r = yield from client.get('/v1/vault/')
-            c = yield from r.json()
+            r = await client.get('/v1/vault/')
+            c = await r.json()
             self.assertEqual(len(c), 1) # one vault
             self.assertIn(c[0]['state'], ('syncing', 'synced'))
-            yield from r.release()
+            await r.release()
 
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_add_user(self):
+    async def test_api_add_user(self):
         app = self.app
         client = APIClient(self.app_config)
 
-        yield from app.init_vault(self.vault)
-        yield from app.start()
+        await app.init_vault(self.vault)
+        await app.start()
 
         clone_folder = os.path.join(self.working_dir, 'cloned')
         if os.path.exists(clone_folder):
             shutil.rmtree(clone_folder)
 
         try:
-            r = yield from client.login(**self.login_data)
-            yield from r.release()
+            r = await client.login(**self.login_data)
+            await r.release()
             self.assertEqual(r.status, 200)
 
-            yield from asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
 
-            r = yield from client.get('/v1/vault/')
+            r = await client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
+            c = await r.json()
             self.assertEqual(len(c), 0) # no vault
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.post('/v1/vault/',
+            r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': self.vault.folder }))
-            c = yield from r.json()
+            c = await r.json()
             self.assertGreater(len(c['resource_uri']), 5)
-            yield from r.release()
+            await r.release()
 
             teh_vault = c['resource_uri']
 
-            r = yield from client.get('/v1/vault/')
-            c = yield from r.json()
+            r = await client.get('/v1/vault/')
+            c = await r.json()
             self.assertEqual(len(c), 1) # one vault
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get(teh_vault + 'users/')
-            c = yield from r.json()
+            r = await client.get(teh_vault + 'users/')
+            c = await r.json()
 
             self.assertEqual(len(c), 1) # one user
-            yield from r.release()
+            await r.release()
             me = c[0]
 
             # add_user will make sure that the email is added as a user to the vault.
             # it will then return all the keys.
             # For testing purpose, we will add ourselves again
 
-            r = yield from client.get('/v1/user/' + me['email'] + '/keys/')
-            c = yield from r.json()
+            r = await client.get('/v1/user/' + me['email'] + '/keys/')
+            c = await r.json()
             self.assertGreater(len(c), 0) # at least one key
-            yield from r.release()
+            await r.release()
             fingerprint = c[0]['fingerprint']
 
-            r = yield from client.post(teh_vault + 'users/',
+            r = await client.post(teh_vault + 'users/',
                 data=json.dumps({
                     'email': me['email'],
                     'fingerprints': [fingerprint]
                 }))
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
 
-            r = yield from client.get(teh_vault + 'users/' + me['email'] + '/keys/')
-            c = yield from r.json()
+            r = await client.get(teh_vault + 'users/' + me['email'] + '/keys/')
+            c = await r.json()
             self.assertGreater(len(c), 0) # at least one key
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.delete(teh_vault)
+            r = await client.delete(teh_vault)
             self.assertEqual(r.status, 200)
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get('/v1/vault/')
-            c = yield from r.json()
+            r = await client.get('/v1/vault/')
+            c = await r.json()
             self.assertEqual(len(c), 0) # no vault
-            yield from r.release()
+            await r.release()
 
             # now lets try to clone the vault
 
@@ -217,154 +217,154 @@ class APITests(VaultTestCase):
                 'id': self.vault.config.id
             })
 
-            r = yield from client.post('/v1/vault/', data=post_data)
+            r = await client.post('/v1/vault/', data=post_data)
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
 
-            r = yield from client.get('/v1/vault/')
+            r = await client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
             self.assertEqual(len(c), 1)
 
             self.assertEqual(c[0]['metadata'].get('name'), 'testvault')
 
             # TODO actually we need to wait for backend future here
-            yield from asyncio.sleep(1.0)
+            await asyncio.sleep(1.0)
 
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_push(self):
+    async def test_api_push(self):
         app = self.app
         client = APIClient(self.app_config)
 
         app.add_vault(self.vault)
 
-        yield from app.init_vault(self.vault)
-        yield from app.start()
+        await app.init_vault(self.vault)
+        await app.start()
 
         try:
 
-            r = yield from client.get('/v1/vault/')
-            c = yield from r.json()
+            r = await client.get('/v1/vault/')
+            c = await r.json()
             self.assertEqual(len(c), 1) # only one vault
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get('/v1/stats')
-            c = yield from r.json()
+            r = await client.get('/v1/stats')
+            c = await r.json()
             self.assertEqual(c['stats']['downloads'], 0)
             self.assertEqual(c['stats']['uploads'], 8)
             self.assertEqual(c['stats']['stats'], 8)
-            yield from r.release()
+            await r.release()
 
-            yield from app.push()
+            await app.push()
 
-            r = yield from client.get('/v1/stats')
-            c = yield from r.json()
+            r = await client.get('/v1/stats')
+            c = await r.json()
             self.assertEqual(c['stats']['downloads'], 0)
             self.assertEqual(c['stats']['uploads'], 8)
             self.assertEqual(c['stats']['stats'], 16)
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get('/v1/config')
-            c = yield from r.json()
+            r = await client.get('/v1/config')
+            c = await r.json()
             self.assertIn('api', c.keys())
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get('/v1/vault/')
-            c = yield from r.json()
+            r = await client.get('/v1/vault/')
+            c = await r.json()
             self.assertEqual(len(c), 1) # still only one vault
-            yield from r.release()
+            await r.release()
 
             self.assertFalse(c[0]['modification_date'] is None)
 
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_metadata(self):
+    async def test_api_metadata(self):
         app = self.app
         client = APIClient(self.app_config)
 
         app.add_vault(self.vault)
 
-        yield from app.init_vault(self.vault)
-        yield from app.start()
+        await app.init_vault(self.vault)
+        await app.start()
 
         try:
 
-            r = yield from client.get('/v1/vault/')
+            r = await client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
 
             self.assertEqual(len(c), 1) # only one vault
 
             vault_uri = c[0]['resource_uri']
 
-            r = yield from client.get(vault_uri)
+            r = await client.get(vault_uri)
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
 
             self.assertEqual(c['metadata'].get('name'), 'testvault')
 
             patch_data = json.dumps({
                 'metadata': dict(c['metadata'], name='newname')
             })
-            r = yield from client.put(vault_uri, data=patch_data)
+            r = await client.put(vault_uri, data=patch_data)
             self.assertEqual(r.status, 200)
-            yield from r.release()
+            await r.release()
 
-            r = yield from client.get(vault_uri)
+            r = await client.get(vault_uri)
             self.assertEqual(r.status, 200)
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
 
             self.assertEqual(c['metadata'].get('name'), 'newname')
 
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_feedback(self):
+    async def test_api_feedback(self):
         'try to send some feedback over API'
         app = self.app
         client = APIClient(self.app_config)
-        yield from app.start()
+        await app.start()
         try:
-            r = yield from client.login(**self.login_data)
-            yield from r.release()
+            r = await client.login(**self.login_data)
+            await r.release()
             self.assertEqual(r.status, 200)
 
-            r = yield from client.post('/v1/feedback/', data=json.dumps({
+            r = await client.post('/v1/feedback/', data=json.dumps({
                 'feedback_text': 'Hey there fellas!'
             }))
-            c = yield from r.json()
-            yield from r.release()
+            c = await r.json()
+            await r.release()
             self.assertEqual(r.status, 200)
 
         finally:
-            yield from app.stop()
+            await app.stop()
 
-    def test_api_shutdown(self):
+    async def test_api_shutdown(self):
         app = self.app
         client = APIClient(self.app_config)
-        yield from app.start()
+        await app.start()
         try:
-            r = yield from client.get('/v1/version/', params={'check_for_update': 0})
-            c = yield from r.json()
-            yield from r.release()
+            r = await client.get('/v1/version/', params={'check_for_update': 0})
+            c = await r.json()
+            await r.release()
             self.assertEqual(r.status, 200)
 
             self.assertEqual(c['installed_version'], syncrypt.__version__)
             self.assertNotIn('update_available', c)
 
-            r = yield from client.get('/v1/shutdown/')
-            c = yield from r.json()
-            yield from r.release()
+            r = await client.get('/v1/shutdown/')
+            c = await r.json()
+            await r.release()
             self.assertEqual(r.status, 200)
 
         finally:
-            yield from app.wait_for_shutdown()
+            await app.wait_for_shutdown()
 

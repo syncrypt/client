@@ -22,17 +22,16 @@ class AsyncContext:
         pass
         #print(self, ex_type, ex_val)
 
-    @asyncio.coroutine
-    def wait(self):
+    async def wait(self):
         if self.semaphore:
-            yield from self.semaphore.join()
+            await self.semaphore.join()
         if self.failed_tasks:
             raise Exception("{0} task(s) failed!".format(len(self.failed_tasks.items())))
 
-    @asyncio.coroutine
-    def create_task(self, task_key, coro):
+    async def create_task(self, task_key, coro):
+
         if self.semaphore:
-            yield from self.semaphore.acquire()
+            await self.semaphore.acquire()
 
         task = self.loop.create_task(coro)
 

@@ -31,9 +31,8 @@ class Hash(Pipe):
     def hash_obj(self):
         return self._hash
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        data = yield from self.input.read(count)
+    async def read(self, count=-1):
+        data = await self.input.read(count)
         if len(data) != 0:
             self._hash.update(data)
         return data
@@ -49,17 +48,16 @@ class PadAES(AESPipe):
         super(PadAES, self).__init__()
         self.next_block = None
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.next_block is None:
-            this_block = yield from self.input.read(count)
+            this_block = await self.input.read(count)
         else:
             if len(self.next_block) == 0:
                 return b''
             else:
                 this_block = self.next_block
 
-        self.next_block = yield from self.input.read(count)
+        self.next_block = await self.input.read(count)
 
         # Only apply padding if last block
         if len(self.next_block) == 0:
@@ -74,17 +72,16 @@ class UnpadAES(AESPipe):
         super(UnpadAES, self).__init__()
         self.next_block = None
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.next_block is None:
-            this_block = yield from self.input.read(count)
+            this_block = await self.input.read(count)
         else:
             if len(self.next_block) == 0:
                 return b''
             else:
                 this_block = self.next_block
 
-        self.next_block = yield from self.input.read(count)
+        self.next_block = await self.input.read(count)
 
         # Only remove padding if last block
         if len(self.next_block) == 0:
@@ -99,9 +96,8 @@ class EncryptAES(AESPipe):
         self.key = key
         self.iv = None
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        data = yield from self.input.read(count)
+    async def read(self, count=-1):
+        data = await self.input.read(count)
         if len(data) == 0:
             return b''
         enc_data = b''
@@ -120,14 +116,13 @@ class DecryptAES(AESPipe):
         self.key = key
         super(DecryptAES, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.aes is None:
-            iv = yield from self.input.read(self.block_size)
+            iv = await self.input.read(self.block_size)
             logger.debug('Initializing symmetric decryption: block=%d iv=%d',
                     self.block_size, len(iv))
             self.aes = AES.new(self.key, AES.MODE_CBC, iv)
-        data = yield from self.input.read(count)
+        data = await self.input.read(count)
         logger.debug('Decrypting %d bytes', len(data))
         original_content = self.aes.decrypt(data)
         return original_content
@@ -148,9 +143,8 @@ class EncryptRSA(Buffered):
     def get_block_size(self):
         return Crypto.Util.number.size(self.public_key.n) // 8 - 2 * 20 - 2
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        data = yield from super(EncryptRSA, self).read(-1)
+    async def read(self, count=-1):
+        data = await super(EncryptRSA, self).read(-1)
         if len(data) > 0:
             enc_data = self.protocol.new(self.public_key).encrypt(data)
             logger.debug('RSA Encrypted %d -> %d bytes', len(data), len(enc_data))
@@ -174,9 +168,8 @@ class DecryptRSA(Buffered):
     def get_block_size(self):
         return Crypto.Util.number.size(self.private_key.n) // 8
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        data = yield from super(DecryptRSA, self).read(-1)
+    async def read(self, count=-1):
+        data = await super(DecryptRSA, self).read(-1)
         if len(data) > 0:
             sentinel = 0
             dec_data = self.protocol.new(self.private_key).decrypt(data, sentinel)
@@ -199,9 +192,8 @@ class DecryptRSA_PKCS1_OAEP(DecryptRSA):
     '''
     protocol = PKCS1_OAEP
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        data = yield from super(DecryptRSA, self).read(-1)
+    async def read(self, count=-1):
+        data = await super(DecryptRSA, self).read(-1)
         if len(data) > 0:
             dec_data = self.protocol.new(self.private_key).decrypt(data)
             logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))

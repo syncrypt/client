@@ -43,8 +43,7 @@ class HypoBinaryTestCase(asynctest.TestCase):
         shutil.copytree(self.folder, vault_folder)
         self.vault = Vault(vault_folder)
 
-        @asyncio.coroutine
-        def go():
+        async def go():
             vault = self.vault
 
             for file_info in initial_files:
@@ -63,8 +62,8 @@ class HypoBinaryTestCase(asynctest.TestCase):
 
             app.add_vault(self.vault)
 
-            yield from app.open_or_init(self.vault)
-            yield from app.push() # init all vaults
+            await app.open_or_init(self.vault)
+            await app.push() # init all vaults
 
             # now we will clone the initialized vault by copying the vault config
             shutil.copytree(os.path.join(self.vault.folder, '.vault'),
@@ -76,8 +75,8 @@ class HypoBinaryTestCase(asynctest.TestCase):
 
             app.add_vault(self.other_vault)
 
-            yield from app.open_or_init(self.other_vault)
-            yield from app.pull()
+            await app.open_or_init(self.other_vault)
+            await app.pull()
 
             assert not self.vault.active
             assert not self.other_vault.active
@@ -90,9 +89,9 @@ class HypoBinaryTestCase(asynctest.TestCase):
                 with open(p, 'wb') as f:
                     f.write(file_info['content'])
 
-            yield from app.push() # push all vaults
+            await app.push() # push all vaults
 
-            yield from app.pull() # pull all vaults
+            await app.pull() # pull all vaults
 
             assert not self.vault.active
             assert not self.other_vault.active
@@ -101,9 +100,8 @@ class HypoBinaryTestCase(asynctest.TestCase):
             final_files = set([f['filename'] for f in initial_files] + [f['filename'] for f in added_files])
             self.assertEqual(files_in_new_vault, len(final_files))
 
-        @asyncio.coroutine
-        def close():
-            yield from app.close()
+        async def close():
+            await app.close()
 
         self.loop.run_until_complete(app.initialize())
         try:

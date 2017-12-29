@@ -33,8 +33,7 @@ def chaos_trace(frame, event, arg):
                     raise exc('Chaos Monkey at it')
     return chaos_trace
 
-@asyncio.coroutine
-def settrace_periodically():
+async def settrace_periodically():
     '''
     Unfortunately, raising an exception in the trace function above will remove the trace handler
     for some reason. In this task, we will set our handler again so that the chaos monkey can
@@ -43,7 +42,7 @@ def settrace_periodically():
     while True:
         if sys.gettrace() != chaos_trace:
             sys.settrace(chaos_trace)
-        yield from asyncio.sleep(2)
+        await asyncio.sleep(2)
 
 @smokesignal.once('pre_setup')
 def pre_setup(app):

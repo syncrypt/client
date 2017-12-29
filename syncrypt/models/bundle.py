@@ -75,11 +75,10 @@ class Bundle(MetadataHolder):
         return self.remote_crypt_hash is None or \
                 self.remote_crypt_hash != self.crypt_hash
 
-    @asyncio.coroutine
-    def load_key(self):
-        metadata_file = yield from aiofiles.open(self.path_metadata, 'rb')
+    async def load_key(self):
+        metadata_file = await aiofiles.open(self.path_metadata, 'rb')
         try:
-            metadata_contents = yield from metadata_file.read()
+            metadata_contents = await metadata_file.read()
             metadata = umsgpack.loads(metadata_contents)
             self.key = metadata[b'key']
             filename = self.decode_path(metadata[b'filename'])
@@ -90,17 +89,16 @@ class Bundle(MetadataHolder):
                 assert self.relpath == filename
             assert len(self.key) == self.key_size
         finally:
-            yield from metadata_file.close()
+            await metadata_file.close()
 
-    @asyncio.coroutine
-    def generate_key(self):
+    async def generate_key(self):
         self.key = os.urandom(self.key_size)
         if not os.path.exists(os.path.dirname(self.path_metadata)):
             os.makedirs(os.path.dirname(self.path_metadata))
         assert len(self.key) == self.key_size
 
         sink = Once(self.serialized_metadata) >> FileWriter(self.path_metadata)
-        yield from sink.consume()
+        await sink.consume()
 
 
     def read_encrypted_stream(self):
@@ -111,12 +109,11 @@ class Bundle(MetadataHolder):
                 >> PadAES() \
                 >> EncryptAES(self.key)
 
-    @asyncio.coroutine
-    def write_encrypted_stream(self, stream, assert_hash=None):
+    async def write_encrypted_stream(self, stream, assert_hash=None):
         hash_pipe = Hash(self.vault.config.hash_algo)
 
         if self.key is None:
-            yield from self.load_key()
+            await self.load_key()
 
         sink = stream \
                 >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
@@ -126,7 +123,7 @@ class Bundle(MetadataHolder):
                 >> hash_pipe \
                 >> FileWriter(self.path, create_dirs=True, create_backup=True, store_temporary=True)
 
-        yield from sink.consume()
+        await sink.consume()
 
         hash_obj = hash_pipe.hash_obj
         hash_obj.update(self.key)
@@ -137,27 +134,25 @@ class Bundle(MetadataHolder):
         if not passed:
             logger.error('hash mismatch: {} != {}'.format(assert_hash, received_hash))
 
-        yield from sink.finalize()
+        await sink.finalize()
 
         return passed
 
-    @asyncio.coroutine
-    def update_serialized_metadata(self, stream):
+    async def update_serialized_metadata(self, stream):
         logger.debug("Updating metadata on disk")
         sink = stream >> FileWriter(self.path_metadata, create_dirs=True)
-        yield from sink.consume()
+        await sink.consume()
         assert os.path.exists(self.path_metadata)
 
-    @asyncio.coroutine
-    def update(self):
+    async def update(self):
         'update encrypted hash (store in .vault)'
 
         #logger.info('Updating %s', self)
 
         try:
-            yield from self.load_key()
+            await self.load_key()
         except FileNotFoundError:
-            yield from self.generate_key()
+            await self.generate_key()
 
         assert self.path is not None
 
@@ -179,7 +174,7 @@ class Bundle(MetadataHolder):
                         >> Buffered(self.vault.config.enc_buf_size) \
                         >> PadAES() \
                         >> Count()
-            yield from counting_reader.consume()
+            await counting_reader.consume()
 
             # We add the AES key to the hash so that the hash stays
             # constant when the files is not changed, but the original
@@ -231,7 +226,6 @@ class VirtualBundle(Bundle):
     def load_key(self):
         self.key = self.metadata[b'key']
 
-    @asyncio.coroutine
-    def update_serialized_metadata(self, stream):
-        yield from MetadataHolder.update_serialized_metadata(self, stream)
+    async def update_serialized_metadata(self, stream):
+        await MetadataHolder.update_serialized_metadata(self, stream)
 

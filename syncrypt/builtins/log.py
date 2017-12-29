@@ -109,11 +109,10 @@ def select_recent_log_items(app, vault_id=None, limit=100, conn=None):
     return cursor.fetchall()
 
 
-@asyncio.coroutine
-def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=None):
+async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=None):
     'Stream Python logs via WebSockets'
 
-    yield from ws.prepare(request)
+    await ws.prepare(request)
 
     for item in select_recent_log_items(app, vault_id, 100):
         ws.send_str(json.dumps(item))
@@ -130,7 +129,7 @@ def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=None):
 
     root_logger.addHandler(wshandler)
     while not ws.closed:
-        msg = yield from ws.receive()
+        msg = await ws.receive()
         logger.debug(msg)
     root_logger.removeHandler(wshandler)
 
@@ -140,8 +139,7 @@ def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=None):
 def create_dispatch_log_list(app):
     conn = open_database(app)
 
-    @asyncio.coroutine
-    def dispatch_log_list(request):
+    async def dispatch_log_list(request):
         vault_id = request.match_info.get('vault_id', None)
         limit = int(request.GET.get('limit', 100))
         return JSONResponse(select_recent_log_items(app, vault_id, limit, conn=conn))
@@ -150,13 +148,12 @@ def create_dispatch_log_list(app):
 
 
 def create_dispatch_stream_log(app):
-    @asyncio.coroutine
-    def dispatch_stream_log(request):
+    async def dispatch_stream_log(request):
         vault_id = request.match_info.get('vault_id', None)
         limit = int(request.GET.get('limit', 100))
 
         ws = web.WebSocketResponse()
-        yield from ws_stream_log(request, ws, app, vault_id=vault_id, limit=limit)
+        await ws_stream_log(request, ws, app, vault_id=vault_id, limit=limit)
         return ws
 
     return dispatch_stream_log

@@ -16,98 +16,99 @@ from tests.base import VaultTestCase
 
 __all__ = ('BinaryServerTests',)
 
+
 @pytest.mark.requires_server
 class BinaryServerTests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
 
     @asynctest.ignore_loop
-    def test_backend_type(self):
+    async def test_backend_type(self):
         self.assertEqual(type(self.vault.backend), BinaryStorageBackend)
 
     @asynctest.ignore_loop
-    def test_vault(self):
+    async def test_vault(self):
         self.assertEqual(len(list(self.vault.walk_disk())), 8)
 
-    def test_upload(self):
+    async def test_upload(self):
         app = self.app
-        yield from app.open_or_init(self.vault)
+        await app.open_or_init(self.vault)
         backend = self.vault.backend
 
-        yield from backend.open()
+        await backend.open()
 
         for bundle in self.vault.walk_disk():
-            yield from bundle.update()
-            yield from backend.stat(bundle)
+            await bundle.update()
+            await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
-            yield from backend.stat(bundle)
+            await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
-            yield from backend.upload(bundle)
-            yield from backend.stat(bundle)
+            await backend.upload(bundle)
+            await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
 
-    def test_upload_2(self):
+    async def test_upload_2(self):
         app = self.app
-        yield from app.open_or_init(self.vault)
+        await app.open_or_init(self.vault)
         backend = self.vault.backend
 
         bundles = list(self.vault.walk_disk())
         files = [b.path for b in bundles]
         keys = {}
 
-        yield from backend.open()
+        await backend.open()
 
         for bundle in self.vault.walk_disk():
-            yield from bundle.update()
+            await bundle.update()
             keys[bundle.path] = bundle.key
-            yield from backend.stat(bundle)
+            await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
-            yield from backend.upload(bundle)
-            yield from backend.stat(bundle)
+            await backend.upload(bundle)
+            await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
 
         self.vault.clear_bundle_cache()
 
         for f in files:
             bundle = self.vault.bundle_for(os.path.relpath(f, self.vault.folder))
-            yield from bundle.update()
+            await bundle.update()
             self.assertEqual(bundle.key, keys[bundle.path])
-            yield from backend.stat(bundle)
+            await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
 
-    def test_app_push(self):
+    async def test_app_push(self):
         self.app.add_vault(self.vault)
-        yield from self.app.push()
+        await self.app.push()
 
-    def test_app_push1(self):
+    async def test_app_push1(self):
         app = self.app
-        yield from app.open_or_init(self.vault)
+        await app.open_or_init(self.vault)
         bundle = list(self.vault.walk_disk())[0]
-        yield from app.push_bundle(bundle)
-        yield from app.wait()
+        await app.push_bundle(bundle)
+        await app.wait()
 
-    def test_vault_metadata(self):
+    async def test_vault_metadata(self):
         app = self.app
-        yield from app.open_or_init(self.vault)
+        await app.open_or_init(self.vault)
         backend = self.vault.backend
-        yield from backend.open()
+        await backend.open()
 
         self.vault.config.vault['name'] = 'My Library'
 
-        yield from backend.set_vault_metadata()
-        yield from backend.vault_metadata()
+        await backend.set_vault_metadata()
+        await backend.vault_metadata()
 
         # new connection
         vault2 = Vault(self.vault.folder)
-        yield from vault2.backend.vault_metadata()
+        await vault2.backend.vault_metadata()
 
-    def test_download(self):
+    async def test_download(self):
         'for all files -> upload file, delete file, download file'
         app = SyncryptApp(self.app_config)
-        yield from app.open_or_init(self.vault)
+        await app.open_or_init(self.vault)
 
         backend = self.vault.backend
 
-        yield from backend.open()
+        await backend.open()
 
         bundles = list(self.vault.walk_disk())
         files = [b.path for b in bundles]
@@ -115,18 +116,18 @@ class BinaryServerTests(VaultTestCase):
 
         for bundle in bundles:
             # upload file
-            yield from bundle.update()
+            await bundle.update()
 
             with open(bundle.path, 'rb') as x:
                 original_contents[bundle.path] = x.read()
 
-            yield from backend.upload(bundle)
+            await backend.upload(bundle)
 
             # delete file
             os.remove(bundle.path)
 
             # download file
-            yield from backend.download(bundle)
+            await backend.download(bundle)
 
             with open(bundle.path, 'rb') as x:
                 current_content = x.read()
@@ -145,14 +146,14 @@ class BinaryServerTests(VaultTestCase):
             bundle = self.vault.bundle_for(os.path.relpath(f, self.vault.folder))
 
             # download file
-            yield from backend.download(bundle)
+            await backend.download(bundle)
 
             with open(bundle.path, 'rb') as x:
                 current_content = x.read()
 
             self.assertEqual(original_contents[bundle.path], current_content)
 
-    def test_two_local_one_remote(self):
+    async def test_two_local_one_remote(self):
         other_vault_path = os.path.join(VaultTestCase.working_dir, 'othervault')
 
         # remove "other vault" folder first
@@ -162,8 +163,8 @@ class BinaryServerTests(VaultTestCase):
         app = self.app
         app.add_vault(self.vault)
 
-        yield from app.open_or_init(self.vault)
-        yield from app.push() # init all vaults
+        await app.open_or_init(self.vault)
+        await app.push() # init all vaults
 
         # now we will clone the initialized vault by copying the vault config
         shutil.copytree(os.path.join(self.vault.folder, '.vault'),
@@ -172,10 +173,10 @@ class BinaryServerTests(VaultTestCase):
         with self.other_vault.config.update_context():
             self.other_vault.config.unset('vault.revision')
 
-        yield from app.open_or_init(self.other_vault)
+        await app.open_or_init(self.other_vault)
         app.add_vault(self.other_vault)
 
-        yield from app.pull()
+        await app.pull()
 
         assert not self.vault.active
         assert not self.other_vault.active
@@ -184,28 +185,28 @@ class BinaryServerTests(VaultTestCase):
         self.assertEqual(files_in_new_vault, 8)
 
 
-    def test_revision_increase_after_push(self):
+    async def test_revision_increase_after_push(self):
         app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
-        yield from app.open_or_init(self.vault)
+        await app.open_or_init(self.vault)
         prev_rev = self.vault.revision
-        yield from app.push()
+        await app.push()
         post_rev = self.vault.revision
         self.assertNotEqual(prev_rev, post_rev)
         self.assertTrue(not post_rev is None)
 
-    def test_take_only_one_connection(self):
+    async def test_take_only_one_connection(self):
         'this will test if connection slots are properly reused'
         vault = self.vault
 
         app = SyncryptApp(self.app_config)
         app.add_vault(vault)
-        yield from app.open_or_init(self.vault)
-        yield from app.retrieve_metadata(vault)
-        yield from app.get_remote_size_for_vault(vault)
-        yield from app.retrieve_metadata(vault)
-        yield from app.get_remote_size_for_vault(vault)
-        yield from app.get_remote_size_for_vault(vault)
+        await app.open_or_init(self.vault)
+        await app.retrieve_metadata(vault)
+        await app.get_remote_size_for_vault(vault)
+        await app.retrieve_metadata(vault)
+        await app.get_remote_size_for_vault(vault)
+        await app.get_remote_size_for_vault(vault)
 
         self.assertEqual(get_manager_instance().get_stats()['idle'], 1)
 

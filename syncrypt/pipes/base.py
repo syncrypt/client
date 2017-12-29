@@ -6,38 +6,34 @@ class Pipe(object):
         self._eof = False
         self.input = None
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.input:
             return self.input.read(count)
         else:
             raise NotImplementedError()
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         if self.input:
             return self.input.close()
 
-    @asyncio.coroutine
-    def consume(self):
+    async def consume(self):
         'read all data from this pipe, but forget about that data'
         try:
             while True:
-                if len((yield from self.read())) == 0:
+                if len((await self.read())) == 0:
                     break
         finally:
-            yield from self.close()
+            await self.close()
 
-    @asyncio.coroutine
-    def readall(self):
+    async def readall(self):
         'read all data from this pipe and return that'
         data = b''
         while True:
-            new_data = yield from self.read()
+            new_data = await self.read()
             if len(new_data) == 0:
                 break
             data += new_data
-        yield from self.close()
+        await self.close()
         return data
 
     def add_input(self, input):
@@ -58,8 +54,7 @@ class Once(Pipe):
         self.contents = contents
         super(Once, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if not self._eof:
             self._eof = True
             return self.contents
@@ -72,10 +67,9 @@ class Repeat(Pipe):
         self.copies = 0
         super(Repeat, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.copies == 0:
-            self.buf = yield from self.input.read()
+            self.buf = await self.input.read()
             if len(self.buf) > 0:
                 self.copies = self.count
         if self.copies > 0:
@@ -90,14 +84,13 @@ class BufferedFree(Pipe):
         self.buf = b''
         super(BufferedFree, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if count == -1:
             raise NotImplementedError()
         else:
             while len(self.buf) < count:
                 # fill up buffer
-                add_buf = yield from self.input.read()
+                add_buf = await self.input.read()
                 if len(add_buf) == 0:
                     self._eof = True
                     break
@@ -130,20 +123,19 @@ class Buffered(Pipe):
         self.head_size = head_size
         super(Buffered, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         assert count == -1 or count == self.buf_size or \
                 (not self.head and count == self.head_size)
 
         if not self.head and self.head_size > 0:
             assert count == self.head_size
-            self.buf += yield from self.input.read(count)
+            self.buf += await self.input.read(count)
             self.head = True
             return self.pop(self.head_size)
 
         while len(self.buf) < self.buf_size:
             # fill up buffer
-            add_buf = yield from self.input.read(max(self.buf_size, count))
+            add_buf = await self.input.read(max(self.buf_size, count))
             if len(add_buf) == 0:
                 self._eof = True
                 break
@@ -164,8 +156,7 @@ class Limit(Pipe):
         self.bytes_read = 0
         super(Limit, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self._eof: return b''
         # fill up buffer
         left = self.bytes_limit - self.bytes_read
@@ -173,7 +164,7 @@ class Limit(Pipe):
             self._eof = True
             return b''
         read_bytes = max(count, left)
-        buf = yield from self.input.read(read_bytes)
+        buf = await self.input.read(read_bytes)
         if len(buf) == 0:
             self._eof = True
         self.bytes_read += len(buf)
@@ -188,8 +179,7 @@ class Count(Pipe):
     def count(self):
         return self._bytes_passed
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        buf = yield from self.input.read(count)
+    async def read(self, count=-1):
+        buf = await self.input.read(count)
         self._bytes_passed += len(buf)
         return buf

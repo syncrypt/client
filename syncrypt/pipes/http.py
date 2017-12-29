@@ -26,10 +26,9 @@ class AiohttpClientSessionMixin():
                     skip_auto_headers=["Content-Type", "User-Agent"]
                     )
 
-    @asyncio.coroutine
-    def close_client(self):
+    async def close_client(self):
         if self.client_owned and not self.client.closed:
-            yield from self.client.close()
+            await self.client.close()
 
 
 DEFAULT_CHUNK_SIZE = 1024*10*16
@@ -42,25 +41,23 @@ class URLReader(Source, AiohttpClientSessionMixin):
         self.response = None
         self.init_client(client)
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self._eof:
             return b''
         if self.response is None:
-            self.response = yield from self.client.get(self.url)
+            self.response = await self.client.get(self.url)
         if count == -1: count = DEFAULT_CHUNK_SIZE
-        buf = (yield from self.response.content.read(count))
+        buf = (await self.response.content.read(count))
         if len(buf) == 0:
-            yield from self.close()
+            await self.close()
         return buf
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         self._eof = True
         if not self.response is None:
-            yield from self.response.release()
+            await self.response.release()
             self.response = None
-        yield from self.close_client()
+        await self.close_client()
 
 
 class URLWriter(Sink, AiohttpClientSessionMixin):
@@ -74,16 +71,15 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         self.etag = None
         self.init_client(client)
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self._done:
             return b''
         if self.response is None:
-            self.response = yield from self.client.put(self.url,
+            self.response = await self.client.put(self.url,
                     data=self.feed_http_upload(),
                     headers={} if self.size is None else {'Content-Length': str(self.size)})
-        content = yield from self.response.read()
-        yield from self.response.release()
+        content = await self.response.read()
+        await self.response.release()
         if not self.response.status in (200, 201, 202):
             raise aiohttp.HttpProcessingError(
                 code=self.response.status, message=self.response.reason,
@@ -93,22 +89,20 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
             self.etag = self.response.headers['ETAG'][1:-1]
         return content
 
-    @asyncio.coroutine
-    def feed_http_upload(self):
+    async def feed_http_upload(self):
         while True:
-            buf = (yield from self.input.read())
+            buf = (await self.input.read())
             if len(buf) == 0:
                 break
             yield buf
             self.bytes_written += len(buf)
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         self._done = True
         if not self.response is None:
-            yield from self.response.release()
+            await self.response.release()
             self.response = None
-        yield from self.close_client()
+        await self.close_client()
 
 class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     '''
@@ -128,20 +122,18 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     def add_input(self, input):
         self.input = input >> BufferedFree()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self._url_idx >= len(self._urls):
             return b''
         url = self._urls[self._url_idx]
         logger.debug('Uploading to: %s (max. %d bytes)', url, self._chunksize)
         size = None if self.total_size is None else min(self.total_size - self.bytes_written, self._chunksize)
         writer = self.input >> Limit(self._chunksize) >> URLWriter(url, size=size, client=self.client)
-        result = (yield from writer.readall())
+        result = (await writer.readall())
         self.etags.append(writer.etag)
         self.bytes_written += writer.bytes_written
         self._url_idx += 1
         return result or b'<empty response>'
 
-    @asyncio.coroutine
-    def close(self):
-        yield from self.close_client()
+    async def close(self):
+        await self.close_client()

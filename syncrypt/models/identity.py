@@ -60,8 +60,7 @@ class Identity(object):
     def key_size(self):
         return Crypto.Util.number.size(self.private_key.n)
 
-    @asyncio.coroutine
-    def init(self):
+    async def init(self):
         loop = asyncio.get_event_loop()
         return loop.run_in_executor(None, self._init)
 

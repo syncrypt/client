@@ -69,56 +69,46 @@ class Resource(object):
     def get_id(self, obj):
         raise NotImplementedError
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_list(self, request):
-        objs = yield from self.get_obj_list(request)
+    async def dispatch_list(self, request):
+        objs = await self.get_obj_list(request)
         return JSONResponse([self.dehydrate(obj) for obj in objs])
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_get(self, request):
-        obj = yield from self.get_obj(request)
+    async def dispatch_get(self, request):
+        obj = await self.get_obj(request)
         return JSONResponse(self.dehydrate(obj))
 
 
-    @asyncio.coroutine
-    def dispatch_options(self, request):
+    async def dispatch_options(self, request):
         return JSONResponse({})
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_delete(self, request):
-        obj = yield from self.get_obj(request)
-        yield from self.delete_obj(request, obj)
+    async def dispatch_delete(self, request):
+        obj = await self.get_obj(request)
+        await self.delete_obj(request, obj)
         return JSONResponse({}) # return 200 without data
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_put(self, request):
-        obj = yield from self.put_obj(request)
+    async def dispatch_put(self, request):
+        obj = await self.put_obj(request)
         return JSONResponse(self.dehydrate(obj))
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_post(self, request):
-        obj = yield from self.post_obj(request)
+    async def dispatch_post(self, request):
+        obj = await self.post_obj(request)
         return JSONResponse(self.dehydrate(obj))
 
-    @asyncio.coroutine
-    def get_obj_list(self, request):
+    async def get_obj_list(self, request):
         raise NotImplementedError
 
-    @asyncio.coroutine
-    def get_obj(self, request):
+    async def get_obj(self, request):
         raise NotImplementedError
 
-    @asyncio.coroutine
-    def put_obj(self, request):
+    async def put_obj(self, request):
         raise NotImplementedError
 
-    @asyncio.coroutine
-    def delete_obj(self, request, obj):
+    async def delete_obj(self, request, obj):
         raise NotImplementedError
 
     def get_resource_uri(self, obj):
@@ -177,63 +167,57 @@ class VaultResource(Resource):
         )
         return dct
 
-    @asyncio.coroutine
-    def get_obj_list(self, request):
+    async def get_obj_list(self, request):
         return self.app.vaults
 
     def find_vault_by_id(self, vault_id):
         'deprecated'
         return self.app.find_vault_by_id(vault_id)
 
-    @asyncio.coroutine
-    def get_obj(self, request):
+    async def get_obj(self, request):
         return self.find_vault_by_id(request.match_info['id'])
 
-    @asyncio.coroutine
-    def delete_obj(self, request, obj):
+    async def delete_obj(self, request, obj):
         if request.GET.get('wipe') == '1':
             logger.warn('Deleting/wiping vault: %s', obj)
-            yield from self.app.unwatch_vault(obj)
-            yield from self.app.delete_vault(obj)
+            await self.app.unwatch_vault(obj)
+            await self.app.delete_vault(obj)
         else:
             logger.warn('Removing vault: %s', obj)
-            yield from self.app.unwatch_vault(obj)
-            yield from self.app.remove_vault(obj)
+            await self.app.unwatch_vault(obj)
+            await self.app.remove_vault(obj)
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_list(self, request):
-        objs = yield from self.get_obj_list(request)
-        backend = yield from self.app.open_backend()
+    async def dispatch_list(self, request):
+        objs = await self.get_obj_list(request)
+        backend = await self.app.open_backend()
 
         # Make a map from vault id -> vault info
-        v_info = {v['id'].decode(): v for v in (yield from backend.list_vaults())}
+        v_info = {v['id'].decode(): v for v in (await backend.list_vaults())}
 
-        yield from backend.close()
+        await backend.close()
         return JSONResponse([self.dehydrate(obj, v_info.get(obj.config.get('vault.id'), {})) for obj in objs])
 
 
-    @asyncio.coroutine
-    def dispatch_fingerprints(self, request):
+    async def dispatch_fingerprints(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
-        fingerprint_list = yield from vault.backend.list_vault_user_key_fingerprints()
+        fingerprint_list = await vault.backend.list_vault_user_key_fingerprints()
         return JSONResponse(fingerprint_list)
 
-    @asyncio.coroutine
-    def dispatch_history(self, request):
+    async def dispatch_history(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
         local_tz = get_localzone()
-        queue = yield from vault.backend.changes(None, None, verbose=True)
+        queue = await vault.backend.changes(None, None, verbose=True)
         log_items = []
         while True:
-            item = yield from queue.get()
+            item = await queue.get()
             if item is None:
                 break
             store_hash, metadata, server_info = item
             bundle = VirtualBundle(None, vault, store_hash=store_hash)
-            yield from bundle.write_encrypted_metadata(Once(metadata))
+            await bundle.write_encrypted_metadata(Once(metadata))
             rev_id = server_info['id'].decode(vault.config.encoding)
             created_at = server_info['created_at'].decode(vault.config.encoding)
             operation = server_info['operation'].decode(vault.config.encoding)
@@ -246,13 +230,12 @@ class VaultResource(Resource):
             })
         return JSONResponse({'items': log_items})
 
-    @asyncio.coroutine
-    def dispatch_export(self, request):
+    async def dispatch_export(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
 
         try:
-            content = yield from request.content.read()
+            content = await request.content.read()
             request_dict = json.loads(content.decode())
         except:
             return web.Response(status=400, text='Need JSON request body.')
@@ -264,52 +247,48 @@ class VaultResource(Resource):
         if os.path.isdir(path):
             path = os.path.join(path, '{0}.zip'.format(vault.config.id))
 
-        yield from self.app.export_package(path, vault=vault)
+        await self.app.export_package(path, vault=vault)
 
         return JSONResponse({'status': 'ok', 'filename': path})
 
-    @asyncio.coroutine
-    def post_obj(self, request):
+    async def post_obj(self, request):
 
-        @asyncio.coroutine
-        def pull_and_watch(vault):
-            yield from self.app.pull_vault(vault)
+        async def pull_and_watch(vault):
+            await self.app.pull_vault(vault)
             # TODO No wait here!
-            yield from self.app.watch(vault)
+            await self.app.watch(vault)
 
-        @asyncio.coroutine
-        def push_and_watch(vault):
-            yield from self.app.push_vault(vault)
+        async def push_and_watch(vault):
+            await self.app.push_vault(vault)
             # TODO No wait here!
-            yield from self.app.watch(vault)
+            await self.app.watch(vault)
 
-        content = yield from request.content.read()
+        content = await request.content.read()
         request_dict = json.loads(content.decode())
 
         if 'id' in request_dict:
-            vault = yield from self.app.clone(request_dict['id'], request_dict['folder'])
+            vault = await self.app.clone(request_dict['id'], request_dict['folder'])
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         elif 'import_package' in request_dict:
-            vault = yield from self.app.import_package(
+            vault = await self.app.import_package(
                     request_dict['import_package'], request_dict['folder'])
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
-            yield from self.app.open_or_init(vault)
+            await self.app.open_or_init(vault)
             asyncio.get_event_loop().create_task(push_and_watch(vault))
         return vault
 
-    @asyncio.coroutine
-    def put_obj(self, request):
-        content = yield from request.content.read()
+    async def put_obj(self, request):
+        content = await request.content.read()
         request_dict = json.loads(content.decode())
         vault = self.find_vault_by_id(request.match_info['id'])
         if vault is None:
             raise ValueError() # this should return 404
         if 'metadata' in request_dict:
             vault.metadata = request_dict['metadata']
-            yield from vault.backend.open()
-            yield from vault.backend.set_vault_metadata()
+            await vault.backend.open()
+            await vault.backend.set_vault_metadata()
         return vault
 
 
@@ -336,27 +315,26 @@ class FlyingVaultResource(Resource):
             logger.debug('Ignored vault keys: %s', ignored)
         return deh_obj
 
-    @asyncio.coroutine
-    def get_obj_list(self, request):
+    async def get_obj_list(self, request):
         vaults = []
-        backend = yield from self.app.open_backend()
+        backend = await self.app.open_backend()
 
         # Make a map from vault id -> vault info
-        v_info = {v['id'].decode(): v for v in (yield from backend.list_vaults())}
+        v_info = {v['id'].decode(): v for v in (await backend.list_vaults())}
 
         my_fingerprint = self.app.identity.get_fingerprint()
 
         for (vault, user_vault_key, encrypted_metadata) in \
-                (yield from backend.list_vaults_by_fingerprint(my_fingerprint)):
+                (await backend.list_vaults_by_fingerprint(my_fingerprint)):
 
-            yield from asyncio.sleep(0.001)
+            await asyncio.sleep(0.001)
 
             vault_id = vault['id'].decode('utf-8')
 
             logger.debug("Received vault: %s (with%s metadata)", vault_id, '' if encrypted_metadata else 'out')
 
             if encrypted_metadata:
-                metadata = yield from self.app._decrypt_metadata(encrypted_metadata, user_vault_key)
+                metadata = await self.app._decrypt_metadata(encrypted_metadata, user_vault_key)
             else:
                 metadata = None
 
@@ -373,11 +351,10 @@ class FlyingVaultResource(Resource):
                 modification_date=modification_date
             ))
 
-        yield from backend.close()
+        await backend.close()
         return vaults
 
-    @asyncio.coroutine
-    def get_obj(self, request):
+    async def get_obj(self, request):
         return find_vault_by_id(request.match_info['id'])
 
 
@@ -388,18 +365,17 @@ class UserResource(Resource):
         opts = {'version': self.version, 'name': self.resource_name}
         router.add_route('GET', '/{version}/{name}/{{id}}/keys/'.format(**opts), self.dispatch_keys)
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_keys(self, request):
+    async def dispatch_keys(self, request):
         email = request.match_info['id']
-        backend = yield from self.app.open_backend()
-        key_list = yield from backend.list_keys(email)
+        backend = await self.app.open_backend()
+        key_list = await backend.list_keys(email)
         response = JSONResponse([{
             'description': key['description'],
             'created_at': key['created_at'],
             'fingerprint': key['fingerprint']
         } for key in key_list])
-        yield from backend.close()
+        await backend.close()
         return response
 
 
@@ -432,8 +408,7 @@ class VaultUserResource(Resource):
             raise ValueError('Vault not found')
         return vault
 
-    @asyncio.coroutine
-    def get_obj(self, request):
+    async def get_obj(self, request):
         return {'email': request.match_info['email']}
 
     def get_id(self, obj):
@@ -442,43 +417,39 @@ class VaultUserResource(Resource):
     def dehydrate(self, obj):
         return dict(obj, resource_uri=self.get_resource_uri(obj))
 
-    @asyncio.coroutine
     @require_auth_token
-    def dispatch_keys(self, request):
+    async def dispatch_keys(self, request):
         vault = self.get_vault(request)
         email = request.match_info['email']
-        key_list = yield from vault.backend.list_keys(email)
+        key_list = await vault.backend.list_keys(email)
         return JSONResponse([{
             'description': key['description'],
             'created_at': key['created_at'],
             'fingerprint': key['fingerprint']
         } for key in key_list])
 
-    @asyncio.coroutine
-    def get_obj_list(self, request):
+    async def get_obj_list(self, request):
         vault = self.get_vault(request)
-        yield from vault.backend.open()
-        return (yield from vault.backend.list_vault_users())
+        await vault.backend.open()
+        return (await vault.backend.list_vault_users())
 
-    @asyncio.coroutine
-    def delete_obj(self, request, obj):
+    async def delete_obj(self, request, obj):
         vault = self.get_vault(request)
-        yield from vault.backend.open()
+        await vault.backend.open()
         email = obj['email']
         logger.info('Removing user "%s" from %s', email, vault)
-        yield from vault.backend.remove_vault_user(email)
+        await vault.backend.remove_vault_user(email)
 
-    @asyncio.coroutine
-    def post_obj(self, request):
+    async def post_obj(self, request):
         vault = self.get_vault(request)
-        content = yield from request.content.read()
+        content = await request.content.read()
         data = json.loads(content.decode())
         email = data['email']
-        yield from vault.backend.open()
+        await vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
-        yield from vault.backend.add_vault_user(email)
+        await vault.backend.add_vault_user(email)
         if 'fingerprints' in data:
-            key_list = yield from vault.backend.list_keys(email)
+            key_list = await vault.backend.list_keys(email)
             key_list = [key for key in key_list if key['fingerprint'] in data['fingerprints']]
             for key in key_list:
                 # retrieve key and verify fingerprint
@@ -486,7 +457,7 @@ class VaultUserResource(Resource):
                 public_key = key['public_key']
                 identity = Identity.from_key(public_key, vault.config)
                 assert identity.get_fingerprint() == fingerprint
-                yield from self.app.add_user_vault_key(vault, email, identity)
+                await self.app.add_user_vault_key(vault, email, identity)
 
         return {'email': email}
 
@@ -515,15 +486,13 @@ class BundleResource(Resource):
         dct.update(path=bundle.relpath)
         return dct
 
-    @asyncio.coroutine
-    def get_obj_list(self, request):
+    async def get_obj_list(self, request):
         vault_res = VaultResource(self.app)
         vault = vault_res.find_vault_by_id(request.match_info['vault_id'])
         if vault is None:
             raise ValueError('Vault not found')
         return itertools.islice(vault.walk_disk(), 0, 20)
 
-    @asyncio.coroutine
-    def get_obj(self, request):
+    async def get_obj(self, request):
         raise NotImplementedError
 

@@ -15,8 +15,7 @@ class StreamReader(Source):
         super(StreamReader, self).__init__()
         self.input = reader
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         # Do NOT close handle
         pass
 
@@ -27,16 +26,14 @@ class FileReader(Source):
         self.handle = None
         super(FileReader, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.handle is None and not self._eof:
-            self.handle = yield from aiofiles.open(self.filename, 'rb')
-        return (yield from self.handle.read(count))
+            self.handle = await aiofiles.open(self.filename, 'rb')
+        return (await self.handle.read(count))
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         if self.handle:
-            yield from self.handle.close()
+            await self.handle.close()
 
 class StreamWriter(Sink):
     def __init__(self, writer):
@@ -44,12 +41,11 @@ class StreamWriter(Sink):
         self.bytes_written = 0
         super(StreamWriter, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
-        buf = yield from self.input.read(count)
+    async def read(self, count=-1):
+        buf = await self.input.read(count)
         if buf and len(buf) > 0:
             self.writer.write(buf)
-            yield from self.writer.drain()
+            await self.writer.drain()
             self.bytes_written += len(buf)
         return buf
 
@@ -68,8 +64,7 @@ class FileWriter(Sink):
         self.store_temporary = store_temporary
         super(FileWriter, self).__init__()
 
-    @asyncio.coroutine
-    def read(self, count=-1):
+    async def read(self, count=-1):
         if self.handle is None and not self._eof:
             fn = self.filename
             if self.create_dirs and not os.path.exists(os.path.dirname(fn)):
@@ -79,13 +74,12 @@ class FileWriter(Sink):
             if self.store_temporary:
                 fn = self.get_temporary_filename(fn)
             logger.debug('Writing to %s', fn)
-            self.handle = yield from aiofiles.open(fn, 'wb')
-        contents = yield from self.input.read(count)
-        yield from self.handle.write(contents)
+            self.handle = await aiofiles.open(fn, 'wb')
+        contents = await self.input.read(count)
+        await self.handle.write(contents)
         return contents
 
-    @asyncio.coroutine
-    def finalize(self):
+    async def finalize(self):
         fn = self.filename
         if self.store_temporary: # we only wrote a temporary filename 
             if os.path.exists(fn):
@@ -103,9 +97,8 @@ class FileWriter(Sink):
         # TODO: more elaborate backup filename composition required
         return filename + '.scbackup'
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         if self.input:
-            yield from self.input.close()
+            await self.input.close()
         if self.handle:
-            yield from self.handle.close()
+            await self.handle.close()

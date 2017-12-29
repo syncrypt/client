@@ -6,21 +6,18 @@ class JoinableSemaphore():
         self.limiter = asyncio.Semaphore(maxsize)
         self.empty = asyncio.Lock()
 
-    @asyncio.coroutine
-    def acquire(self):
-        if self.count == 0: yield from self.empty
+    async def acquire(self):
+        if self.count == 0: await self.empty
         self.count += 1
-        yield from self.limiter.acquire()
+        await self.limiter.acquire()
 
-    @asyncio.coroutine
-    def release(self):
+    async def release(self):
         self.count -= 1
         if self.count == 0: self.empty.release()
         self.limiter.release()
 
-    @asyncio.coroutine
-    def join(self):
-        yield from self.empty
+    async def join(self):
+        await self.empty
         if self.empty.locked(): self.empty.release()
 
 
@@ -35,21 +32,18 @@ class JoinableSetSemaphore(JoinableSemaphore):
     def objects(self):
         return self._objects
 
-    @asyncio.coroutine
-    def acquire(self, obj):
-        if self.count == 0: yield from self.empty
+    async def acquire(self, obj):
+        if self.count == 0: await self.empty
         self.count += 1
-        yield from self.limiter.acquire()
+        await self.limiter.acquire()
         self._objects.add(obj)
 
-    @asyncio.coroutine
-    def release(self, obj):
+    async def release(self, obj):
         self.count -= 1
         if self.count == 0: self.empty.release()
         self.limiter.release()
         self._objects.remove(obj)
 
-    @asyncio.coroutine
-    def join(self):
-        yield from self.empty
+    async def join(self):
+        await self.empty
         if self.empty.locked(): self.empty.release()

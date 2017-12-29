@@ -25,28 +25,27 @@ class SyncryptDaemonApp(SyncryptApp):
 
         self.api = SyncryptAPI(self)
 
-    @asyncio.coroutine
-    def start(self):
+    async def start(self):
         try:
             self.api.initialize()
-            yield from self.api.start()
+            await self.api.start()
         except OSError:
             logger.error('Port is blocked, could not start API REST server')
             logger.info('Attempting to query running server for version...')
             client = APIClient(self.config)
-            r = yield from client.get('/v1/version/', params={'check_for_update': 0})
-            c = yield from r.json()
-            yield from r.release()
+            r = await client.get('/v1/version/', params={'check_for_update': 0})
+            c = await r.json()
+            await r.release()
             other_version = LooseVersion(c['installed_version']) 
             our_version =  LooseVersion(syncrypt.__version__)
             if other_version < our_version:
                 logger.info('Starting takeover because other version (%s) is lower than ours (%s)!',
                         other_version, our_version)
-                r = yield from client.get('/v1/shutdown/')
-                yield from r.release()
-                yield from asyncio.sleep(5.0)
+                r = await client.get('/v1/shutdown/')
+                await r.release()
+                await asyncio.sleep(5.0)
                 try:
-                    yield from self.api.start()
+                    await self.api.start()
                 except OSError:
                     logger.error('After 5s, port is still blocked, giving up...')
                     self.shutdown_event.set()
@@ -60,23 +59,23 @@ class SyncryptDaemonApp(SyncryptApp):
 
         for vault in self.vaults:
             try:
-                yield from vault.backend.open()
-                yield from self.set_vault_state(vault, VaultState.READY)
+                await vault.backend.open()
+                await self.set_vault_state(vault, VaultState.READY)
             except VaultFolderDoesNotExist:
                 logger.error('%s does not exist, removing vault from list.' % vault)
-                yield from self.remove_vault(vault)
+                await self.remove_vault(vault)
             except Exception as e:
                 logger.exception(e)
                 continue
 
-        yield from self.push()
+        await self.push()
 
         #for vault in self.vaults:
         #    try:
-        #        yield from self.watch_vault(vault)
+        #        await self.watch_vault(vault)
         #    except VaultFolderDoesNotExist:
         #        logger.error('%s does not exist, removing vault from list.' % vault)
-        #        yield from self.remove_vault(vault)
+        #        await self.remove_vault(vault)
         #
         #try:
         #except Exception as e:
@@ -84,27 +83,23 @@ class SyncryptDaemonApp(SyncryptApp):
         #    logger.warn('The above exception occured while pushing vaults, we will try to continue anyway')
         #
         #for vault in self.vaults:
-        #    yield from self.autopull_vault(vault)
+        #    await self.autopull_vault(vault)
 
-    @asyncio.coroutine
-    def stop(self):
+    async def stop(self):
         for vault in self.vaults:
-            yield from self.unwatch_vault(vault)
-            yield from self.unautopull_vault(vault)
-        yield from self.api.stop()
+            await self.unwatch_vault(vault)
+            await self.unautopull_vault(vault)
+        await self.api.stop()
 
-    @asyncio.coroutine
-    def shutdown(self):
-        yield from self.stop()
+    async def shutdown(self):
+        await self.stop()
         self.shutdown_event.set()
 
-    @asyncio.coroutine
-    def restart(self):
+    async def restart(self):
         logger.warn('Restart requested, shutting down...')
         self.restart_flag = True
-        yield from self.shutdown()
+        await self.shutdown()
 
-    @asyncio.coroutine
-    def wait_for_shutdown(self):
+    async def wait_for_shutdown(self):
         if not self.shutdown_event.is_set():
-            yield from self.shutdown_event.wait()
+            await self.shutdown_event.wait()

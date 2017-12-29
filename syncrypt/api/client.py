@@ -24,8 +24,7 @@ class APIClient:
         return self._session
 
     def __getattr__(self, http_method):
-        @asyncio.coroutine
-        def api_call(request_uri, *args, **kwargs):
+        async def api_call(request_uri, *args, **kwargs):
 
             # Add auth token to headers
             kwargs['headers'] = dict(kwargs.get('headers', {}), **{AUTH_TOKEN_HEADER: self.auth_token})
@@ -33,6 +32,7 @@ class APIClient:
             # Build URL
             url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
 
-            return getattr(self.session, http_method)(url, *args, **kwargs)
+            ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
+            return ctx
         return api_call
 

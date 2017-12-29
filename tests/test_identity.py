@@ -11,8 +11,7 @@ __all__ = ('IdentityTests',)
 
 class IdentityTests(VaultTestCase):
 
-    @asyncio.coroutine
-    def test_creation(self):
+    async def test_creation(self):
 
         key = os.path.join(self.working_dir, 'id_rsa')
         key_pub = os.path.join(self.working_dir, 'id_rsa.pub')
@@ -21,19 +20,18 @@ class IdentityTests(VaultTestCase):
         if os.path.exists(key_pub): os.unlink(key_pub)
 
         identity = Identity(key, key_pub, AppConfig())
-        yield from identity.init()
+        await identity.init()
 
         fp = identity.get_fingerprint()
         self.assertEqual(len(fp), 16)
 
         identity2 = Identity(key, key_pub, AppConfig())
-        yield from identity2.init()
+        await identity2.init()
 
         self.assertEqual(fp, identity2.get_fingerprint())
         self.assertEqual(identity2.key_size(), 4096)
 
-    @asyncio.coroutine
-    def test_async_key_generation(self):
+    async def test_async_key_generation(self):
         'check wether key generation can happen concurrently'
 
         key = os.path.join(self.working_dir, 'id_rsa')
@@ -47,14 +45,13 @@ class IdentityTests(VaultTestCase):
         loop = asyncio.get_event_loop()
 
         x = [0]
-        @asyncio.coroutine
-        def counter():
+        async def counter():
             while True:
-                yield from asyncio.sleep(0.01)
+                await asyncio.sleep(0.01)
                 x[0] += 1
 
         task = loop.create_task(counter())
-        yield from identity.init()
+        await identity.init()
         task.cancel()
 
         # Make sure the inner loop of counter ran more than 20 times, which
