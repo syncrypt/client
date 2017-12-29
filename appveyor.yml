@@ -38,21 +38,6 @@ environment:
       WHEEL_ARCH: "win_amd64"
       WHEEL_PLATFORM: "cp35-cp35m"
 
-    - PYTHON: "C:\\Python34"
-      PYTHON_VERSION: "3.4.x"
-      PYTHON_ARCH: "32"
-      DIST_PLATFORM: "win-i386"
-      WHEEL_ARCH: "win32"
-      WHEEL_PLATFORM: "cp34-cp34m"
-
-    - PYTHON: "C:\\Python34-x64"
-      PYTHON_VERSION: "3.4.x"
-      PYTHON_ARCH: "64"
-      DIST_PLATFORM: "win-x86_64"
-      WHEEL_ARCH: "win_amd64"
-      WHEEL_PLATFORM: "cp34-cp34m"
-
-
 init:
   # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
   - ps: >-
