@@ -1,19 +1,20 @@
+import asyncio
 import hashlib
 import logging
 import os
 import os.path
 import sys
 import zipfile
+from enum import Enum
 from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
 
-import asyncio
 from syncrypt.config import VaultConfig
-from syncrypt.exceptions import SecurityError, VaultNotInitialized, VaultFolderDoesNotExist
+from syncrypt.exceptions import (SecurityError, VaultFolderDoesNotExist,
+                                 VaultNotInitialized)
 from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
-from syncrypt.utils.semaphores import JoinableSetSemaphore
 
 from .base import MetadataHolder
 from .bundle import Bundle
@@ -22,6 +23,16 @@ from .identity import Identity
 logger = logging.getLogger(__name__)
 
 IGNORE_EMPTY_FILES = ['.DS_Store']
+
+
+class VaultState(Enum):
+    UNKNOWN = "unknown"
+    UNINITIALIZED = "uninitialized"
+    READY = "ready"
+    FAILURE = "failure"
+
+#class VaultAction(Enum):
+#    SYNCING = "syncing"
 
 
 class VaultLoggerAdapter(logging.LoggerAdapter):
@@ -37,17 +48,11 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
 
 class Vault(MetadataHolder):
     def __init__(self, folder):
+        self.state = VaultState.UNKNOWN
         self.folder = folder
         self._bundle_cache = {}
 
         self.logger = VaultLoggerAdapter(self, logger)
-
-        self.semaphores = {
-            'update': JoinableSetSemaphore(32),
-            'stat': JoinableSetSemaphore(32),
-            'upload': JoinableSetSemaphore(32),
-            'download': JoinableSetSemaphore(32)
-        }
 
     @property
     def config(self):
@@ -97,10 +102,10 @@ class Vault(MetadataHolder):
             self._backend = Backend(self, **kwargs)
             return self._backend
 
-    @property
-    def active(self):
-        #self.logger.debug('Sema count: %s', [sema.count for sema in self.semaphores.values()])
-        return sum(sema.count for sema in self.semaphores.values()) > 0
+    #@property
+    #def active(self):
+    #    #self.logger.debug('Sema count: %s', [sema.count for sema in self.semaphores.values()])
+    #    return sum(sema.count for sema in self.semaphores.values()) > 0
 
     def __str__(self):
         return '<Vault: {0}>'.format(self.folder)
@@ -127,10 +132,6 @@ class Vault(MetadataHolder):
     @property
     def config_path(self):
         return os.path.join(self.folder, '.vault', 'config')
-
-    @property
-    def state(self):
-        return 'syncing' if self.active else 'synced'
 
     def get_local_size(self):
         return folder_size(self.folder)

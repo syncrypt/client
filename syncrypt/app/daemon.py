@@ -5,6 +5,8 @@ from getpass import getpass
 import syncrypt
 from syncrypt.api import APIClient, SyncryptAPI
 from syncrypt.app.auth import AuthenticationProvider
+from syncrypt.models import VaultState
+from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp
@@ -58,19 +60,31 @@ class SyncryptDaemonApp(SyncryptApp):
 
         for vault in self.vaults:
             try:
-                yield from self.watch(vault)
+                yield from vault.backend.open()
+                yield from self.set_vault_state(vault, VaultState.READY)
             except VaultFolderDoesNotExist:
                 logger.error('%s does not exist, removing vault from list.' % vault)
                 yield from self.remove_vault(vault)
+            except Exception as e:
+                logger.exception(e)
+                continue
 
-        try:
-            yield from self.push()
-        except Exception as e:
-            logger.exception(e)
-            logger.warn('The above exception occured while pushing vaults, we will try to continue anyway')
+        yield from self.push()
 
-        for vault in self.vaults:
-            yield from self.autopull_vault(vault)
+        #for vault in self.vaults:
+        #    try:
+        #        yield from self.watch_vault(vault)
+        #    except VaultFolderDoesNotExist:
+        #        logger.error('%s does not exist, removing vault from list.' % vault)
+        #        yield from self.remove_vault(vault)
+        #
+        #try:
+        #except Exception as e:
+        #    logger.exception(e)
+        #    logger.warn('The above exception occured while pushing vaults, we will try to continue anyway')
+        #
+        #for vault in self.vaults:
+        #    yield from self.autopull_vault(vault)
 
     @asyncio.coroutine
     def stop(self):

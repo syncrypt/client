@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 class AsyncContext:
 
-    def __init__(self, semaphore=None):
+    def __init__(self, semaphore=None, concurrency=8):
         self.loop = asyncio.get_event_loop()
-        self.semaphore = semaphore or JoinableSemaphore(2)
+        self.semaphore = semaphore or JoinableSemaphore(concurrency)
         self.running_tasks = {}
         self.failed_tasks = {}
 
@@ -46,7 +46,11 @@ class AsyncContext:
 
                 if _task.exception():
                     ex = _task.exception()
+                    #print("EX")
+                    logger.error("Exception in task %s (%s)", task, task_key)
+                    #import ipdb; ipdb.set_trace()
                     logger.exception(ex)
+                    #, stack_info=_task.get_stack())
                     self.failed_tasks[task_key] = task
 
                 if self.semaphore:

@@ -15,12 +15,12 @@ import syncrypt
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
 from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
-from syncrypt.models import Identity, Vault, VirtualBundle
+from syncrypt.models import Identity, Vault, VaultState, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import (format_fingerprint, format_size,
                                    size_with_unit)
-from syncrypt.utils.semaphores import JoinableSemaphore
+from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
 
 from .asynccontext import AsyncContext
 from .events import create_watchdog
@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 class SyncryptApp(object):
     '''
-    The main controller class for Syncrypt commands. It can orchestrate
-    multiple vaults and report status via a HTTP interface.
+    The main controller class for Syncrypt commands. A single instance of this class can
+    orchestrate multiple vaults.
     '''
 
     def __init__(self, config, auth_provider=None, vault_dirs=None):
@@ -39,6 +39,20 @@ class SyncryptApp(object):
         self.vaults = []
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
+
+        # These enforce global limits on various bundle actions
+        self.semaphores = {
+            'update': JoinableSetSemaphore(8),
+            'stat': JoinableSetSemaphore(8),
+            'upload': JoinableSetSemaphore(8),
+            'download': JoinableSetSemaphore(8)
+        }
+
+        self.stats = {
+            'uploads': 0,
+            'downloads': 0,
+            'stats': 0
+        }
 
         # A map from Bundle -> Future that contains all bundles scheduled for a push
         self._scheduled_pushes = {}
@@ -57,12 +71,6 @@ class SyncryptApp(object):
 
         # A map from folder -> Task. Used by the daemon to autopull vault periodically.
         self._autopull_tasks = {}
-
-        self.stats = {
-            'uploads': 0,
-            'downloads': 0,
-            'stats': 0
-            }
 
         def handler(loop, **kwargs):
             if 'exception' in kwargs and isinstance(kwargs['exception'], asyncio.CancelledError):
@@ -208,9 +216,30 @@ class SyncryptApp(object):
             yield from self.init_vault(vault, host=self.config.remote.get('host'))
             yield from vault.backend.open()
 
+    async def set_vault_state(self, vault, new_state):
+        if vault.state != new_state:
+            old_state = vault.state
+            vault.state = new_state
+            await self.handle_state_transition(vault, old_state)
+
+    async def handle_state_transition(self, vault, old_state):
+        logger.info('STATE TRANSITION %s -> %s', vault, vault.state)
+        new_state = vault.state
+
+        if new_state in (VaultState.READY,):
+            await self.watch_vault(vault)
+        else:
+            if old_state in (VaultState.READY,):
+                await self.unwatch_vault(vault)
+
+        #if new_state == VaultState.SYNCED:
+        #    await self.autopull_vault(vault)
+        #elif old_state == VaultState.SYNCED:
+        #    await self.unautopull_vault(vault)
+
     @asyncio.coroutine
-    def watch(self, vault):
-        'Install a watchdog and auto-pull for vault'
+    def watch_vault(self, vault):
+        'Install a watchdog for the given vault'
         vault.check_existence()
         folder = os.path.abspath(vault.folder)
         logger.info('Watching %s', folder)
@@ -219,6 +248,7 @@ class SyncryptApp(object):
 
     @asyncio.coroutine
     def autopull_vault(self, vault):
+        'Install a regular autopull for the given vault'
         vault.check_existence()
         folder = os.path.abspath(vault.folder)
         logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
@@ -500,20 +530,27 @@ class SyncryptApp(object):
         "Push all registered vaults"
         with AsyncContext() as ctx:
             for vault in self.vaults:
-                try:
-                    logger.info('Pushing %s', vault)
-                    yield from vault.backend.open()
-                    yield from vault.backend.set_vault_metadata()
-                    for bundle in vault.walk_disk():
-                        yield from ctx.create_task(bundle, self._push_bundle(bundle))
-                except VaultNotInitialized:
-                    logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-                    continue
-                except VaultFolderDoesNotExist:
-                    logger.error('%s does not exist, removing vault from list.' % vault)
-                    yield from self.remove_vault(vault)
-                    continue
-            yield from ctx.wait()
+
+                if vault.state != VaultState.READY:
+                    logger.warning("Skipping %s because it state is %s", vault, vault.state)
+
+                yield from ctx.create_task(vault, self.push_vault(vault))
+                #try:
+                    #logger.info('Pushing %s', vault)
+                    #yield from vault.backend.open()
+                    #yield from vault.backend.set_vault_metadata()
+
+                    #for bundle in vault.walk_disk():
+                    #    yield from ctx.create_task(bundle, self._push_bundle(bundle))
+                #except VaultNotInitialized:
+                #    logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+                #    continue
+                #except VaultFolderDoesNotExist:
+                #    logger.error('%s does not exist, removing vault from list.' % vault)
+                #    yield from self.remove_vault(vault)
+                #   continue
+            result = yield from ctx.wait()
+        print(result)
 
     #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     @asyncio.coroutine
@@ -541,6 +578,7 @@ class SyncryptApp(object):
                 yield from this.remove_vault(vault)
                 continue
             except Exception as e:
+                print("EXCEPTION")
                 logger.exception(e)
                 continue
         yield from self.wait()
@@ -549,10 +587,7 @@ class SyncryptApp(object):
     def pull_vault_periodically(self, vault):
         while True:
             yield from asyncio.sleep(int(vault.config.get('vault.pull_interval')))
-            # Disable watch during periodic pulls
-            yield from self.unwatch_vault(vault)
             yield from self.pull_vault(vault)
-            yield from self.watch(vault)
 
     @asyncio.coroutine
     def pull_vault(self, vault, full=False):
@@ -615,31 +650,36 @@ class SyncryptApp(object):
     @asyncio.coroutine
     def _push_bundle(self, bundle):
         'update bundle and maybe upload'
-        yield from bundle.update()
 
-        yield from bundle.vault.semaphores['stat'].acquire(bundle)
+        yield from self.semaphores['update'].acquire(bundle)
+        yield from bundle.update()
+        yield from self.semaphores['update'].release(bundle)
+
+        yield from self.semaphores['stat'].acquire(bundle)
         yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
-        yield from bundle.vault.semaphores['stat'].release(bundle)
+        yield from self.semaphores['stat'].release(bundle)
         if bundle.remote_hash_differs:
-            yield from bundle.vault.semaphores['upload'].acquire(bundle)
+            yield from self.semaphores['upload'].acquire(bundle)
             yield from bundle.vault.backend.upload(bundle)
             self.stats['uploads'] += 1
-            yield from bundle.vault.semaphores['upload'].release(bundle)
+            yield from self.semaphores['upload'].release(bundle)
 
     @asyncio.coroutine
     def _pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
+        yield from self.semaphores['update'].acquire(self)
         yield from bundle.update()
-        yield from bundle.vault.semaphores['stat'].acquire(bundle)
+        yield from self.semaphores['update'].release(self)
+        yield from self.semaphores['stat'].acquire(bundle)
         yield from bundle.vault.backend.stat(bundle)
         self.stats['stats'] += 1
-        yield from bundle.vault.semaphores['stat'].release(bundle)
+        yield from self.semaphores['stat'].release(bundle)
         if bundle.remote_crypt_hash is None:
             logger.warn('File not found: %s', bundle)
             return
         if bundle.remote_hash_differs:
-            yield from bundle.vault.semaphores['download'].acquire(bundle)
+            yield from self.semaphores['download'].acquire(bundle)
             yield from bundle.vault.backend.download(bundle)
             self.stats['downloads'] += 1
-            yield from bundle.vault.semaphores['download'].release(bundle)
+            yield from self.semaphores['download'].release(bundle)

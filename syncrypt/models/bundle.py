@@ -19,9 +19,6 @@ logger = logging.getLogger(__name__)
 class Bundle(MetadataHolder):
     'A Bundle represents a file and some additional information'
 
-    encrypt_semaphore = asyncio.Semaphore(value=8)
-    decrypt_semaphore = asyncio.Semaphore(value=8)
-
     __slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
             'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
             'key', 'bytes_written')
@@ -155,8 +152,6 @@ class Bundle(MetadataHolder):
     def update(self):
         'update encrypted hash (store in .vault)'
 
-        yield from self.vault.semaphores['update'].acquire(self)
-        yield from self.encrypt_semaphore.acquire()
         #logger.info('Updating %s', self)
 
         try:
@@ -204,9 +199,6 @@ class Bundle(MetadataHolder):
             self.crypt_hash = None
             self.file_size_crypt = None
             self.uptodate = True
-
-        self.encrypt_semaphore.release()
-        yield from self.vault.semaphores['update'].release(self)
 
     def __str__(self):
         return "<Bundle: {0}>".format(self.relpath)
