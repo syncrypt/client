@@ -274,11 +274,13 @@ class VaultResource(Resource):
         @asyncio.coroutine
         def pull_and_watch(vault):
             yield from self.app.pull_vault(vault)
+            # TODO No wait here!
             yield from self.app.watch(vault)
 
         @asyncio.coroutine
         def push_and_watch(vault):
             yield from self.app.push_vault(vault)
+            # TODO No wait here!
             yield from self.app.watch(vault)
 
         content = yield from request.content.read()

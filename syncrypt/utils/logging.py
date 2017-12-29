@@ -22,7 +22,7 @@ def setup_logging(loglevel, logfile=None):
         'formatters': {
             'colored': {
                 '()': ColoredFormatter,
-                'format': '%(log_color)s[%(levelname)-8s] %(message)s',
+                'format': '%(log_color)s[%(levelname).1s] %(message)s',
             },
             'precise': {
                 'format': '%(asctime)s %(levelname)s [%(name)s] %(message)s',

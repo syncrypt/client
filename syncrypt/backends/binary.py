@@ -835,7 +835,7 @@ class BinaryStorageManager(object):
                     yield from conn.disconnect()
                     break
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    #@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
     @asyncio.coroutine
     def acquire_connection(self, vault):
         'return an available connection or block until one is free'

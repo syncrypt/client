@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 CHAOS_TABLE = [
     # Function names, Probability, Exception
-    (('write_term', 'read_term'), 0.005, IOError),
-    (('open_connection',), 0.3, IOError)
+    (('write_term', 'read_term'), 0.015, IOError),
+    (('open_connection',), 0.1, IOError)
 ]
 
 def chaos_trace(frame, event, arg):
