@@ -382,6 +382,10 @@ class SyncryptApp(object):
             with vault.config.update_context():
                 vault.config.unset(setting)
 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
+    async def check_vault(self, vault: Vault):
+        await vault.backend.open()
+
     async def open_backend(self, always_ask_for_creds=False, auth_provider=None, num_tries=3):
         'open a backend connection that will be independent from any vault'
 
@@ -499,13 +503,19 @@ class SyncryptApp(object):
     #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     async def push(self):
         "Push all registered vaults"
-        with AsyncContext() as ctx:
+        async with AsyncContext(concurrency=3) as ctx:
             for vault in self.vaults:
 
                 if vault.state != VaultState.READY:
                     logger.warning("Skipping %s because it state is %s", vault, vault.state)
+                    continue
 
                 await ctx.create_task(vault, self.push_vault(vault))
+                for result in ctx.completed_tasks():
+                    print("PUSHED_VAULT", result)
+            await ctx.wait()
+            for result in ctx.completed_tasks():
+                print("PUSHED_VAULT", result)
                 #try:
                     #logger.info('Pushing %s', vault)
                     #await vault.backend.open()
@@ -521,18 +531,28 @@ class SyncryptApp(object):
                 #    await self.remove_vault(vault)
                 #   continue
             result = await ctx.wait()
-        print(result)
 
-    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
+        if result:
+            print(result)
+
     async def push_vault(self, vault):
         "Push a single vault"
         logger.info('Pushing %s', vault)
-        with AsyncContext() as ctx:
+
+        try:
+            await self.set_vault_state(vault, VaultState.SYNCING)
             await vault.backend.open()
             await vault.backend.set_vault_metadata()
-            for bundle in vault.walk_disk():
-                await ctx.create_task(bundle, self._push_bundle(bundle))
-            await ctx.wait()
+
+            async with AsyncContext(concurrency=3) as ctx:
+                for bundle in vault.walk_disk():
+                    await ctx.create_task(bundle, self._push_bundle(bundle))
+                    ctx.raise_for_failures()
+                await ctx.wait()
+                ctx.raise_for_failures()
+            await self.set_vault_state(vault, VaultState.READY)
+        except:
+            await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def pull(self, full=False):
         "Pull all registered vaults"

@@ -59,7 +59,7 @@ class SyncryptDaemonApp(SyncryptApp):
 
         for vault in self.vaults:
             try:
-                await vault.backend.open()
+                await self.check_vault(vault)
                 await self.set_vault_state(vault, VaultState.READY)
             except VaultFolderDoesNotExist:
                 logger.error('%s does not exist, removing vault from list.' % vault)

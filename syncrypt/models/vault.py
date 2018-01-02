@@ -28,6 +28,7 @@ IGNORE_EMPTY_FILES = ['.DS_Store']
 class VaultState(Enum):
     UNKNOWN = "unknown"
     UNINITIALIZED = "uninitialized"
+    SYNCING = "syncing"
     READY = "ready"
     FAILURE = "failure"
 
