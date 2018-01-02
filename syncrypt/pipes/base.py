@@ -14,7 +14,7 @@ class Pipe(object):
 
     async def close(self):
         if self.input:
-            return self.input.close()
+            return (await self.input.close())
 
     async def consume(self):
         'read all data from this pipe, but forget about that data'
