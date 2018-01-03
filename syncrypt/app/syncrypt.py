@@ -75,7 +75,7 @@ class SyncryptApp(object):
         def handler(loop, args, **kwargs):
             if 'exception' in kwargs and isinstance(kwargs['exception'], asyncio.CancelledError):
                 return
-            logger.error("Exception in event loop: %s, %s", args, kwargs)
+            logger.error("Unhandled exception in event loop: %s, %s", args, kwargs)
         asyncio.get_event_loop().set_exception_handler(handler)
 
         # generate or read users identity

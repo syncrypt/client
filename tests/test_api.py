@@ -13,7 +13,7 @@ import asynctest
 import hypothesis.strategies as st
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.config import AppConfig
-from syncrypt.models import Vault
+from syncrypt.models import Vault, VaultState
 from syncrypt.app import SyncryptDaemonApp
 from tests.base import VaultTestCase
 
@@ -69,6 +69,8 @@ class APITests(VaultTestCase):
         await app.init_vault(self.vault)
         await app.start()
 
+        assert self.vault.state == VaultState.READY
+
         try:
             r = await client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
@@ -111,7 +113,7 @@ class APITests(VaultTestCase):
             await r.release()
             self.assertEqual(r.status, 200)
 
-            await asyncio.sleep(0.1)
+            #await asyncio.sleep(0.1)
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -130,7 +132,7 @@ class APITests(VaultTestCase):
             r = await client.get('/v1/vault/')
             c = await r.json()
             self.assertEqual(len(c), 1) # one vault
-            self.assertIn(c[0]['state'], ('syncing', 'synced'))
+            self.assertIn(c[0]['state'], ('syncing', 'ready'))
             await r.release()
 
         finally:

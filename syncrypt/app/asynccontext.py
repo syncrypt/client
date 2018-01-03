@@ -53,15 +53,12 @@ class AsyncContext:
                     del self.running_tasks[task_key]
 
                 if _task.cancelled():
-                    logger.info("Upload of %s got canceled.", task_key)
+                    logger.info("Task %s (%s) got canceled.", task, task_key)
 
                 if _task.exception():
                     ex = _task.exception()
-                    #print("EX")
                     logger.error("Exception in task %s (%s)", task, task_key)
-                    #import ipdb; ipdb.set_trace()
                     logger.exception(ex)
-                    #, stack_info=_task.get_stack())
                     self.failed_tasks[task_key] = task
 
                 self._completed_tasks.put_nowait(task)
