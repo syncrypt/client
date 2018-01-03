@@ -103,10 +103,10 @@ class Vault(MetadataHolder):
             self._backend = Backend(self, **kwargs)
             return self._backend
 
-    #@property
-    #def active(self):
-    #    #self.logger.debug('Sema count: %s', [sema.count for sema in self.semaphores.values()])
-    #    return sum(sema.count for sema in self.semaphores.values()) > 0
+    # Deprecated
+    @property
+    def active(self):
+        return self.state == VaultState.SYNCING
 
     def __str__(self):
         return '<Vault: {0}>'.format(self.folder)

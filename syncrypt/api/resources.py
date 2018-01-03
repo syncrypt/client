@@ -256,12 +256,12 @@ class VaultResource(Resource):
         async def pull_and_watch(vault):
             await self.app.pull_vault(vault)
             # TODO No wait here!
-            await self.app.watch(vault)
+            #await self.app.watch(vault)
 
         async def push_and_watch(vault):
             await self.app.push_vault(vault)
             # TODO No wait here!
-            await self.app.watch(vault)
+            #await self.app.watch(vault)
 
         content = await request.content.read()
         request_dict = json.loads(content.decode())

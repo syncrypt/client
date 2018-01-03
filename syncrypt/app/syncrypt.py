@@ -72,7 +72,7 @@ class SyncryptApp(object):
         # A map from folder -> Task. Used by the daemon to autopull vault periodically.
         self._autopull_tasks = {}
 
-        def handler(loop, **kwargs):
+        def handler(loop, args, **kwargs):
             if 'exception' in kwargs and isinstance(kwargs['exception'], asyncio.CancelledError):
                 return
             logger.error("Exception in event loop: %s, %s", args, kwargs)
@@ -258,44 +258,6 @@ class SyncryptApp(object):
         if folder in self._autopull_tasks:
             self._autopull_tasks[folder].cancel()
             del self._autopull_tasks[folder]
-
-    async def push_bundle(self, bundle):
-        await self._bundle_actions.acquire()
-        task = asyncio.get_event_loop().create_task(self._push_bundle(bundle))
-
-        def cb(_task):
-            if bundle in self._running_pushes:
-                del self._running_pushes[bundle]
-
-            if _task.cancelled():
-                logger.info("Upload of %s got canceled.", bundle)
-
-            if task.exception():
-                ex = task.exception()
-
-                #from traceback import format_tb
-                logger.exception(ex)
-                #"Got exception: %s %s %s", ex, type(ex),
-                #        format_tb(ex.__traceback__))
-                self._failed_pushes[bundle] = ex
-
-            asyncio.get_event_loop().create_task(self._bundle_actions.release())
-
-        self._running_pushes[bundle] = task
-        task.add_done_callback(cb)
-
-    async def pull_bundle(self, bundle):
-        await self._bundle_actions.acquire()
-        task = asyncio.get_event_loop().create_task(self._pull_bundle(bundle))
-        def cb(_task):
-            if task.exception():
-                from traceback import format_tb
-                ex = task.exception()
-                logger.warn("Got exception: %s %s %s", ex, type(ex),
-                        format_tb(ex.__traceback__))
-            asyncio.get_event_loop().create_task(self._bundle_actions.release())
-        task.add_done_callback(cb)
-        return task
 
     async def clone_local(self, clone_target):
         import shutil
@@ -506,9 +468,9 @@ class SyncryptApp(object):
         async with AsyncContext(concurrency=3) as ctx:
             for vault in self.vaults:
 
-                if vault.state != VaultState.READY:
-                    logger.warning("Skipping %s because it state is %s", vault, vault.state)
-                    continue
+                #if vault.state != VaultState.READY:
+                #    logger.warning("Skipping %s because it state is %s", vault, vault.state)
+                #    continue
 
                 await ctx.create_task(vault, self.push_vault(vault))
                 for result in ctx.completed_tasks():
@@ -530,10 +492,6 @@ class SyncryptApp(object):
                 #    logger.error('%s does not exist, removing vault from list.' % vault)
                 #    await self.remove_vault(vault)
                 #   continue
-            result = await ctx.wait()
-
-        if result:
-            print(result)
 
     async def push_vault(self, vault):
         "Push a single vault"
@@ -544,9 +502,9 @@ class SyncryptApp(object):
             await vault.backend.open()
             await vault.backend.set_vault_metadata()
 
-            async with AsyncContext(concurrency=3) as ctx:
+            async with AsyncContext(self._bundle_actions) as ctx:
                 for bundle in vault.walk_disk():
-                    await ctx.create_task(bundle, self._push_bundle(bundle))
+                    await ctx.create_task(bundle, self.push_bundle(bundle))
                     ctx.raise_for_failures()
                 await ctx.wait()
                 ctx.raise_for_failures()
@@ -554,8 +512,49 @@ class SyncryptApp(object):
         except:
             await self.set_vault_state(vault, VaultState.FAILURE)
 
+    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
+    async def push_bundle(self, bundle):
+        'update bundle and maybe upload'
+
+        await self.semaphores['update'].acquire(bundle)
+        try:
+            await bundle.update()
+        finally:
+            await self.semaphores['update'].release(bundle)
+
+        await self.semaphores['stat'].acquire(bundle)
+        try:
+            await bundle.vault.backend.stat(bundle)
+            self.stats['stats'] += 1
+        finally:
+            await self.semaphores['stat'].release(bundle)
+
+        if bundle.remote_hash_differs:
+            await self.semaphores['upload'].acquire(bundle)
+            try:
+                await bundle.vault.backend.upload(bundle)
+                self.stats['uploads'] += 1
+            finally:
+                await self.semaphores['upload'].release(bundle)
+
     async def pull(self, full=False):
         "Pull all registered vaults"
+
+        async with AsyncContext(concurrency=3) as ctx:
+            for vault in self.vaults:
+
+                #if vault.state == VaultState.SYNCING:
+                #    logger.warning("Skipping %s because it state is %s", vault, vault.state)
+                #    continue
+
+                await ctx.create_task(vault, self.pull_vault(vault, full=full))
+                for result in ctx.completed_tasks():
+                    print("PUSHED_VAULT", result)
+            await ctx.wait()
+            for result in ctx.completed_tasks():
+                print("PUSHED_VAULT", result)
+
+        """
         for vault in self.vaults:
             try:
                 await self.pull_vault(vault, full=full)
@@ -571,6 +570,7 @@ class SyncryptApp(object):
                 logger.exception(e)
                 continue
         await self.wait()
+        """
 
     async def pull_vault_periodically(self, vault):
         while True:
@@ -583,10 +583,6 @@ class SyncryptApp(object):
         total = 0
         successful = []
 
-        def cb(_task):
-            if not _task.exception():
-                successful.append(_task)
-
         await self.retrieve_metadata(vault)
 
         # TODO: do a change detection (.vault/metadata store vs filesystem)
@@ -595,20 +591,27 @@ class SyncryptApp(object):
             queue = await vault.backend.list_files()
         else:
             queue = await vault.backend.changes(vault.revision, None)
-        while True:
-            item = await queue.get()
-            if item is None:
-                break
-            total += 1
-            store_hash, metadata, server_info = item
-            try:
-                bundle = await vault.add_bundle_by_metadata(store_hash, metadata)
-                task = await self.pull_bundle(bundle)
-                task.add_done_callback(cb)
-            except Exception as e:
-                vault.logger.exception(e)
-            latest_revision = server_info.get('id') or latest_revision
-        await self.wait()
+
+        async with AsyncContext(self._bundle_actions) as ctx:
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                total += 1
+                store_hash, metadata, server_info = item
+                try:
+                    bundle = await vault.add_bundle_by_metadata(store_hash, metadata)
+                    await ctx.create_task(bundle, self.pull_bundle(bundle))
+                except Exception as e:
+                    vault.logger.exception(e)
+                for result in ctx.completed_tasks():
+                    if not result.exception():
+                        successful.append(result)
+                latest_revision = server_info.get('id') or latest_revision
+            await ctx.wait()
+            for result in ctx.completed_tasks():
+                if not result.exception():
+                    successful.append(result)
 
         success = len(successful) == total
 
@@ -623,6 +626,33 @@ class SyncryptApp(object):
             vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
                     total - len(successful), total, vault)
 
+    async def pull_bundle(self, bundle):
+        'update, maybe download, and then decrypt'
+        await self.semaphores['update'].acquire(bundle)
+        try:
+            await bundle.update()
+        finally:
+            await self.semaphores['update'].release(bundle)
+
+        await self.semaphores['stat'].acquire(bundle)
+        try:
+            await bundle.vault.backend.stat(bundle)
+            self.stats['stats'] += 1
+        finally:
+            await self.semaphores['stat'].release(bundle)
+
+        if bundle.remote_crypt_hash is None:
+            logger.warn('File not found: %s', bundle)
+            return
+
+        if bundle.remote_hash_differs:
+            await self.semaphores['download'].acquire(bundle)
+            try:
+                await bundle.vault.backend.download(bundle)
+                self.stats['downloads'] += 1
+            finally:
+                await self.semaphores['download'].release(bundle)
+
     async def wait(self):
         await self._bundle_actions.join()
 
@@ -630,39 +660,3 @@ class SyncryptApp(object):
         await self.wait()
         for vault in self.vaults:
             await vault.close()
-
-    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
-    async def _push_bundle(self, bundle):
-        'update bundle and maybe upload'
-
-        await self.semaphores['update'].acquire(bundle)
-        await bundle.update()
-        await self.semaphores['update'].release(bundle)
-
-        await self.semaphores['stat'].acquire(bundle)
-        await bundle.vault.backend.stat(bundle)
-        self.stats['stats'] += 1
-        await self.semaphores['stat'].release(bundle)
-        if bundle.remote_hash_differs:
-            await self.semaphores['upload'].acquire(bundle)
-            await bundle.vault.backend.upload(bundle)
-            self.stats['uploads'] += 1
-            await self.semaphores['upload'].release(bundle)
-
-    async def _pull_bundle(self, bundle):
-        'update, maybe download, and then decrypt'
-        await self.semaphores['update'].acquire(self)
-        await bundle.update()
-        await self.semaphores['update'].release(self)
-        await self.semaphores['stat'].acquire(bundle)
-        await bundle.vault.backend.stat(bundle)
-        self.stats['stats'] += 1
-        await self.semaphores['stat'].release(bundle)
-        if bundle.remote_crypt_hash is None:
-            logger.warn('File not found: %s', bundle)
-            return
-        if bundle.remote_hash_differs:
-            await self.semaphores['download'].acquire(bundle)
-            await bundle.vault.backend.download(bundle)
-            self.stats['downloads'] += 1
-            await self.semaphores['download'].release(bundle)

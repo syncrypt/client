@@ -17,6 +17,9 @@ class APIClient:
     def logout(self, **kwargs):
         return self.get('/v1/auth/logout/')
 
+    async def close(self):
+        await self._session.close()
+
     @property
     def session(self):
         if not self._session:

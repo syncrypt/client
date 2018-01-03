@@ -49,7 +49,7 @@ class Identity(object):
 
     def read(self):
         if self.state == IdentityState.INITIALIZING:
-            raise ProgrammingError('identity is currently initializing')
+            raise RuntimeError('identity is currently initializing')
         with open(self.id_rsa_pub_path, 'rb') as id_rsa_pub:
             public_key = RSA.importKey(id_rsa_pub.read())
         with open(self.id_rsa_path, 'rb') as id_rsa:
@@ -62,7 +62,7 @@ class Identity(object):
 
     async def init(self):
         loop = asyncio.get_event_loop()
-        return loop.run_in_executor(None, self._init)
+        await loop.run_in_executor(None, self._init)
 
     def _init(self):
         if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):

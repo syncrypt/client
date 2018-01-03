@@ -57,6 +57,7 @@ class APITests(VaultTestCase):
             self.assertEqual(c['connected'], False)
 
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_bundle(self):
@@ -91,6 +92,7 @@ class APITests(VaultTestCase):
             #from pprint import pprint; pprint(c)
             await r.release()
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_init_vault(self):
@@ -132,6 +134,7 @@ class APITests(VaultTestCase):
             await r.release()
 
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_add_user(self):
@@ -234,6 +237,7 @@ class APITests(VaultTestCase):
             await asyncio.sleep(1.0)
 
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_push(self):
@@ -281,6 +285,7 @@ class APITests(VaultTestCase):
             self.assertFalse(c[0]['modification_date'] is None)
 
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_metadata(self):
@@ -325,6 +330,7 @@ class APITests(VaultTestCase):
             self.assertEqual(c['metadata'].get('name'), 'newname')
 
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_feedback(self):
@@ -345,6 +351,7 @@ class APITests(VaultTestCase):
             self.assertEqual(r.status, 200)
 
         finally:
+            await client.close()
             await app.stop()
 
     async def test_api_shutdown(self):
@@ -366,5 +373,6 @@ class APITests(VaultTestCase):
             self.assertEqual(r.status, 200)
 
         finally:
+            await client.close()
             await app.wait_for_shutdown()
 

@@ -8,7 +8,7 @@ class Pipe(object):
 
     async def read(self, count=-1):
         if self.input:
-            return self.input.read(count)
+            return (await self.input.read(count))
         else:
             raise NotImplementedError()
 
