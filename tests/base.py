@@ -1,16 +1,18 @@
+import asyncio
 import os
 import os.path
 import shutil
 import unittest
 
-import asyncio
 import asynctest
 from syncrypt.app import SyncryptApp
+from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.backends.binary import get_manager_instance
-from syncrypt.models import Vault
 from syncrypt.config import AppConfig
-from syncrypt.app.auth import CredentialsAuthenticationProvider
+from syncrypt.models import Vault
+from syncrypt.utils.logging import setup_logging
+
 
 class TestAuthenticationProvider(CredentialsAuthenticationProvider):
     def __init__(self):
@@ -18,6 +20,7 @@ class TestAuthenticationProvider(CredentialsAuthenticationProvider):
             'test@syncrypt.space',
             'test!password'
         )
+
 
 class TestAppConfig(AppConfig):
     def __init__(self, config_file):
@@ -28,6 +31,7 @@ class TestAppConfig(AppConfig):
 
             # Change default API port so that tests can be run alongside the daemon
             self.set('api.port', '28081')
+
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
@@ -46,6 +50,8 @@ class VaultTestCase(asynctest.TestCase):
             self.vault = Vault(vault_folder)
 
         app_config_file = os.path.join(self.working_dir, 'test_config')
+
+        setup_logging('DEBUG')
 
         if os.path.exists(app_config_file):
             os.remove(app_config_file)
