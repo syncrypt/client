@@ -1,19 +1,21 @@
+import asyncio
+import json
 import math
 import os
 import os.path
 import shutil
 import unittest
-import pytest
-import json
 
 import aiofiles
-import asyncio
+import pytest
+
 import asynctest
-from syncrypt.pipes import (URLReader, Hash, Count, Once, Repeat, URLWriter,
-        StdoutWriter, Buffered, ChunkedURLWriter, BufferedFree)
+from syncrypt.pipes import (Buffered, BufferedFree, ChunkedURLWriter, Count,
+                            Hash, Once, Repeat, StdoutWriter, URLReader,
+                            URLWriter)
+
 from .base import VaultTestCase
 
-__all__ = ('URLReaderTests',)
 
 class URLReaderTests(asynctest.TestCase):
 
@@ -29,14 +31,14 @@ class URLReaderTests(asynctest.TestCase):
 
     @pytest.mark.external_resources
     async def test_url_1mb(self):
-        url = 'http://www.speedtestx.de/testfiles/data_1mb.test'
+        url = 'http://speedtest.ftp.otenet.gr/files/test1Mb.db'
         stream = URLReader(url) >> Hash('sha256')
         counted = stream >> Count()
         await counted.consume()
 
         self.assertEqual(counted.count, 1048576)
         self.assertEqual(stream.hash,
-            '9f5a9086cf5ade0d0eeea626861e29f42dfd840691259e6742aa1446fc466057')
+            '30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58')
 
     @pytest.mark.external_resources
     async def test_url_put(self):
@@ -80,7 +82,7 @@ class URLReaderTests(asynctest.TestCase):
             # The httpbin API will return a JSON object with the data.
             obj = json.loads(returned_content.decode('utf-8'))
             complete_data += obj['data']
-        await writer.release()
+        await writer.close()
 
         self.assertEqual(writer.bytes_written, len(data) * times)
 

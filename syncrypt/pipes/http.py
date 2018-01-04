@@ -13,6 +13,7 @@ from .base import BufferedFree, Limit, Pipe, Sink, Source
 
 logger = logging.getLogger(__name__)
 
+
 class AiohttpClientSessionMixin():
     def init_client(self, client, headers={}):
         sslcontext = ssl.create_default_context(cafile=certifi.where())
@@ -46,6 +47,7 @@ class URLReader(Source, AiohttpClientSessionMixin):
             return b''
         if self.response is None:
             self.response = await self.client.get(self.url)
+            self.response.raise_for_status()
         if count == -1: count = DEFAULT_CHUNK_SIZE
         buf = (await self.response.content.read(count))
         if len(buf) == 0:
@@ -61,6 +63,7 @@ class URLReader(Source, AiohttpClientSessionMixin):
 
 
 class URLWriter(Sink, AiohttpClientSessionMixin):
+
     def __init__(self, url, size=None, client=None):
         super(URLWriter, self).__init__()
         self.url = url
@@ -75,9 +78,19 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         if self._done:
             return b''
         if self.response is None:
-            self.response = await self.client.put(self.url,
-                    data=self.feed_http_upload(),
+
+            @aiohttp.streamer
+            async def feed_http_upload(writer):
+               while True:
+                   buf = await self.input.read()
+                   if len(buf) == 0:
+                       break
+                   await writer.write(buf)
+                   self.bytes_written += len(buf)
+
+            self.response = await self.client.put(self.url, data=feed_http_upload,
                     headers={} if self.size is None else {'Content-Length': str(self.size)})
+            self.response.raise_for_status()
         content = await self.response.read()
         await self.response.release()
         if not self.response.status in (200, 201, 202):
@@ -89,20 +102,13 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
             self.etag = self.response.headers['ETAG'][1:-1]
         return content
 
-    async def feed_http_upload(self):
-        while True:
-            buf = (await self.input.read())
-            if len(buf) == 0:
-                break
-            yield buf
-            self.bytes_written += len(buf)
-
     async def close(self):
         self._done = True
         if not self.response is None:
             await self.response.release()
             self.response = None
         await self.close_client()
+
 
 class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     '''
