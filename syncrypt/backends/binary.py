@@ -11,6 +11,8 @@ from getpass import getpass
 
 import certifi
 from erlastic import Atom
+from tenacity import (retry, retry_unless_exception_type, stop_after_attempt,
+                      wait_exponential, retry_if_exception_type)
 
 import syncrypt
 from syncrypt import __project__, __version__
@@ -19,7 +21,6 @@ from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once,
                             StreamReader, StreamWriter, URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
-from tenacity import retry, wait_exponential, stop_after_attempt
 
 from .base import StorageBackend, StorageBackendInvalidAuth
 
@@ -808,7 +809,9 @@ class BinaryStorageManager(object):
                     await conn.disconnect()
                     break
 
-    #@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    @retry(retry=retry_if_exception_type() & retry_unless_exception_type(StorageBackendInvalidAuth),
+           stop=stop_after_attempt(3),
+           wait=wait_exponential(multiplier=1, max=10))
     async def acquire_connection(self, vault):
         'return an available connection or block until one is free'
         if self._monitor_task is None:
