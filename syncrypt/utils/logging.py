@@ -45,6 +45,10 @@ def setup_logging(loglevel, logfile=None):
                 'handlers': ['stream'],
                 'level': loglevel
             },
+            'asyncio': {
+                'handlers': ['stream'],
+                'level': loglevel
+            },
         },
     }
     if logfile:
