@@ -138,7 +138,7 @@ class VaultResource(Resource):
     def dehydrate(self, v, vault_info={}):
         dct = super(VaultResource, self).dehydrate(v)
 
-        dct.update(folder=v.folder, status='ready', state=v.state,
+        dct.update(folder=v.folder, state=v.state,
                    metadata=v.metadata, ignore=v.config.get('vault.ignore').split(','))
 
         # Annotate each obj with information from the server
