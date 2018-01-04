@@ -201,7 +201,6 @@ class BinaryStorageConnection(object):
             self.server_version = version_info[1].decode()
 
             client_version = '%s' % __version__
-            client_version = '0.5.0' # logger.warn('FIXME')
             client_ident = (__project__, client_version)
             self.logger.debug('Identifying to server as %s', client_ident)
             await self.write_term('hello', client_ident)
