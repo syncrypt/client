@@ -23,6 +23,13 @@ def setup_logging(loglevel, logfile=None):
             'colored': {
                 '()': ColoredFormatter,
                 'format': '%(log_color)s[%(levelname).1s] %(message)s',
+                'log_colors': {
+                    'DEBUG':    'cyan',
+                    'INFO':     'white',
+                    'WARNING':  'yellow',
+                    'ERROR':    'red',
+                    'CRITICAL': 'red,bg_white',
+                    }
             },
             'precise': {
                 'format': '%(asctime)s %(levelname)s [%(name)s] %(message)s',
