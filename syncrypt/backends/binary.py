@@ -81,10 +81,8 @@ class BinaryStorageConnectionLoggerAdapter(logging.LoggerAdapter):
         super(BinaryStorageConnectionLoggerAdapter, self).__init__(logger, {})
 
     def process(self, msg, kwargs):
-        if self.connection.vault and self.connection.vault.config.id:
-            return (msg, dict(kwargs, extra={
-                    'vault_id': self.connection.vault.config.id
-                }))
+        if self.connection.vault and self.connection.vault.id:
+            return (msg, dict(kwargs, extra={'vault_id': self.connection.vault.id}))
         else:
             return (msg, kwargs)
 
@@ -126,7 +124,7 @@ class BinaryStorageConnection(object):
     def __repr__(self):
         return "<Connection %s%s>" % (
                self.state,
-               self.vault and ' vault={0}'.format(str(self.vault.config.id)) or '')
+               self.vault and ' vault={0}'.format(str(self.vault)) or '')
 
     async def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''

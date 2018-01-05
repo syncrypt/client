@@ -113,26 +113,29 @@ class APITests(VaultTestCase):
             await r.release()
             self.assertEqual(r.status, 200)
 
-            #await asyncio.sleep(0.1)
-
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertGreater(len(c['resource_uri']), 5)
+            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
+            self.assertGreater(len(c['resource_uri']), 20)
             await r.release()
 
-            #r = await client.get('/v1/vault/')
-            #c = await r.json()
-            #self.assertEqual(len(c), 1) # one vault
-            #self.assertEqual(c[0]['state'], 'initializing')
-            #await r.release()
+            vault_uri = c['resource_uri']
 
-            #await asyncio.sleep(6.0)
+            r = await client.get(vault_uri)
+            c = await r.json()
+            self.assertIn(c['state'], ('uninitialized', 'initializing'))
+            await r.release()
+
+            self.assertEqual(len(app.vaults), 1) # one vault
+            while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+                await asyncio.sleep(0.2)
+            self.assertEqual(len(app.vaults), 1) # one vault
 
             r = await client.get('/v1/vault/')
             c = await r.json()
             self.assertEqual(len(c), 1) # one vault
-            self.assertIn(c[0]['state'], ('syncing', 'ready'))
+            self.assertEqual(c[0]['state'], 'ready')
             await r.release()
 
         finally:
@@ -169,14 +172,22 @@ class APITests(VaultTestCase):
             self.assertGreater(len(c['resource_uri']), 5)
             await r.release()
 
-            teh_vault = c['resource_uri']
+            vault_uri = c['resource_uri']
+
+            r = await client.get(vault_uri)
+            c = await r.json()
+            self.assertIn(c['state'], ('uninitialized', 'initializing', 'syncing'))
+            await r.release()
+
+            while app.vaults[0].state in ('uninitialized', 'initializing', 'syncing'):
+                await asyncio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
             self.assertEqual(len(c), 1) # one vault
             await r.release()
 
-            r = await client.get(teh_vault + 'users/')
+            r = await client.get(vault_uri + 'users/')
             c = await r.json()
 
             self.assertEqual(len(c), 1) # one user
@@ -193,7 +204,7 @@ class APITests(VaultTestCase):
             await r.release()
             fingerprint = c[0]['fingerprint']
 
-            r = await client.post(teh_vault + 'users/',
+            r = await client.post(vault_uri + 'users/',
                 data=json.dumps({
                     'email': me['email'],
                     'fingerprints': [fingerprint]
@@ -201,12 +212,12 @@ class APITests(VaultTestCase):
             c = await r.json()
             await r.release()
 
-            r = await client.get(teh_vault + 'users/' + me['email'] + '/keys/')
+            r = await client.get(vault_uri + 'users/' + me['email'] + '/keys/')
             c = await r.json()
             self.assertGreater(len(c), 0) # at least one key
             await r.release()
 
-            r = await client.delete(teh_vault)
+            r = await client.delete(vault_uri)
             self.assertEqual(r.status, 200)
             await r.release()
 

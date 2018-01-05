@@ -17,6 +17,18 @@ class IdentityState(Enum):
     INITIALIZED = "initialized"
 
 
+class IdentityError(RuntimeError):
+    pass
+
+
+class IdentityNotInitialized(IdentityError):
+    pass
+
+
+class IdentityIsInitializing(IdentityError):
+    pass
+
+
 class Identity(object):
     '''represents an RSA key pair'''
     def __init__(self, id_rsa_path, id_rsa_pub_path, config):
@@ -29,6 +41,7 @@ class Identity(object):
     def from_key(cls, key, config, private_key=None):
         identity = cls(None, None, config)
         identity._keypair = (RSA.importKey(key), RSA.importKey(private_key) if private_key else None)
+        identity.state = IdentityState.INITIALIZED
         return identity
 
     @property
@@ -36,20 +49,29 @@ class Identity(object):
         try:
             return self._keypair[1]
         except AttributeError:
-            self.read()
-            return self._keypair[1]
+            try:
+                self.read()
+                return self._keypair[1]
+            except IdentityError:
+                return None
 
     @property
     def public_key(self):
         try:
             return self._keypair[0]
         except AttributeError:
-            self.read()
-            return self._keypair[0]
+            try:
+                self.read()
+                return self._keypair[0]
+            except IdentityError:
+                return None
 
     def read(self):
         if self.state == IdentityState.INITIALIZING:
-            raise RuntimeError('identity is currently initializing')
+            raise IdentityIsInitializing()
+        if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):
+            self.state = IdentityState.UNINITIALIZED
+            raise IdentityNotInitialized()
         with open(self.id_rsa_pub_path, 'rb') as id_rsa_pub:
             public_key = RSA.importKey(id_rsa_pub.read())
         with open(self.id_rsa_path, 'rb') as id_rsa:
@@ -63,6 +85,9 @@ class Identity(object):
     async def init(self):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._init)
+
+    def is_initialized(self):
+        return self.state == IdentityState.INITIALIZED
 
     def _init(self):
         if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):
@@ -99,6 +124,8 @@ class Identity(object):
         self.state = IdentityState.INITIALIZED
 
     def get_fingerprint(self):
+        if not self.is_initialized():
+            raise IdentityNotInitialized()
         assert self.public_key
         pk_hash = hashlib.new(self.config.hash_algo)
         pk_hash.update(self.public_key.exportKey('DER'))

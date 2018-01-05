@@ -27,7 +27,7 @@ class APIClient:
         return self._session
 
     def __getattr__(self, http_method):
-        async def api_call(request_uri, *args, **kwargs):
+        async def api_call(request_uri, *args, raise_for_status=True, **kwargs):
 
             # Add auth token to headers
             kwargs['headers'] = dict(kwargs.get('headers', {}), **{AUTH_TOKEN_HEADER: self.auth_token})
@@ -36,6 +36,8 @@ class APIClient:
             url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
 
             ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
+            if raise_for_status:
+                ctx.raise_for_status()
             return ctx
         return api_call
 

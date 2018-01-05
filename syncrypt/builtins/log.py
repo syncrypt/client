@@ -34,7 +34,7 @@ class VaultFilter(logging.Filter):
         self._vault = vault
 
     def filter(self, record):
-        return 1 if getattr(record, 'vault_id', None) == self._vault.config.id else 0
+        return 1 if getattr(record, 'vault_id', None) == self._vault.id else 0
 
 
 class JSONFormatter(logging.Formatter):

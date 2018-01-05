@@ -26,14 +26,11 @@ IGNORE_EMPTY_FILES = ['.DS_Store']
 
 
 class VaultState(Enum):
-    UNKNOWN = "unknown"
+    #UNKNOWN = "unknown"
     UNINITIALIZED = "uninitialized"
     SYNCING = "syncing"
     READY = "ready"
     FAILURE = "failure"
-
-#class VaultAction(Enum):
-#    SYNCING = "syncing"
 
 
 class VaultLoggerAdapter(logging.LoggerAdapter):
@@ -42,14 +39,12 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
         super(VaultLoggerAdapter, self).__init__(logger, {})
 
     def process(self, msg, kwargs):
-        return (msg, dict(kwargs, extra={
-                'vault_id': self.vault.config.id
-            }))
+        return (msg, dict(kwargs, extra={'vault_id': self.vault.id}))
 
 
 class Vault(MetadataHolder):
     def __init__(self, folder):
-        self.state = VaultState.UNKNOWN
+        self.state = VaultState.UNINITIALIZED
         self.folder = folder
         self._bundle_cache = {}
 
@@ -102,6 +97,25 @@ class Vault(MetadataHolder):
             kwargs = self.config.backend_kwargs
             self._backend = Backend(self, **kwargs)
             return self._backend
+
+    @property
+    def id(self):
+        """
+        The value to uniquely identify a vault locally. It needs to be a seperate value from
+        the "remote id" because
+        1) We might clone the same remote id to multiple local vaults (each local vault needs to
+           be identifyable)
+        2) We might be in the UNINITIALIZED state, where we don't even know the remote id yet.
+           Still we need to be able to identify the vault.
+        We'll take a hash of the expanded path for now.
+        """
+        try:
+            return self._local_id
+        except AttributeError:
+            hash_obj = hashlib.new('sha256')
+            hash_obj.update(os.path.normpath(self.folder).encode())
+            self._local_id = hash_obj.hexdigest()
+            return self._local_id
 
     # Deprecated
     @property

@@ -133,7 +133,7 @@ class VaultResource(Resource):
                 self.dispatch_export)
 
     def get_id(self, v):
-        return str(v.config.get('vault.id'))
+        return str(v.id)
 
     def dehydrate(self, v, vault_info={}):
         dct = super(VaultResource, self).dehydrate(v)
@@ -154,7 +154,8 @@ class VaultResource(Resource):
             'key_algo': 'rsa',
             'transfer_algo': 'aes',
             'hash_algo': v.config.hash_algo,
-            'fingerprint': v.identity.get_fingerprint() if v.identity else None
+            'fingerprint': v.identity.get_fingerprint() \
+                    if v.identity and v.identity.is_initialized() else None
         }
 
         dct.update(
@@ -263,6 +264,10 @@ class VaultResource(Resource):
             # TODO No wait here!
             #await self.app.watch(vault)
 
+        async def init_and_push(vault):
+            await self.app.open_or_init(vault)
+            await self.app.push_vault(vault)
+
         content = await request.content.read()
         request_dict = json.loads(content.decode())
 
@@ -275,8 +280,7 @@ class VaultResource(Resource):
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
-            await self.app.open_or_init(vault)
-            asyncio.get_event_loop().create_task(push_and_watch(vault))
+            asyncio.get_event_loop().create_task(init_and_push(vault))
         return vault
 
     async def put_obj(self, request):

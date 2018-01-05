@@ -110,7 +110,7 @@ class SyncryptApp(object):
 
     def find_vault_by_id(self, vault_id):
         for v in self.vaults:
-            if str(v.config.get('vault.id')) == vault_id:
+            if v.id == vault_id:
                 return v
         raise ValueError('Vault not found: {}'.format(vault_id))
 
