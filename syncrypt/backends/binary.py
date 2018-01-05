@@ -122,7 +122,8 @@ class BinaryStorageConnection(object):
             return 'closed'
 
     def __repr__(self):
-        return "<Connection %s%s>" % (
+        return "<Connection 0x%x %s%s>" % (
+               id(self),
                self.state,
                self.vault and ' vault={0}'.format(str(self.vault)) or '')
 
@@ -830,7 +831,7 @@ class BinaryStorageManager(object):
                 elif vault:
                     logger.debug('Found an available connection for %s', vault)
                 else:
-                    logger.debug('Found an available connection')
+                    logger.debug('Found an available connection %s', conn)
                 conn.available.clear()
                 return conn
 
@@ -840,25 +841,13 @@ class BinaryStorageManager(object):
                 conn.connecting = True
                 try:
                     await conn.connect(vault)
+                    conn.available.clear()
+                    logger.debug("Choosing %s", conn)
+                    return conn
                 except:
                     conn._clear_connection()
                     raise
                 break
-
-        # wait until one slot is available
-        done, running = await \
-                asyncio.wait([conn.available.wait() for conn in self.slots],
-                            return_when=asyncio.FIRST_COMPLETED)
-
-        for f in running:
-            f.cancel()
-
-        # find this slot
-        for conn in self.slots:
-            if conn.connected and conn.available.is_set():
-                logger.debug("Choosing %s", conn)
-                conn.available.clear()
-                return conn
 
         logger.debug("Wait for empty slot in: %s", self.slots)
 
