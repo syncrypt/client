@@ -314,6 +314,7 @@ class FlyingVaultResource(Resource):
         deh_obj['file_count'] = obj.get('file_count')
         deh_obj['revision_count'] = obj.get('revision_count')
         deh_obj['modification_date'] = obj.get('modification_date')
+        deh_obj['remote_id'] = obj.get('id')
         ignored = set(obj.keys()) - set(deh_obj.keys())
         if len(ignored) > 0:
             logger.debug('Ignored vault keys: %s', ignored)
