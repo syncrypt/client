@@ -817,7 +817,10 @@ class BinaryStorageManager(object):
             self._monitor_task = \
                     asyncio.get_event_loop().create_task(self.monitor_connections())
 
-        for conn in self.slots:
+        # Prefer slots that have the same vault as we want
+        prio_slots = sorted(self.slots, key=lambda c: c.vault == vault, reverse=True)
+
+        for conn in prio_slots:
             if conn.connected and conn.available.is_set():
                 conn.available.clear()
                 if conn.vault != vault:
@@ -835,8 +838,8 @@ class BinaryStorageManager(object):
                 conn.available.clear()
                 return conn
 
-        # trigger at most one connection
-        for conn in self.slots:
+        # Try to find an unconnected slot and open a connection
+        for conn in prio_slots:
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
                 try:
