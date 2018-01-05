@@ -3,6 +3,8 @@ import logging
 import os
 from getpass import getpass
 
+from tzlocal import get_localzone
+
 import syncrypt
 from syncrypt.app.auth import AuthenticationProvider
 from syncrypt.utils.format import (format_fingerprint, format_size,

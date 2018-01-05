@@ -8,7 +8,6 @@ import os.path
 
 import iso8601
 from aiohttp import web
-from tzlocal import get_localzone
 
 from syncrypt.models import Identity
 from syncrypt.utils.format import format_size
