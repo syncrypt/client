@@ -147,7 +147,7 @@ setup(
         'certifi',
         'colorlog',
         'erlastic',
-        'hachiko',
+        'hachiko>=0.1',
         'iso8601',
         'msgpack-python>=0.4.0',
         'pycryptodome',

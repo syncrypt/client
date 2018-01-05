@@ -37,7 +37,7 @@ class VaultEventHandler(AIOEventHandler):
             logger.debug('Ignoring file delete: %s', path)
 
     async def on_deleted(self, event):
-        await self.on_file_removed(event.dest_path)
+        await self.on_file_removed(event.src_path)
 
     async def on_moved(self, event):
         await self.on_file_changed(event.dest_path)
