@@ -22,7 +22,8 @@ def setup_logging(loglevel, logfile=None):
         'formatters': {
             'colored': {
                 '()': ColoredFormatter,
-                'format': '%(log_color)s[%(levelname).1s] %(message)s',
+                'format': '%(log_color)s%(asctime)s [%(levelname).1s] %(message)s',
+                'datefmt': '%Y-%m-%d %H:%M:%S',
                 'log_colors': {
                     'DEBUG':    'cyan',
                     'INFO':     'white',
