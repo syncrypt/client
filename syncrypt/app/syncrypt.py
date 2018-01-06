@@ -215,7 +215,8 @@ class SyncryptApp(object):
             await self.handle_state_transition(vault, old_state)
 
     async def handle_state_transition(self, vault, old_state):
-        logger.info('STATE TRANSITION %s -> %s', vault, vault.state)
+        logger.debug('State transition of %s: %s -> %s', vault, old_state,
+                     vault.state)
         new_state = vault.state
 
         if new_state in (VaultState.READY,):
@@ -247,8 +248,8 @@ class SyncryptApp(object):
     async def unwatch_vault(self, vault):
         'Remove watchdog and auto-pulls'
         folder = os.path.abspath(vault.folder)
-        logger.info('Unwatching %s', os.path.abspath(folder))
         if folder in self._watchdogs:
+            logger.info('Unwatching %s', os.path.abspath(folder))
             self._watchdogs[folder].stop()
             del self._watchdogs[folder]
 
