@@ -60,6 +60,7 @@ target/
 bin/
 include/
 share/
+venv/
 lib/
 pip-selfcheck.json
 
