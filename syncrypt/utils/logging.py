@@ -9,7 +9,7 @@ if sys.platform == 'win32':
         # terminal :(
         def format(self, record):
             formatted = super(SafeColoredFormatter, self).format(record)
-            return formatted.encode('cp1252', 'replace').decode()
+            return formatted.encode('cp1252', 'replace').decode('cp1252')
 
     ColoredFormatter = SafeColoredFormatter
 else:
