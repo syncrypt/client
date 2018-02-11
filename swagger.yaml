@@ -1,0 +1,120 @@
+swagger: "2.0"
+info:
+  version: "1.0.0"
+  title: "Syncrypt Daemon"
+  contact:
+    email: "info@syncrypt.space"
+host: "127.0.0.1:28080"
+basePath: "/v1"
+tags:
+- name: "vault"
+  description: "Everything about your Vaults"
+- name: "admin"
+  description: "Administrative API calls"
+schemes:
+- "http"
+paths:
+  /vault/:
+    get:
+      tags:
+      - "vault"
+      summary: "List all local vaults"
+      description: ""
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Vault"
+      security:
+      - api_key: []
+  /flying-vault/:
+    get:
+      tags:
+      - "vault"
+      summary: "List all remote vaults"
+      description: ""
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Vault"
+      security:
+      - api_key: []
+  /version/:
+    get:
+      tags:
+      - "admin"
+      summary: "Get the current version"
+      description: ""
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+      security:
+      - api_key: []
+  /restart/:
+    get:
+      tags:
+      - "admin"
+      summary: "Restart the daemon"
+      operationId: "restart"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+      security:
+      - api_key: []
+  /shutdown/:
+    get:
+      tags:
+      - "admin"
+      summary: "Shutdown the daemon"
+      operationId: "shutdown"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+      security:
+      - api_key: []
+securityDefinitions:
+  api_key:
+    type: "apiKey"
+    name: "X-AuthToken"
+    in: "header"
+definitions:
+  Vault:
+    type: "object"
+    required:
+    - "id"
+    - "folder"
+    - "status"
+    properties:
+      id:
+        type: "string"
+        example: 67cbad12-3b90-4109-8920-cce923131154
+      folder:
+        type: "string"
+        example: "/path/to/local/folder"
+      status:
+        type: "string"
+        example: "synced"
+  ApiResponse:
+    type: "object"
+    properties:
+      status:
+        type: "string"
+        example: "ok"
+externalDocs:
+  description: "Syncrypt website"
+  url: "https://syncrypt.space"
