@@ -21,28 +21,6 @@ from .responses import JSONResponse
 logger = logging.getLogger(__name__)
 
 
-class EnumEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, enum.Enum):
-            return obj.value
-        return json.JSONEncoder.default(self, obj)
-
-
-class JSONResponse(web.Response):
-    cors_headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods" : "GET, POST, PUT, DELETE",
-        "Access-Control-Allow-Headers": "X-Authtoken, Content-Type, Origin, Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers"
-    }
-
-    def __init__(self, obj, **kwargs):
-        super(JSONResponse, self).__init__(
-                body=json.dumps(obj, cls=EnumEncoder).encode('utf-8'),
-                content_type='application/json',
-                headers=self.cors_headers,
-                **kwargs)
-
-
 class Resource(object):
     version = 'v1'
 
@@ -78,7 +56,6 @@ class Resource(object):
     async def dispatch_get(self, request):
         obj = await self.get_obj(request)
         return JSONResponse(self.dehydrate(obj))
-
 
     async def dispatch_options(self, request):
         return JSONResponse({})
