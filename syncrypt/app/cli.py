@@ -7,7 +7,7 @@ from tzlocal import get_localzone
 import iso8601
 import syncrypt
 from syncrypt.app.auth import AuthenticationProvider
-from syncrypt.models import VirtualBundle
+from syncrypt.models import VirtualBundle, Identity
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import (format_fingerprint, format_size,
