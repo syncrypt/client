@@ -1,4 +1,5 @@
 import json
+import enum
 
 from aiohttp import web
 
