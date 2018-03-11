@@ -98,7 +98,7 @@ install:
 
   # Upgrade to the latest version of pip to avoid it displaying warnings
   # about it being out of date.
-  - "pip install --disable-pip-version-check --user --upgrade pip"
+  - "pip install --disable-pip-version-check --user --upgrade pip setuptools"
 
   # Install python-snappy from wheel
   - "pip install https://syncrypt.space/build/python_snappy-0.5.1-%WHEEL_PLATFORM%-%WHEEL_ARCH%.whl"
