@@ -140,7 +140,7 @@ artifacts:
   - path: \*.zip
 
 on_success:
-  - "curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%SYNCRYPT_VER%/\""
+  - "curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VER%/\""
   # The following thing does not work:
   #- ps: >-
   #  if ($env:PYTHON_VERSION -eq "3.6.x") {

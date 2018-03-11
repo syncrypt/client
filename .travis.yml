@@ -44,7 +44,7 @@ script:
   - python setup.py dist
 deploy:
   - provider: script
-    script: python setup.py deploy
+    script: BRANCH=$TRAVIS_BRANCH python setup.py deploy
     skip_cleanup: true
     on:
       all_branches: true

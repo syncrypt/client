@@ -84,9 +84,10 @@ class DeployCommand(Command):
         os.system(('curl -X POST'
             ' --header "Content-Type: application/octet-stream"'
             ' --data-binary "@dist/{dist_name}"'
-            ' "{store_endpoint}{store_name}/{version}/"'
+            ' "{store_endpoint}{store_name}/{channel}/{version}/"'
             ).format(dist_name=dist_name, store_endpoint=store_endpoint,
-                     store_name=store_name, version=__version__.replace('+', '%2b')))
+                     store_name=store_name, version=__version__.replace('+', '%2b'),
+                     channel=os.environ.get('BRANCH', 'master')))
 
 cmdclass['dist'] = DistCommand
 cmdclass['deploy'] = DeployCommand
