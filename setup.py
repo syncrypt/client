@@ -150,7 +150,7 @@ setup(
         'hachiko>=0.1',
         'iso8601',
         'msgpack-python>=0.4.0',
-        'pycryptodome',
+        'pycryptodomex',
         'python-snappy',
         'smokesignal',
         'tenacity',
@@ -164,7 +164,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dist': [
-            'pyinstaller==3.1',
+            'pyinstaller==3.3',
             'six',
             'packaging'
         ],

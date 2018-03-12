@@ -106,13 +106,13 @@ install:
   # Install development version of pyinstaller when Python 3.6
   - ps: >-
       if ($env:PYTHON_VERSION -eq "3.6.x") {
-        & pip install --upgrade https://github.com/pyinstaller/pyinstaller/archive/develop.tar.gz
+        & pip install --upgrade 'pyinstaller==3.3'
       }
 
 build_script:
   # Build the compiled extension
-  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt"
-  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks --runtime-hook hooks/rthook-Crypto.py scripts/syncrypt_daemon"
+  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks scripts/syncrypt"
+  - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs --additional-hooks-dir ./hooks scripts/syncrypt_daemon"
   - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 test_script:

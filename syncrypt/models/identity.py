@@ -5,8 +5,8 @@ import os
 import os.path
 from enum import Enum
 
-import Crypto.Util.number
-from Crypto.PublicKey import RSA
+import Cryptodome.Util.number
+from Cryptodome.PublicKey import RSA
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class Identity(object):
         self.state = IdentityState.INITIALIZED
 
     def key_size(self):
-        return Crypto.Util.number.size(self.private_key.n)
+        return Cryptodome.Util.number.size(self.private_key.n)
 
     async def init(self):
         loop = asyncio.get_event_loop()

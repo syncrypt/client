@@ -2,8 +2,8 @@ import hashlib
 import logging
 import os
 
-import Crypto.Util
-from Crypto.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5
+import Cryptodome.Util
+from Cryptodome.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5
 
 import aiofiles
 import asyncio
@@ -141,7 +141,7 @@ class EncryptRSA(Buffered):
         super(EncryptRSA, self).__init__(self.block_size)
 
     def get_block_size(self):
-        return Crypto.Util.number.size(self.public_key.n) // 8 - 2 * 20 - 2
+        return Cryptodome.Util.number.size(self.public_key.n) // 8 - 2 * 20 - 2
 
     async def read(self, count=-1):
         data = await super(EncryptRSA, self).read(-1)
@@ -166,7 +166,7 @@ class DecryptRSA(Buffered):
         super(DecryptRSA, self).__init__(self.block_size)
 
     def get_block_size(self):
-        return Crypto.Util.number.size(self.private_key.n) // 8
+        return Cryptodome.Util.number.size(self.private_key.n) // 8
 
     async def read(self, count=-1):
         data = await super(DecryptRSA, self).read(-1)
