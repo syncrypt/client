@@ -40,6 +40,9 @@ install: |
 script:
   - py.test -m 'not (requires_server or external_resources)'
   - python setup.py dist
+  # Try to run the compiled executables to see if we run in import errors
+  - "./dist/syncrypt-bin --help"
+  - "./dist/syncrypt_daemon -h"
 deploy:
   - provider: script
     script: BRANCH=$TRAVIS_BRANCH python setup.py deploy
