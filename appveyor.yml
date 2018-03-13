@@ -23,6 +23,7 @@ environment:
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
       WHEEL_PLATFORM: "cp36-cp36m"
+      DEPLOY_ARTIFACT: "true"
 
     - PYTHON: "C:\\Python35"
       PYTHON_VERSION: "3.5.x"
@@ -125,9 +126,5 @@ artifacts:
   - path: \*.zip
 
 on_success:
-  - "curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VER%/\""
-  # The following thing does not work:
-  #- ps: >-
-  #  if ($env:PYTHON_VERSION -eq "3.6.x") {
-  #    & curl -X POST --header "Content-Type: application/octet-stream" --data-binary "@syncrypt-$($env:SYNCRYPT_VER)).$($env:DIST_PLATFORM)).zip" "$($env:artifact_tray_url))syncrypt-$($env:DIST_PLATFORM)).zip/$($env:SYNCRYPT_VER))/"
-  #  }
+  # Only push to artifact tray for the most recent python version
+  - "IF \"%DEPLOY_ARTIFACT%\" == \"true\" (curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VER%/\")"
