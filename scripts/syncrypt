@@ -305,6 +305,14 @@ class Login(NoVaultCmd):
         self.loop.run_until_complete(self.app.login())
 
 
+class Logout(NoVaultCmd):
+    command = 'logout'
+    description = 'logout and remove auth token'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.logout())
+
+
 class Export(SingleVaultCmd):
     command = 'export'
     description = 'export vault config and keys to backup or share'
@@ -341,7 +349,7 @@ class CheckUpdate(NoVaultCmd):
         self.loop.run_until_complete(self.app.check_update())
 
 
-COMMANDS = [Login(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
+COMMANDS = [Login(), Logout(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
         Watch(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(),
         ConfigSet(), ConfigUnset(), Export(), Import(), Keys()]
 COMMAND_NAMES = [c.command for c in COMMANDS]

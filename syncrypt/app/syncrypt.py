@@ -372,8 +372,8 @@ class SyncryptApp(object):
                         cfg.update('remote', {'auth': backend.global_auth})
                 return backend
             except StorageBackendInvalidAuth as e:
-                logger.error('Invalid login: %s' % e)
                 if (try_num + 1) < num_tries:
+                    logger.error('Invalid login: %s' % e)
                     continue
                 else:
                     raise
@@ -429,11 +429,6 @@ class SyncryptApp(object):
         await export_pipe.consume()
         if filename:
             logger.info("Vault export has been written to: %s" % filename)
-
-    async def login(self):
-        backend = await self.open_backend(always_ask_for_creds=True)
-        await backend.close()
-        await self.upload_identity()
 
     async def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package

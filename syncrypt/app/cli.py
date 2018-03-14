@@ -3,16 +3,17 @@ import logging
 import os
 from getpass import getpass
 
-from tzlocal import get_localzone
 import iso8601
 import syncrypt
 from syncrypt.app.auth import AuthenticationProvider
-from syncrypt.models import VirtualBundle, Identity
+from syncrypt.backends.base import StorageBackendInvalidAuth
+from syncrypt.models import Identity, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import (format_fingerprint, format_size,
                                    size_with_unit)
 from syncrypt.vendor.keyart import draw_art
+from tzlocal import get_localzone
 
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp
@@ -25,7 +26,7 @@ class CLIAuthenticationProvider(AuthenticationProvider):
     async def get_auth(self, backend):
         username = None
         while not username:
-            username = input('Email: ')
+                username = input('Email: ')
         password = getpass()
         return username, password
 
@@ -36,6 +37,22 @@ class SyncryptCLIApp(SyncryptApp):
         super(SyncryptCLIApp, self).__init__(config,
                                              auth_provider=CLIAuthenticationProvider(),
                                              **kwargs)
+
+    async def login(self):
+        # Already logged in?
+        try:
+            backend = await self.open_backend(num_tries=1)
+            await backend.close()
+            print("Already logged in.")
+        except StorageBackendInvalidAuth as e:
+            backend = await self.open_backend(always_ask_for_creds=True)
+            await backend.close()
+            await self.upload_identity()
+
+    async def logout(self):
+        with self.config.update_context():
+            self.config.update('remote', {'auth': ''})
+        print("Removed auth token.")
 
     async def check_update(self):
         logger.debug('Retrieving available version...')
