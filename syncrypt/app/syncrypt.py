@@ -579,6 +579,8 @@ class SyncryptApp(object):
         total = 0
         successful = []
 
+        await self.set_vault_state(vault, VaultState.SYNCING)
+
         await self.retrieve_metadata(vault)
 
         # TODO: do a change detection (.vault/metadata store vs filesystem)
@@ -618,9 +620,12 @@ class SyncryptApp(object):
                 vault.logger.info('Successfully pulled %d revisions for %s', total, vault)
                 if latest_revision:
                     vault.update_revision(latest_revision)
+
+            await self.set_vault_state(vault, VaultState.READY)
         else:
             vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
                     total - len(successful), total, vault)
+            await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
