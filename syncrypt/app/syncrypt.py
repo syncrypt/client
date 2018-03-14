@@ -470,10 +470,10 @@ class SyncryptApp(object):
 
                 await ctx.create_task(vault, self.push_vault(vault))
                 for result in ctx.completed_tasks():
-                    print("PUSHED_VAULT", result)
+                    pass
             await ctx.wait()
             for result in ctx.completed_tasks():
-                print("PUSHED_VAULT", result)
+                pass
                 #try:
                     #logger.info('Pushing %s', vault)
                     #await vault.backend.open()
@@ -545,10 +545,10 @@ class SyncryptApp(object):
 
                 await ctx.create_task(vault, self.pull_vault(vault, full=full))
                 for result in ctx.completed_tasks():
-                    print("PUSHED_VAULT", result)
+                    pass
             await ctx.wait()
             for result in ctx.completed_tasks():
-                print("PUSHED_VAULT", result)
+                pass
 
         """
         for vault in self.vaults:
