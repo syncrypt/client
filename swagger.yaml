@@ -31,6 +31,29 @@ paths:
               $ref: "#/definitions/Vault"
       security:
       - api_key: []
+  /vault/{vaultId}/users/:
+    get:
+      tags:
+      - "vault"
+      summary: "List all users in a vault"
+      description: ""
+      produces:
+      - "application/json"
+      parameters:
+      - name: "vaultId"
+        in: "path"
+        description: "Vault ID"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/User"
+      security:
+      - api_key: []
   /flying-vault/:
     get:
       tags:
@@ -115,6 +138,18 @@ definitions:
       status:
         type: "string"
         example: "ok"
+  User:
+    type: "object"
+    required:
+    - "id"
+    - "folder"
+    - "status"
+    properties:
+      resource_uri:
+        type: "string"
+      email:
+        type: "string"
+        example: "example@syncrypt.space"
 externalDocs:
   description: "Syncrypt website"
   url: "https://syncrypt.space"
