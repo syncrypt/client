@@ -58,6 +58,7 @@ manual](docs/manual.md).
  * [Syncrypt Alpha Signup](https://syncrypt.space/)
  * [Syncrypt Encryption](docs/encryption.md)
  * [Syncrypt CLI Manual](docs/manual.md)
+ * [Syncrypt Daemon](docs/daemon.md)
  * [A guide through the Syncrypt client source code](docs/source_guide.md)
 
 ## Tests
