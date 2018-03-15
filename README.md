@@ -2,7 +2,8 @@
 
 [![Build status](https://travis-ci.org/syncrypt/client.svg?branch=master)](https://travis-ci.org/syncrypt/client)
 [![Build status](https://ci.appveyor.com/api/projects/status/9jjn4gadwlc802c7?svg=true)](https://ci.appveyor.com/project/Syncrypt/client)
-[![OpenAPI validity](http://online.swagger.io/validator?url=https://raw.githubusercontent.com/syncrypt/client/reliability/swagger.yaml)]
+[![PyPI version](https://img.shields.io/pypi/v/syncrypt.svg)]
+[![PyPI status](https://img.shields.io/pypi/status/syncrypt.svg)]
 
 Syncrypt is a fully encrypted file storage service for groups and private
 backups. This is the client that you can use to store and retrieve files.

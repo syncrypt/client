@@ -5,6 +5,8 @@ manages all file transfer and encryption.
 
 ## API
 
+[![OpenAPI validity](http://online.swagger.io/validator?url=https://raw.githubusercontent.com/syncrypt/client/reliability/swagger.yaml)]
+
 The Syncrypt Daemon features an local HTTP API, over which all communication
 with the Desktop GUI happens. If you want to integrate Syncrypt features into
 your application, you can also use the HTTP API.
