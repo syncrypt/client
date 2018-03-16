@@ -16,6 +16,8 @@ addons:
 # command to install dependencies
 # Manually install python on osx
 install: |
+  # Receive tags so that our versioning works correctly
+  git fetch --unshallow --tags
   if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
       brew update;
       brew install snappy;
