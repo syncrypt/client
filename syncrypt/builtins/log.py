@@ -27,6 +27,7 @@ class WebSocketHandler(StreamHandler):
     def emit(self, record):
         if not self.ws.closed:
             self.ws.send_str(self.format(record))
+            yield from self.ws.drain()
 
 
 class VaultFilter(logging.Filter):
@@ -130,7 +131,7 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
     root_logger.addHandler(wshandler)
     while not ws.closed:
         msg = await ws.receive()
-        logger.debug(msg)
+        logger.debug('Received: %s', msg)
     root_logger.removeHandler(wshandler)
 
     logger.debug('WebSocket connection closed')
