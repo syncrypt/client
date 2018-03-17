@@ -104,12 +104,6 @@ install:
   # Install test deps as well
   - "pip install -e \".[test]\""
 
-  # Install development version of pyinstaller when Python 3.6
-  - ps: >-
-      if ($env:PYTHON_VERSION -eq "3.6.x") {
-        & pip install --upgrade 'pyinstaller==3.3'
-      }
-
 build_script:
   # Build the compiled extension
   - "pyinstaller --onefile --hidden-import six --hidden-import packaging --hidden-import packaging.version --hidden-import packaging.specifiers --hidden-import packaging.requirements --hidden-import pkg_resources._vendor.appdirs scripts/syncrypt"
@@ -126,5 +120,7 @@ artifacts:
   - path: \*.zip
 
 on_success:
+  # Weird CMD way to set VERSION env var to current syncrypt version
+  - for /f %%i in ('syncrypt --short-version') do set SYNCRYPT_VERSION=%%i
   # Only push to artifact tray for the most recent python version
-  - "IF \"%DEPLOY_ARTIFACT%\" == \"true\" (curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VER%/\")"
+  - "IF \"%DEPLOY_ARTIFACT%\" == \"true\" (curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VERSION%/\")"

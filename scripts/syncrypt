@@ -367,6 +367,7 @@ available commands:
 
 global_parser.add_argument('command', help='Subcommand to run', choices=COMMAND_NAMES, nargs='?')
 global_parser.add_argument('-v', '--version', action='store_true', help='Show version information')
+global_parser.add_argument('--short-version', action='store_true', help='Show short version information')
 
 if __name__ == '__main__':
     # setlocale() is called here so that strftime will use the correct user
@@ -385,6 +386,8 @@ if __name__ == '__main__':
 
     if args.version:
         print(COPYRIGHT)
+    elif args.short_version:
+        print(__version__)
     elif args.command:
         for c in COMMANDS:
             if c.command == args.command:
