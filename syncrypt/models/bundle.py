@@ -16,6 +16,7 @@ from syncrypt.utils.filesystem import splitpath
 
 logger = logging.getLogger(__name__)
 
+
 class Bundle(MetadataHolder):
     'A Bundle represents a file and some additional information'
 
@@ -100,7 +101,6 @@ class Bundle(MetadataHolder):
         sink = Once(self.serialized_metadata) >> FileWriter(self.path_metadata)
         await sink.consume()
 
-
     def read_encrypted_stream(self):
         assert not self.key is None
         return FileReader(self.path) \
@@ -114,6 +114,13 @@ class Bundle(MetadataHolder):
 
         if self.key is None:
             await self.load_key()
+
+        # Security check against malicious path not inside
+        vault_path = os.path.abspath(self.vault.folder)
+        bundle_path = os.path.abspath(self.path)
+
+        if os.path.commonpath([vault_path]) != os.path.commonpath([vault_path, bundle_path]):
+            raise AssertionError("Refusing to write to given bundle path: " + bundle_path)
 
         sink = stream \
                 >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
