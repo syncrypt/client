@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os.path
 
 import smokesignal
 from aiohttp import web
@@ -13,9 +14,9 @@ from syncrypt.backends.binary import get_manager_instance
 from ..utils.updates import is_update_available
 from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
+from .resources import (BundleResource, FlyingVaultResource, UserResource, VaultResource,
+                        VaultUserResource)
 from .responses import JSONResponse
-from .resources import (BundleResource, FlyingVaultResource, UserResource,
-                        VaultResource, VaultUserResource)
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +214,25 @@ class SyncryptAPI():
         await backend.close()
         return JSONResponse({'status': 'ok'})
 
+    @require_auth_token
+    async def post_user_key_export(self, request):
+        try:
+            content = await request.content.read()
+            request_dict = json.loads(content.decode())
+        except:
+            return web.Response(status=400, text='Need JSON request body.')
+
+        if not 'path' in request_dict:
+            return web.Response(status=400, text='Missing parameter "path".')
+
+        path = request_dict['path']
+        if os.path.isdir(path):
+            path = os.path.join(path, 'SyncryptKey.zip')
+
+        await self.app.export_user_key(path)
+
+        return JSONResponse({'status': 'ok', 'filename': path})
+
     def json_error(self,  message):
         return web.Response(
             status=500,
@@ -247,9 +267,11 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
         self.web_app.router.add_route('GET', '/v1/auth/user/', self.get_user_info)
         self.web_app.router.add_route('POST', '/v1/feedback/', self.post_user_feedback)
+        self.web_app.router.add_route('POST', '/v1/user_key_export/', self.post_user_key_export)
         self.web_app.router.add_route('GET', '/v1/version/', self.get_version)
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
+
 
         self.web_app.router.add_route('OPTIONS', '/v1/version/', self.dispatch_options)
         self.web_app.router.add_route('OPTIONS', '/v1/shutdown/', self.dispatch_options)

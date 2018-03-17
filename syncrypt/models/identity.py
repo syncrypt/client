@@ -3,10 +3,14 @@ import hashlib
 import logging
 import os
 import os.path
+import zipfile
 from enum import Enum
+from io import BytesIO
 
 import Cryptodome.Util.number
 from Cryptodome.PublicKey import RSA
+
+from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +35,7 @@ class IdentityIsInitializing(IdentityError):
 
 class Identity(object):
     '''represents an RSA key pair'''
+
     def __init__(self, id_rsa_path, id_rsa_pub_path, config):
         self.id_rsa_path = id_rsa_path
         self.id_rsa_pub_path = id_rsa_pub_path
@@ -40,7 +45,9 @@ class Identity(object):
     @classmethod
     def from_key(cls, key, config, private_key=None):
         identity = cls(None, None, config)
-        identity._keypair = (RSA.importKey(key), RSA.importKey(private_key) if private_key else None)
+        identity._keypair = (
+            RSA.importKey(key), RSA.importKey(private_key) if private_key else None
+        )
         identity.state = IdentityState.INITIALIZED
         return identity
 
@@ -48,10 +55,12 @@ class Identity(object):
     def private_key(self):
         try:
             return self._keypair[1]
+
         except AttributeError:
             try:
                 self.read()
                 return self._keypair[1]
+
             except IdentityError:
                 return None
 
@@ -59,19 +68,25 @@ class Identity(object):
     def public_key(self):
         try:
             return self._keypair[0]
+
         except AttributeError:
             try:
                 self.read()
                 return self._keypair[0]
+
             except IdentityError:
                 return None
 
     def read(self):
         if self.state == IdentityState.INITIALIZING:
             raise IdentityIsInitializing()
-        if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):
+
+        if not os.path.exists(self.id_rsa_path) or not os.path.exists(
+            self.id_rsa_pub_path
+        ):
             self.state = IdentityState.UNINITIALIZED
             raise IdentityNotInitialized()
+
         with open(self.id_rsa_pub_path, 'rb') as id_rsa_pub:
             public_key = RSA.importKey(id_rsa_pub.read())
         with open(self.id_rsa_path, 'rb') as id_rsa:
@@ -90,20 +105,21 @@ class Identity(object):
         return self.state == IdentityState.INITIALIZED
 
     def _init(self):
-        if not os.path.exists(self.id_rsa_path) or not os.path.exists(self.id_rsa_pub_path):
+        if not os.path.exists(self.id_rsa_path) or not os.path.exists(
+            self.id_rsa_pub_path
+        ):
             self.generate_keys()
         else:
             self.read()
 
-            # Do NOT enforce a specific key length yet
-            # if Crypto.Util.number.size(self.public_key.n) != self.config.rsa_key_len or \
-            #        Crypto.Util.number.size(self.private_key.n) != self.config.rsa_key_len - 1:
-            #    self.public_key = None
-            #    self.private_key = None
-            #    raise SecurityError(
-            #            'Vault key is not of required length of %d bit.' \
-            #                    % self.config.rsa_key_len)
-
+    # Do NOT enforce a specific key length yet
+    # if Crypto.Util.number.size(self.public_key.n) != self.config.rsa_key_len or \
+    #        Crypto.Util.number.size(self.private_key.n) != self.config.rsa_key_len - 1:
+    #    self.public_key = None
+    #    self.private_key = None
+    #    raise SecurityError(
+    #            'Vault key is not of required length of %d bit.' \
+    #                    % self.config.rsa_key_len)
     def export_public_key(self):
         'return the public key serialized as bytes'
         return self.public_key.exportKey('DER')
@@ -126,7 +142,25 @@ class Identity(object):
     def get_fingerprint(self):
         if not self.is_initialized():
             raise IdentityNotInitialized()
+
         assert self.public_key
         pk_hash = hashlib.new(self.config.hash_algo)
         pk_hash.update(self.public_key.exportKey('DER'))
         return pk_hash.hexdigest()[:self.config.fingerprint_length]
+
+    def package_info(self):
+        '''
+        return a pipe that will contain the identity info such as private and public key
+        '''
+        memview = BytesIO()
+        zipf = zipfile.ZipFile(memview, 'w', zipfile.ZIP_DEFLATED)
+
+        # include private and public key
+        def include(f):
+            zipf.write(f, arcname=os.path.basename(f))
+
+        include(self.id_rsa_path)
+        include(self.id_rsa_pub_path)
+        zipf.close()
+        memview.seek(0)
+        return Once(memview.read())

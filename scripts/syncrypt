@@ -177,12 +177,12 @@ class UploadVaultKey(SingleVaultCmd):
         self.loop.run_until_complete(self.app.upload_vault_key())
 
 
-class Vaults(NoVaultCmd):
-    command = 'vaults'
+class ListVaults(NoVaultCmd):
+    command = 'list-vaults'
     description = 'list vaults'
 
     def configure_parser(self, parser):
-        super(Vaults, self).configure_parser(parser)
+        super(ListVaults, self).configure_parser(parser)
         parser.add_argument('-a', '--all', dest='all', action='store_true',
                 help='also list vaults without key')
 
@@ -193,12 +193,12 @@ class Vaults(NoVaultCmd):
             self.loop.run_until_complete(self.app.print_list_of_vaults())
 
 
-class Keys(NoVaultCmd):
-    command = 'keys'
+class ListKeys(NoVaultCmd):
+    command = 'list-keys'
     description = 'list keys'
 
     def configure_parser(self, parser):
-        super(Keys, self).configure_parser(parser)
+        super(ListKeys, self).configure_parser(parser)
         parser.add_argument('-u', '--user', action='store', dest='user',
                 help='user email to list keys for')
         parser.add_argument('--upload', action='store_true',
@@ -349,9 +349,21 @@ class CheckUpdate(NoVaultCmd):
         self.loop.run_until_complete(self.app.check_update())
 
 
-COMMANDS = [Login(), Logout(), CheckUpdate(), Init(), Vaults(), Clone(), Pull(), Push(),
+class KeyExport(NoVaultCmd):
+    command = 'export-key'
+    description = 'export your user-key'
+
+    def configure_parser(self, parser):
+        super(KeyExport, self).configure_parser(parser)
+        parser.add_argument('-o', '--output', dest='filename', help='export filename')
+
+    def run(self):
+        self.loop.run_until_complete(self.app.export_user_key(self.config.filename))
+
+
+COMMANDS = [Login(), Logout(), CheckUpdate(), Init(), ListVaults(), Clone(), Pull(), Push(),
         Watch(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(),
-        ConfigSet(), ConfigUnset(), Export(), Import(), Keys()]
+        ConfigSet(), ConfigUnset(), Export(), Import(), ListKeys(), KeyExport()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

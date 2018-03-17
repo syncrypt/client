@@ -248,7 +248,7 @@ class Vault(MetadataHolder):
     @staticmethod
     def from_package_info(package_info, local_directory, auth_token=None):
 
-        logger.info("Trying to create vault from package in %s", local_directory)
+        logger.info("Creating vault from package in %s", local_directory)
 
         try:
             os.makedirs(local_directory)

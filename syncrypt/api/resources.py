@@ -382,7 +382,6 @@ class VaultUserResource(Resource):
                 '/{version}/vault/{{vault_id}}/{{name}}/{{email}}/keys/'.format(**opts),
                 self.dispatch_keys)
 
-
     def get_vault(self, request):
         vault_res = VaultResource(self.app)
         vault = vault_res.find_vault_by_id(request.match_info['vault_id'])

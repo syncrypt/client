@@ -430,6 +430,16 @@ class SyncryptApp(object):
         if filename:
             logger.info("Vault export has been written to: %s" % filename)
 
+    async def export_user_key(self, filename):
+        export_pipe = self.identity.package_info()
+        if filename is None:
+            export_pipe = export_pipe >> StdoutWriter()
+        else:
+            export_pipe = export_pipe >> FileWriter(filename)
+        await export_pipe.consume()
+        if filename:
+            logger.info("Key has been written to: %s" % filename)
+
     async def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package
         export_pipe = vault.package_info() \
