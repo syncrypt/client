@@ -44,8 +44,8 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record):
         return json.dumps({
-            'level': record.levelname,
-            'createdAt': record.asctime,
+            'level': getattr(record, 'levelname', None),
+            'createdAt': getattr(record, 'asctime', None),
             'message': super(JSONFormatter, self).format(record),
             'vault_id': getattr(record, 'vault_id', None)
         })
