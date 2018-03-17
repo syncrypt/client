@@ -1,13 +1,12 @@
 language: python
 matrix:
   include:
-    - os: linux
-      python: 3.5
-    - os: linux
-      python: 3.6
     - os: osx
       sudo: required
       language: generic
+      # This will build OS X 10.10 instead of default 10.12.
+      # We need this to get builds running on older OS X versions.
+      osx_image: xcode7.3
 addons:
   apt:
     packages:
@@ -18,6 +17,7 @@ addons:
 install: |
   # Receive tags so that our versioning works correctly
   git fetch --unshallow --tags
+  pyenv install --list
   if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
       brew update;
       brew install snappy;
