@@ -3,7 +3,6 @@ import logging
 import os.path
 import socket
 import sys
-from distutils.version import LooseVersion
 from io import StringIO
 from zipfile import ZipFile
 

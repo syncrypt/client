@@ -21,12 +21,11 @@ MAX_ITEMS_BEFORE_DRAIN = 64
 
 
 class QueueHandler(StreamHandler):
-    into: asyncio.Queue
 
-    def __init__(self, into: asyncio.Queue, formatter, *args, **kwargs):
-        self.into = into
+    def __init__(self, into: asyncio.Queue, formatter, *args, **kwargs) -> None:
         super(QueueHandler, self).__init__(*args, **kwargs)
         self.setFormatter(formatter)
+        self.into = into
 
     def emit(self, record):
         try:

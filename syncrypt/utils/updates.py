@@ -1,6 +1,6 @@
 import asyncio
 import ssl
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 import aiohttp
 import certifi

@@ -1,12 +1,13 @@
 import asyncio
 import logging
+from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 from getpass import getpass
 
 import syncrypt
 from syncrypt.api import APIClient, SyncryptAPI
 from syncrypt.app.auth import AuthenticationProvider
-from syncrypt.models import VaultState
 from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
+from syncrypt.models import VaultState
 
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp

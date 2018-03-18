@@ -8,6 +8,7 @@ import sys
 import aiofiles
 import aiohttp
 import certifi
+from aiohttp.http_exceptions import HttpProcessingError
 
 from .base import BufferedFree, Limit, Pipe, Sink, Source
 
@@ -94,7 +95,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         content = await self.response.read()
         await self.response.release()
         if not self.response.status in (200, 201, 202):
-            raise aiohttp.HttpProcessingError(
+            raise HttpProcessingError(
                 code=self.response.status, message=self.response.reason,
                 headers=self.response.headers)
         self._done = True
