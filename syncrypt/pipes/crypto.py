@@ -1,17 +1,18 @@
+import asyncio
 import hashlib
 import logging
 import os
 
+import aiofiles
 import Cryptodome.Util
 from Cryptodome.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5
 
-import aiofiles
-import asyncio
 from syncrypt.utils.padding import PKCS5Padding
 
 from .base import Buffered, Pipe
 
 logger = logging.getLogger(__name__)
+
 
 class Hash(Pipe):
     'Hash everything that goes through this pipe'
@@ -21,7 +22,7 @@ class Hash(Pipe):
         self._hash = hashlib.new(hash_algo)
 
     def __str__(self):
-        return "<Hash: {0} ({1} bytes)>".format(self.hash, self.size)
+        return "<Hash: {0}>".format(self.hash)
 
     @property
     def hash(self):
@@ -37,9 +38,11 @@ class Hash(Pipe):
             self._hash.update(data)
         return data
 
+
 class AESPipe(Pipe):
     # AES has a fixed data block size of 16 bytes
     block_size = 16
+
 
 class PadAES(AESPipe):
     '''This pipe will add PKCS5Padding to the stream'''
@@ -152,6 +155,7 @@ class EncryptRSA(Buffered):
         else:
             return data
 
+
 class DecryptRSA(Buffered):
     '''
     Asymmetric decryption pipe that decrypts blocks using RSA and will put the
@@ -178,12 +182,14 @@ class DecryptRSA(Buffered):
         else:
             return data
 
+
 class EncryptRSA_PKCS1_OAEP(EncryptRSA):
     '''
     Asymmetric encryption pipe that divides the incoming stream into blocks
     which will then be encrypted using RSA (PKCS1-OAEP protocol).
     '''
     protocol = PKCS1_OAEP
+
 
 class DecryptRSA_PKCS1_OAEP(DecryptRSA):
     '''
@@ -193,11 +199,10 @@ class DecryptRSA_PKCS1_OAEP(DecryptRSA):
     protocol = PKCS1_OAEP
 
     async def read(self, count=-1):
-        data = await super(DecryptRSA, self).read(-1)
+        data = await super(DecryptRSA, self).read(-1)  # pylint: disable=bad-super-call
         if len(data) > 0:
             dec_data = self.protocol.new(self.private_key).decrypt(data)
             logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
             return dec_data
         else:
             return data
-

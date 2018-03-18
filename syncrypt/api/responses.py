@@ -5,7 +5,7 @@ from aiohttp import web
 
 
 class EnumEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj):  # pylint: disable=method-hidden
         if isinstance(obj, enum.Enum):
             return obj.value
         return json.JSONEncoder.default(self, obj)

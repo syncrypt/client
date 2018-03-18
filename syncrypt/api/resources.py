@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Resource(object):
     version = 'v1'
+    resource_name = None
 
     def __init__(self, app):
         self.app = app
@@ -83,6 +84,9 @@ class Resource(object):
         raise NotImplementedError
 
     async def put_obj(self, request):
+        raise NotImplementedError
+
+    async def post_obj(self, request):
         raise NotImplementedError
 
     async def delete_obj(self, request, obj):
@@ -335,9 +339,6 @@ class FlyingVaultResource(Resource):
 
         await backend.close()
         return vaults
-
-    async def get_obj(self, request):
-        return find_vault_by_id(request.match_info['id'])
 
 
 class UserResource(Resource):

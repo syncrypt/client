@@ -111,6 +111,7 @@ build_script:
   - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 test_script:
+  - "pylint -E syncrypt scripts"
   - "py.test -m \"not (requires_server or external_resources)\""
   - "dist\\syncrypt.exe --version"
   - "dist\\syncrypt_daemon.exe -h"
@@ -121,6 +122,6 @@ artifacts:
 
 on_success:
   # Weird CMD way to set VERSION env var to current syncrypt version
-  - for /f %%i in ('syncrypt --short-version') do set SYNCRYPT_VERSION=%%i
+  - "for /f %%i in ('dist\\syncrypt.exe --short-version') do set SYNCRYPT_VERSION=%%i"
   # Only push to artifact tray for the most recent python version
   - "IF \"%DEPLOY_ARTIFACT%\" == \"true\" (curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VERSION%/\")"

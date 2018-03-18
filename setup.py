@@ -175,7 +175,8 @@ setup(
             'pytest-runner',
             'pytest>=2.8.0',
             'asynctest',
-            'hypothesis'
+            'hypothesis',
+            'pylint'  # used for static code analysis
         ],
         'uvloop': [
             'uvloop'
