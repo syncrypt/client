@@ -1,3 +1,4 @@
+# pylint: disable=no-member
 # From https://github.com/reduxionist/python-daemon/tree/feature/add-python3-compatibility
 # TODO When a py3-compatible pypi package is released, use that instead
 '''
