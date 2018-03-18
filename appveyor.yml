@@ -111,6 +111,7 @@ build_script:
   - ps: Compress-Archive -Path dist\*.exe -Update -DestinationPath syncrypt-$env:SYNCRYPT_VER.$env:DIST_PLATFORM.zip
 
 test_script:
+  - "pylint -E syncrypt scripts"
   - "py.test -m \"not (requires_server or external_resources)\""
   - "dist\\syncrypt.exe --version"
   - "dist\\syncrypt_daemon.exe -h"
