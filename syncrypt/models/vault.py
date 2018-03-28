@@ -3,6 +3,7 @@ import hashlib
 import logging
 import os
 import os.path
+import shutil
 import sys
 import zipfile
 from enum import Enum
@@ -11,8 +12,7 @@ from glob import glob
 from io import BytesIO, StringIO
 
 from syncrypt.config import VaultConfig
-from syncrypt.exceptions import (SecurityError, VaultFolderDoesNotExist,
-                                 VaultNotInitialized)
+from syncrypt.exceptions import SecurityError, VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
 
@@ -271,3 +271,9 @@ class Vault(MetadataHolder):
 
         return vault
 
+    async def delete(self):
+        config_folder = os.path.join(self.folder, '.vault')
+        logger.info('Removing the vault metadata folder: %s', config_folder)
+        # TODO: this should be done in a process (could take a while for big vaults)
+        shutil.rmtree(config_folder, ignore_errors=True)
+        self.state = VaultState.UNINITIALIZED

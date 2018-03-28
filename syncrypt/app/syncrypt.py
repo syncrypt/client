@@ -122,6 +122,7 @@ class SyncryptApp(object):
         await vault.backend.open()
         await vault.backend.delete_vault()
         await self.remove_vault(vault)
+        await vault.delete()
 
     async def delete_vaults(self):
         for vault in self.vaults:
