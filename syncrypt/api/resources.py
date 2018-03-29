@@ -8,7 +8,7 @@ import os.path
 
 import iso8601
 from aiohttp import web
-
+from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity
 from syncrypt.utils.format import format_size
 from tzlocal import get_localzone
@@ -272,8 +272,13 @@ class VaultResource(Resource):
             raise ValueError() # this should return 404
         if 'metadata' in request_dict:
             vault.metadata = request_dict['metadata']
-            await vault.backend.open()
-            await vault.backend.set_vault_metadata()
+            try:
+                await vault.backend.open()
+                await vault.backend.set_vault_metadata()
+            except VaultNotInitialized:
+                logger.warn('Could not sync metadata to server right now, as the vault is not ' +
+                            'initialized yet. However, metadata has been stored locally and ' +
+                            'will be synced when the vault is initialized.')
         return vault
 
 
