@@ -9,6 +9,8 @@ basePath: "/v1"
 tags:
 - name: "vault"
   description: "Everything about your Vaults"
+- name: "keys"
+  description: "Key and identity management"
 - name: "admin"
   description: "Administrative API calls"
 schemes:
@@ -35,15 +37,15 @@ paths:
     delete:
       tags:
       - "vault"
-      summary: "Wipe remote vault and remove local keys and metadata"
+      summary: "Delete vault from list (stop syncing)"
       description: ""
       produces:
       - "application/json"
       parameters:
       - name: wipe
         in: path
-        description: Wipe confirmation (must be 1)
-        required: true
+        description: If set to 1, this will also wipe remote vault and remove local keys and metadata (use with care)
+        required: false
         type: integer
       responses:
         200:
@@ -135,7 +137,7 @@ paths:
   /user_key_export/:
     get:
       tags:
-      - "vault"
+      - "keys"
       summary: "export the user key"
       description: ""
       produces:
