@@ -1,265 +1,286 @@
-swagger: "2.0"
+swagger: '2.0'
 info:
-  version: "1.0.0"
-  title: "Syncrypt Daemon"
+  version: 1.0.0
+  title: Syncrypt Daemon
   contact:
-    email: "info@syncrypt.space"
-host: "127.0.0.1:28080"
-basePath: "/v1"
+    email: info@syncrypt.space
+host: '127.0.0.1:28080'
+basePath: /v1
 tags:
-- name: "vault"
-  description: "Everything about your Vaults"
-- name: "keys"
-  description: "Key and identity management"
-- name: "admin"
-  description: "Administrative API calls"
+  - name: vault
+    description: Everything about your Vaults
+  - name: keys
+    description: Key and identity management
+  - name: admin
+    description: Administrative API calls
 schemes:
-- "http"
+  - http
 paths:
   /vault/:
     get:
       tags:
-      - "vault"
-      summary: "List all local vaults"
-      description: ""
+        - vault
+      summary: List all local vaults
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
-              $ref: "#/definitions/Vault"
+              $ref: '#/definitions/Vault'
       security:
-      - api_key: []
-  /vault/{vaultId}/:
+        - api_key: []
+  '/vault/{vaultId}/':
     delete:
       tags:
-      - "vault"
-      summary: "Delete vault from list (stop syncing)"
-      description: ""
+        - vault
+      summary: Delete vault from list (stop syncing)
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: wipe
-        in: path
-        description: If set to 1, this will also wipe remote vault and remove local keys and metadata (use with care)
-        required: false
-        type: integer
+        - name: vaultId
+          in: path
+          description: >-
+            Local vault ID
+          required: true
+          type: integer
+        - name: wipe
+          in: query
+          description: >-
+            If set to 1, this will also wipe remote vault and remove local keys
+            and metadata (use with care)
+          required: false
+          type: integer
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: '#/definitions/ApiResponse'
       security:
-      - api_key: []
-  /vault/{vaultId}/users/:
+        - api_key: []
+  '/vault/{vaultId}/users/':
     get:
       tags:
-      - "vault"
-      summary: "List all users in a vault"
-      description: ""
+        - vault
+      summary: List all users in a vault
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "vaultId"
-        in: "path"
-        description: "Vault ID"
-        required: true
-        type: string
+        - name: vaultId
+          in: path
+          description: Vault ID
+          required: true
+          type: string
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
-              $ref: "#/definitions/User"
+              $ref: '#/definitions/User'
       security:
-      - api_key: []
-  /vault/{vaultId}/export/:
+        - api_key: []
+  '/vault/{vaultId}/export/':
     get:
       tags:
-      - "vault"
-      summary: "export the vault package including the vault key to a given path"
-      description: ""
+        - vault
+      summary: export the vault package including the vault key to a given path
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: "vaultId"
-        in: "path"
-        description: "Vault ID"
-        required: true
-        type: string
+        - name: vaultId
+          in: path
+          description: Vault ID
+          required: true
+          type: string
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
       security:
-      - api_key: []
+        - api_key: []
   /flying-vault/:
     get:
       tags:
-      - "vault"
-      summary: "List all remote vaults"
-      description: ""
+        - vault
+      summary: List all remote vaults
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
-              $ref: "#/definitions/FlyingVault"
+              $ref: '#/definitions/FlyingVault'
       security:
-      - api_key: []
-  /flying-vault/{remoteId}/:
+        - api_key: []
+  '/flying-vault/{remoteId}/':
     delete:
       tags:
-      - "vault"
-      summary: "Wipe remote vault"
-      description: ""
+        - vault
+      summary: Wipe remote vault
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       parameters:
-      - name: wipe
-        in: path
-        description: Wipe confirmation (must be 1)
-        required: true
-        type: integer
+        - name: remoteId
+          in: path
+          description: Vault ID
+          required: true
+          type: string
+        - name: wipe
+          in: query
+          description: Wipe confirmation (must be 1)
+          required: true
+          type: integer
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: '#/definitions/ApiResponse'
       security:
-      - api_key: []
+        - api_key: []
   /user_key_export/:
-    get:
+    post:
       tags:
-      - "keys"
-      summary: "export the user key"
-      description: ""
+        - keys
+      summary: Export the user key
+      description: ''
       produces:
-      - "application/json"
+        - application/json
+      consumes:
+        - application/json
       parameters:
-      - name: "path"
-        in: "body"
-        description: "Export filename"
-        required: true
-        type: string
+        - name: params
+          in: body
+          description: Export parameters
+          schema:
+            type: object
+            required:
+              - path
+            properties:
+              path:
+                type: string
+                example: /tmp/user-key-export.zip
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
       security:
-      - api_key: []
+        - api_key: []
   /version/:
     get:
       tags:
-      - "admin"
-      summary: "Get the current version"
-      description: ""
+        - admin
+      summary: Get the current version
+      description: ''
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
       security:
-      - api_key: []
+        - api_key: []
   /restart/:
     get:
       tags:
-      - "admin"
-      summary: "Restart the daemon"
-      operationId: "restart"
+        - admin
+      summary: Restart the daemon
+      operationId: restart
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: '#/definitions/ApiResponse'
       security:
-      - api_key: []
+        - api_key: []
   /shutdown/:
     get:
       tags:
-      - "admin"
-      summary: "Shutdown the daemon"
-      operationId: "shutdown"
+        - admin
+      summary: Shutdown the daemon
+      operationId: shutdown
       produces:
-      - "application/json"
+        - application/json
       responses:
-        200:
-          description: "successful operation"
+        '200':
+          description: successful operation
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: '#/definitions/ApiResponse'
       security:
-      - api_key: []
+        - api_key: []
 securityDefinitions:
   api_key:
-    type: "apiKey"
-    name: "X-AuthToken"
-    in: "header"
+    type: apiKey
+    name: X-AuthToken
+    in: header
 definitions:
   Vault:
-    type: "object"
+    type: object
     required:
-    - "id"
-    - "folder"
-    - "status"
+      - id
+      - folder
+      - status
     properties:
       id:
-        type: "string"
+        type: string
         example: 67cbad12-3b90-4109-8920-cce923131154
       folder:
-        type: "string"
-        example: "/path/to/local/folder"
+        type: string
+        example: /path/to/local/folder
       status:
-        type: "string"
-        example: "synced"
+        type: string
+        example: synced
   FlyingVault:
-    type: "object"
+    type: object
     required:
-    - "id"
-    - "resource_uri"
-    - "file_count"
-    - "user_count"
-    - "revision_count"
+      - id
+      - resource_uri
+      - file_count
+      - user_count
+      - revision_count
     properties:
       id:
-        type: "string"
-        example: "e2d79981-c7c6-4ce1-99c1-60aeb8730154"
+        type: string
+        example: e2d79981-c7c6-4ce1-99c1-60aeb8730154
       resource_uri:
-        type: "string"
-        example: "/v1/flying-vault/e2d79981-c7c6-4ce1-99c1-60aeb8730154/"
+        type: string
+        example: /v1/flying-vault/e2d79981-c7c6-4ce1-99c1-60aeb8730154/
       file_count:
-        type: "integer"
+        type: integer
         example: 12
       user_count:
-        type: "integer"
+        type: integer
         example: 1
       revision_count:
-        type: "integer"
+        type: integer
         example: 4
   ApiResponse:
-    type: "object"
+    type: object
     properties:
       status:
-        type: "string"
-        example: "ok"
+        type: string
+        example: ok
   User:
-    type: "object"
+    type: object
     required:
-    - "id"
-    - "folder"
-    - "status"
+      - id
+      - folder
+      - status
     properties:
       resource_uri:
-        type: "string"
+        type: string
       email:
-        type: "string"
-        example: "example@syncrypt.space"
+        type: string
+        example: example@syncrypt.space
 externalDocs:
-  description: "Syncrypt website"
-  url: "https://syncrypt.space"
+  description: Syncrypt website
+  url: 'https://syncrypt.space'
