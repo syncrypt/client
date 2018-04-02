@@ -160,7 +160,7 @@ class VaultResource(Resource):
         return self.find_vault_by_id(request.match_info['id'])
 
     async def delete_obj(self, request, obj):
-        if request.GET.get('wipe') == '1':
+        if request.query.get('wipe') == '1':
             logger.warn('Deleting/wiping vault: %s', obj)
             await self.app.unwatch_vault(obj)
             await self.app.delete_vault(obj)
@@ -349,7 +349,7 @@ class FlyingVaultResource(Resource):
         return dict(id=request.match_info['id'])
 
     async def delete_obj(self, request, obj):
-        if request.GET.get('wipe') == '1':
+        if request.query.get('wipe') == '1':
             vault_id = obj['id']
             logger.warn('Deleting/wiping flying vault: %s', vault_id)
             backend = await self.app.open_backend()

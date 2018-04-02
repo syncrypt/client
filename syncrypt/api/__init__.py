@@ -178,7 +178,7 @@ class SyncryptAPI():
 
     @require_auth_token
     async def get_version(self, request):
-        if int(request.GET.get('check_for_update', 1)):
+        if int(request.query.get('check_for_update', 1)):
             can_update, available = await is_update_available()
             return JSONResponse({
                 'update_available': can_update,
