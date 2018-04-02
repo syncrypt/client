@@ -515,7 +515,8 @@ class SyncryptApp(object):
                 await ctx.wait()
                 ctx.raise_for_failures()
             await self.set_vault_state(vault, VaultState.READY)
-        except:
+        except Exception as e:
+            vault.logger.exception(e)
             await self.set_vault_state(vault, VaultState.FAILURE)
 
     #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
