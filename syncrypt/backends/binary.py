@@ -679,10 +679,8 @@ class BinaryStorageConnection(object):
         self.logger.debug('Uploading my public key to server')
 
         # upload public key and fingerprint
-        await self.write_term('add_user_key',
-                identity.export_public_key(),
-                identity.get_fingerprint(),
-                description)
+        await self.write_term('add_user_key', identity.export_public_key(),
+                              identity.get_fingerprint(), description)
 
         response = await self.read_term()
 
@@ -697,12 +695,16 @@ class BinaryStorageConnection(object):
         await self.write_term('remove_vault_user', email)
         await self.read_term()
 
-    async def delete_vault(self):
-        vault = self.vault
-        self.logger.info('Wiping vault: %s', vault.config.id)
-
-        # download key and file
-        await self.write_term('delete_vault', vault.config.id)
+    async def delete_vault(self, vault_id=None):
+        '''
+        Delete/wipe a vault. When vault_id is given, this will delete the vault with the given
+        vault id on the server. If it is not given, this will delete the current vault for this
+        connection.
+        '''
+        if vault_id is None:
+            vault_id = self.vault.config.id
+        self.logger.info('Wiping vault: %s', vault_id)
+        await self.write_term('delete_vault', vault_id)
         await self.read_response()
 
     def __getattr__(self, name):

@@ -345,6 +345,17 @@ class FlyingVaultResource(Resource):
         await backend.close()
         return vaults
 
+    async def get_obj(self, request):
+        return dict(id=request.match_info['id'])
+
+    async def delete_obj(self, request, obj):
+        if request.GET.get('wipe') == '1':
+            vault_id = obj['id']
+            logger.warn('Deleting/wiping flying vault: %s', vault_id)
+            backend = await self.app.open_backend()
+            await backend.delete_vault(vault_id=vault_id)
+        else:
+            raise NotImplementedError
 
 class UserResource(Resource):
     resource_name = 'user'
@@ -418,7 +429,7 @@ class VaultUserResource(Resource):
     async def get_obj_list(self, request):
         vault = self.get_vault(request)
         await vault.backend.open()
-        return (await vault.backend.list_vault_users())
+        return await vault.backend.list_vault_users()
 
     async def delete_obj(self, request, obj):
         vault = self.get_vault(request)

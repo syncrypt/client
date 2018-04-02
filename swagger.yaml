@@ -31,6 +31,27 @@ paths:
               $ref: "#/definitions/Vault"
       security:
       - api_key: []
+  /vault/{vaultId}/:
+    delete:
+      tags:
+      - "vault"
+      summary: "Wipe remote vault and remove local keys and metadata"
+      description: ""
+      produces:
+      - "application/json"
+      parameters:
+      - name: wipe
+        in: path
+        description: Wipe confirmation (must be 1)
+        required: true
+        type: integer
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+      security:
+      - api_key: []
   /vault/{vaultId}/users/:
     get:
       tags:
@@ -87,7 +108,28 @@ paths:
           schema:
             type: "array"
             items:
-              $ref: "#/definitions/Vault"
+              $ref: "#/definitions/FlyingVault"
+      security:
+      - api_key: []
+  /flying-vault/{remoteId}/:
+    delete:
+      tags:
+      - "vault"
+      summary: "Wipe remote vault"
+      description: ""
+      produces:
+      - "application/json"
+      parameters:
+      - name: wipe
+        in: path
+        description: Wipe confirmation (must be 1)
+        required: true
+        type: integer
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
       security:
       - api_key: []
   /user_key_export/:
@@ -133,6 +175,8 @@ paths:
       responses:
         200:
           description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
       security:
       - api_key: []
   /shutdown/:
@@ -146,6 +190,8 @@ paths:
       responses:
         200:
           description: "successful operation"
+          schema:
+            $ref: "#/definitions/ApiResponse"
       security:
       - api_key: []
 securityDefinitions:
@@ -170,6 +216,30 @@ definitions:
       status:
         type: "string"
         example: "synced"
+  FlyingVault:
+    type: "object"
+    required:
+    - "id"
+    - "resource_uri"
+    - "file_count"
+    - "user_count"
+    - "revision_count"
+    properties:
+      id:
+        type: "string"
+        example: "e2d79981-c7c6-4ce1-99c1-60aeb8730154"
+      resource_uri:
+        type: "string"
+        example: "/v1/flying-vault/e2d79981-c7c6-4ce1-99c1-60aeb8730154/"
+      file_count:
+        type: "integer"
+        example: 12
+      user_count:
+        type: "integer"
+        example: 1
+      revision_count:
+        type: "integer"
+        example: 4
   ApiResponse:
     type: "object"
     properties:
