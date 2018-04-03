@@ -125,7 +125,7 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
     'Stream Python logs via WebSockets'
     await ws.prepare(request)
     for item in select_recent_log_items(app, vault_id, 100):
-        ws.send_str(json.dumps(item))
+        await ws.send_str(json.dumps(item))
     root_logger = logging.getLogger()
     queue = asyncio.Queue(maxsize=MAX_ITEMS_LOGGING_QUEUE)
     handler = QueueHandler(queue, JSONFormatter(app))
@@ -140,13 +140,12 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
             item = await queue.get()
             try:
                 # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
-                # queue before draining the connection
+                # queue before continuing the loop
                 for i in range(MAX_ITEMS_BEFORE_DRAIN):
-                    ws.send_str(str(item))
+                    await ws.send_str(str(item))
                     item = queue.get_nowait()
             except asyncio.QueueEmpty:
                 pass
-            await ws.drain()
 
     async def reader():
         while not ws.closed:
