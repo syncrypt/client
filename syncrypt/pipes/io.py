@@ -1,14 +1,15 @@
+import asyncio
 import logging
-import sys
 import os.path
 import shutil
+import sys
 
 import aiofiles
-import asyncio
 
 from .base import Pipe, Sink, Source
 
 logger = logging.getLogger(__name__)
+
 
 class StreamReader(Source):
     def __init__(self, reader):
@@ -18,6 +19,7 @@ class StreamReader(Source):
     async def close(self):
         # Do NOT close handle
         pass
+
 
 class FileReader(Source):
     # simple wrapper for aiofiles
@@ -35,6 +37,7 @@ class FileReader(Source):
         if self.handle:
             await self.handle.close()
 
+
 class StreamWriter(Sink):
     def __init__(self, writer):
         self.writer = writer
@@ -49,10 +52,12 @@ class StreamWriter(Sink):
             self.bytes_written += len(buf)
         return buf
 
+
 class StdoutWriter(StreamWriter):
     def __init__(self):
         self.handle = sys.stdout
         super(StdoutWriter, self).__init__(self.handle.buffer)
+
 
 class FileWriter(Sink):
     # simple wrapper for aiofiles
