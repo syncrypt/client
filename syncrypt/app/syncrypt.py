@@ -13,7 +13,7 @@ from tzlocal import get_localzone
 import syncrypt
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
-from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
+from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized, VaultNotFound
 from syncrypt.models import Identity, Vault, VaultState, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
                             FileWriter, Once, SnappyCompress, StdoutWriter)
@@ -111,7 +111,7 @@ class SyncryptApp(object):
         for v in self.vaults:
             if v.id == vault_id:
                 return v
-        raise ValueError('Vault not found: {}'.format(vault_id))
+        raise VaultNotFound('Vault not found: {}'.format(vault_id))
 
     async def remove_vault(self, vault):
         with self.config.update_context():
@@ -468,6 +468,23 @@ class SyncryptApp(object):
     async def retrieve_metadata(self, vault):
         await vault.backend.open()
         return (await vault.backend.vault_metadata())
+
+    async def refresh_vault_info(self):
+        logger.info('Refreshing vault information')
+        backend = await self.open_backend()
+
+        for remote_info in (await backend.list_vaults()):
+
+            remote_id = remote_info['id'].decode()
+
+            for v in self.vaults:
+                if v.config.id == remote_id:
+                    v.vault_info.byte_size = remote_info['byte_size']
+                    v.vault_info.file_count = remote_info['file_count']
+                    v.vault_info.revision_count = remote_info['revision_count']
+                    v.vault_info.modification_date = remote_info['modification_date'].decode()
+
+        await backend.close()
 
     #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     async def push(self):

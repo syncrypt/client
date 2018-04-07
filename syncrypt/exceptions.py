@@ -9,3 +9,6 @@ class VaultNotInitialized(VaultException):
 
 class VaultFolderDoesNotExist(VaultException):
     pass
+
+class VaultNotFound(ValueError):
+    pass

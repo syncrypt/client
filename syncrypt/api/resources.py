@@ -8,10 +8,11 @@ import os.path
 
 import iso8601
 from aiohttp import web
+from tzlocal import get_localzone
+
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity
 from syncrypt.utils.format import format_size
-from tzlocal import get_localzone
 
 from ..models.bundle import VirtualBundle
 from ..pipes import Once
@@ -116,17 +117,11 @@ class VaultResource(Resource):
     def get_id(self, v):
         return str(v.id)
 
-    def dehydrate(self, v, vault_info={}):
+    def dehydrate(self, v):
         dct = super(VaultResource, self).dehydrate(v)
 
         dct.update(folder=v.folder, state=v.state, remote_id=v.config.id,
                    metadata=v.metadata, ignore=v.config.get('vault.ignore').split(','))
-
-        # Annotate each obj with information from the server
-        vault_size = vault_info.get('byte_size', 0)
-        modification_date = vault_info.get('modification_date')
-        if isinstance(modification_date, bytes):
-            modification_date = modification_date.decode()
 
         # Compile some information about the underlying crypto system(s)
         crypt_info = {
@@ -138,14 +133,16 @@ class VaultResource(Resource):
             'fingerprint': v.identity.get_fingerprint() \
                     if v.identity and v.identity.is_initialized() else None
         }
+        dct.update(crypt_info=crypt_info)
 
+        # Annotate each obj with vault information from the server
+        vault_info = v.vault_info
         dct.update(
-            size=vault_size,
-            user_count=vault_info.get('user_count', 0),
-            file_count=vault_info.get('file_count', 0),
-            revision_count=vault_info.get('revision_count', 0),
-            modification_date=modification_date,
-            crypt_info=crypt_info
+            size=vault_info.byte_size,
+            user_count=vault_info.user_count,
+            file_count=vault_info.file_count,
+            revision_count=vault_info.revision_count,
+            modification_date=vault_info.modification_date,
         )
         return dct
 
@@ -170,15 +167,11 @@ class VaultResource(Resource):
             await self.app.remove_vault(obj)
 
     @require_auth_token
-    async def dispatch_list(self, request):
-        objs = await self.get_obj_list(request)
-        backend = await self.app.open_backend()
+    async def dispatch_list(self, request, force_refresh=True):
+        if request.query.get('force_refresh', '0') == '1':
+            await self.app.refresh_vault_info()
 
-        # Make a map from vault id -> vault info
-        v_info = {v['id'].decode(): v for v in (await backend.list_vaults())}
-
-        await backend.close()
-        return JSONResponse([self.dehydrate(obj, v_info.get(obj.config.get('vault.id'), {})) for obj in objs])
+        return await super(VaultResource, self).dispatch_list(request)
 
 
     async def dispatch_fingerprints(self, request):

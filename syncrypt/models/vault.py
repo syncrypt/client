@@ -26,6 +26,16 @@ logger = logging.getLogger(__name__)
 IGNORE_EMPTY_FILES = ['.DS_Store']
 
 
+class VaultInfo():
+    "Vault information from the server"
+
+    byte_size: int = 0
+    file_count: int = 0
+    modification_date: str = ''
+    revision_count: int = 0
+    user_count: int = 1
+
+
 class VaultState(Enum):
     #UNKNOWN = "unknown"
     UNINITIALIZED = "uninitialized"
@@ -44,12 +54,15 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
 
 
 class Vault(MetadataHolder):
+    vault_info: VaultInfo = None
+
     def __init__(self, folder):
         self.state = VaultState.UNINITIALIZED
         self.folder = folder
         self._bundle_cache = {}
 
         self.logger = VaultLoggerAdapter(self, logger)
+        self.vault_info = VaultInfo()
 
     @property
     def config(self):
@@ -151,9 +164,6 @@ class Vault(MetadataHolder):
 
     def get_local_size(self):
         return folder_size(self.folder)
-
-    def get_remote_size(self):
-        return 0
 
     async def close(self):
         await self.backend.close()
