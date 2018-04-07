@@ -1,4 +1,5 @@
 import asyncio
+import configparser
 import hashlib
 import logging
 import os
@@ -221,16 +222,23 @@ class Vault(MetadataHolder):
         memview = BytesIO()
         zipf = zipfile.ZipFile(memview, 'w', zipfile.ZIP_DEFLATED)
 
-        # include config but strip auth information
-        self.config.unset('remote.auth')
-        self.config.unset('remote.username')
-        self.config.unset('remote.password')
+        cloned_config = configparser.ConfigParser()
+        cloned_config.read(self.config._config)
 
-        # also strip revision
-        self.config.unset('vault.revision')
+        # include config but strip auth information
+        if 'remote' in cloned_config:
+            for key in ('auth', 'username', 'password'):
+                if key in cloned_config['remote']:
+                    del cloned_config['remote'][key]
+
+        # also vault info such as revision
+        if 'vault' in cloned_config:
+            for key in ('revision',):
+                if key in cloned_config['vault']:
+                    del cloned_config['vault'][key]
 
         temp_config = StringIO()
-        self.config._config.write(temp_config)
+        cloned_config.write(temp_config)
         temp_config.seek(0)
         zipf.writestr('.vault/config', temp_config.read().encode(self.config.encoding))
 
