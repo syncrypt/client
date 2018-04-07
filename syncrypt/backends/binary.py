@@ -222,8 +222,8 @@ class BinaryStorageConnection(object):
                 await self.disconnect()
                 raise StorageBackendInvalidAuth(response)
         else:
-            # we don't have auth token yet
             if not self.manager.global_auth and (self.manager.username is None or self.manager.username == ''):
+                # we don't have auth token yet
                 await self.disconnect()
                 raise StorageBackendInvalidAuth('No username/email or auth token provided')
 
@@ -280,8 +280,11 @@ class BinaryStorageConnection(object):
                     raise StorageBackendInvalidAuth(response)
 
             else:
-                await self.write_term('vault_login', self.manager.username,
-                        self.manager.password, vault.config.id)
+                if self.manager.global_auth:
+                    await self.write_term('vault_login', self.manager.global_auth, vault.config.id)
+                else:
+                    await self.write_term('vault_login', self.manager.username,
+                            self.manager.password, vault.config.id)
 
                 login_response = await self.read_term(assert_ok=False)
 
@@ -926,8 +929,6 @@ class BinaryStorageBackend(StorageBackend):
         try:
             async with (await self._acquire_connection()) as conn:
                 # after successful login, write back config
-                #with self.vault.config.update_context():
-                #    self.vault.config.update('remote', {'auth': self.auth})
                 self.invalid_auth = False
                 conn.logger.info('Successfully logged in and stored auth token')
         except StorageBackendInvalidAuth:

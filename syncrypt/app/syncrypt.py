@@ -179,6 +179,7 @@ class SyncryptApp(object):
             vault.backend.set_auth(username, password)
             await vault.backend.init()
 
+        await self.set_vault_state(vault, VaultState.READY)
         with vault.config.update_context():
             vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
         await vault.backend.set_vault_metadata()
