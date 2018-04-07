@@ -69,6 +69,8 @@ class SyncryptDaemonApp(SyncryptApp):
                 logger.exception(e)
                 continue
 
+        await self.refresh_vault_info()
+
         await self.push()
 
         #for vault in self.vaults:
