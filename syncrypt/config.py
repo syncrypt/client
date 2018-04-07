@@ -62,14 +62,17 @@ class Config(object):
     def set(self, setting, value):
         realm, setting_ = setting.split('.')
         self._config[realm][setting_] = value
+        #logger.debug('Setting config: %s.%s = %s', realm, setting_, value)
 
     def unset(self, setting):
         realm, setting_ = setting.split('.')
         if setting_ in self._config[realm]:
             del self._config[realm][setting_]
+        #logger.debug('Unsetting config: %s.%s', realm, setting_)
 
     def update(self, section, dct):
         self._config[section].update(dct)
+        #logger.debug('Update vault config: %s <- %s', section, dct)
 
     @property
     def config_dir(self):
