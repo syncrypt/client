@@ -18,6 +18,13 @@ schemes:
 paths:
   /vault/:
     get:
+      parameters:
+        - name: force_refresh
+          in: query
+          description: >-
+            If set to 1, this will refresh vault information from server.
+          required: false
+          type: integer
       tags:
         - vault
       summary: List all local vaults
