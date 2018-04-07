@@ -360,7 +360,7 @@ class BinaryStorageConnection(object):
         response = await self.read_term()
 
         if isinstance(response[1], (tuple, list)) and response[1][0] == Atom('not_found'):
-            self.logger.info('File not found: %s', bundle.store_hash)
+            self.logger.debug('File not found: %s', bundle.store_hash)
             return None
 
         dct = rewrite_atoms_dict(response[1])
@@ -382,7 +382,7 @@ class BinaryStorageConnection(object):
 
         response = await self.read_response() # make sure server returns 'ok'
 
-        self.logger.info('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
+        self.logger.debug('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
                 .format(metadata_size, bundle.file_size_crypt))
 
         bundle.bytes_written = 0
@@ -417,7 +417,7 @@ class BinaryStorageConnection(object):
             else:
                 await self.write_term('uploaded', url)
         else:
-            self.logger.info('Streaming upload requested.')
+            self.logger.debug('Streaming upload requested.')
 
             writer = reader >> StreamWriter(self.writer)
             await writer.consume()
