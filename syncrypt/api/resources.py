@@ -180,7 +180,6 @@ class VaultResource(Resource):
         await backend.close()
         return JSONResponse([self.dehydrate(obj, v_info.get(obj.config.get('vault.id'), {})) for obj in objs])
 
-
     async def dispatch_fingerprints(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)

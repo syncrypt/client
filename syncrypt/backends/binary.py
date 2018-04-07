@@ -435,7 +435,6 @@ class BinaryStorageConnection(object):
         # if all went well, store revision_id in vault
         self.vault.update_revision(server_info['id'])
 
-
     async def vault_metadata(self):
         self.logger.debug('Getting metadata for %s', self.vault)
 
