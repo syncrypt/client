@@ -35,11 +35,9 @@ class SyncryptAPI():
     @require_auth_token
     async def get_stats(self, request):
         vault_resource = VaultResource(self.app)
-        vault_states = {vault_resource.get_resource_uri(v): v.state for v in self.app.vaults}
         return JSONResponse({
             'stats': self.app.stats,
             'user_key_state': self.app.identity.state,
-            'states': vault_states,
             'slots': get_manager_instance().get_stats()
         })
 
