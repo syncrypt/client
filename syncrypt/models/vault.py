@@ -29,11 +29,11 @@ IGNORE_EMPTY_FILES = ['.DS_Store']
 class VaultInfo():
     "Vault information from the server"
 
-    byte_size: int = 0
-    file_count: int = 0
-    modification_date: str = ''
-    revision_count: int = 0
-    user_count: int = 1
+    byte_size = 0
+    file_count = 0
+    modification_date = ''
+    revision_count = 0
+    user_count = 1
 
 
 class VaultState(Enum):
@@ -54,7 +54,7 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
 
 
 class Vault(MetadataHolder):
-    vault_info: VaultInfo = None
+    vault_info = None
 
     def __init__(self, folder):
         self.state = VaultState.UNINITIALIZED
