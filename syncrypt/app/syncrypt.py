@@ -479,10 +479,11 @@ class SyncryptApp(object):
 
             for v in self.vaults:
                 if v.config.id == remote_id:
-                    v.vault_info.byte_size = remote_info['byte_size']
-                    v.vault_info.file_count = remote_info['file_count']
-                    v.vault_info.revision_count = remote_info['revision_count']
-                    v.vault_info.modification_date = remote_info['modification_date'].decode()
+                    v.vault_info.byte_size = int(remote_info.get('byte_size', 0))
+                    v.vault_info.file_count = int(remote_info.get('file_count', 0))
+                    v.vault_info.revision_count = int(remote_info.get('revision_count', 0))
+                    modification_date = remote_info.get('modification_date') or b''
+                    v.vault_info.modification_date = modification_date.decode()
 
         await backend.close()
 
