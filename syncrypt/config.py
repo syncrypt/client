@@ -160,7 +160,7 @@ class AppConfig(Config, BackendConfigMixin):
         },
         'gui': {
             'is_first_launch': '1',
-            'language': ''
+            'language': 'English'
         },
         'api': {
             'host': '127.0.0.1',
