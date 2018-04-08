@@ -140,6 +140,7 @@ class EncryptRSA(Buffered):
     def __init__(self, public_key):
         self.public_key = public_key
         self.block_size = self.get_block_size()
+        self.cipher = self.protocol.new(self.public_key)
         logger.debug('Encrypting block size: %d bytes', self.block_size)
         super(EncryptRSA, self).__init__(self.block_size)
 
@@ -149,7 +150,7 @@ class EncryptRSA(Buffered):
     async def read(self, count=-1):
         data = await super(EncryptRSA, self).read(-1)
         if len(data) > 0:
-            enc_data = self.protocol.new(self.public_key).encrypt(data)
+            enc_data = self.cipher.encrypt(data)
             logger.debug('RSA Encrypted %d -> %d bytes', len(data), len(enc_data))
             return enc_data
         else:
@@ -166,6 +167,7 @@ class DecryptRSA(Buffered):
     def __init__(self, private_key):
         self.private_key = private_key
         self.block_size = self.get_block_size()
+        self.cipher = self.protocol.new(self.private_key)
         logger.debug('Decrypting block size: %d bytes', self.block_size)
         super(DecryptRSA, self).__init__(self.block_size)
 
@@ -176,7 +178,7 @@ class DecryptRSA(Buffered):
         data = await super(DecryptRSA, self).read(-1)
         if len(data) > 0:
             sentinel = 0
-            dec_data = self.protocol.new(self.private_key).decrypt(data, sentinel)
+            dec_data = self.cipher.decrypt(data, sentinel)
             logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
             return dec_data
         else:
@@ -201,7 +203,7 @@ class DecryptRSA_PKCS1_OAEP(DecryptRSA):
     async def read(self, count=-1):
         data = await super(DecryptRSA, self).read(-1)  # pylint: disable=bad-super-call
         if len(data) > 0:
-            dec_data = self.protocol.new(self.private_key).decrypt(data)
+            dec_data = self.cipher.decrypt(data)
             logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
             return dec_data
         else:
