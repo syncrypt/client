@@ -960,7 +960,7 @@ class BinaryStorageBackend(StorageBackend):
 
     async def list_files(self):
         conn = await self._acquire_connection()
-        queue = asyncio.Queue()
+        queue = asyncio.Queue(8)
         task = asyncio.get_event_loop().create_task(conn.list_files(queue))
 
         def free_conn(result):
@@ -971,7 +971,7 @@ class BinaryStorageBackend(StorageBackend):
 
     async def changes(self, since_rev, to_rev, verbose=False):
         conn = await self._acquire_connection()
-        queue = asyncio.Queue()
+        queue = asyncio.Queue(8)
         task = asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
 
         def free_conn(result):
