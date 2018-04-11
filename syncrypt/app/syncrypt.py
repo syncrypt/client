@@ -22,7 +22,6 @@ from syncrypt.utils.format import (format_fingerprint, format_size,
 from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
 
 from .asynccontext import AsyncContext
-from .events import create_watchdog
 
 logger = logging.getLogger(__name__)
 
@@ -216,50 +215,7 @@ class SyncryptApp(object):
             await self.handle_state_transition(vault, old_state)
 
     async def handle_state_transition(self, vault, old_state):
-        logger.debug('State transition of %s: %s -> %s', vault, old_state,
-                     vault.state)
-        new_state = vault.state
-
-        if new_state in (VaultState.READY,):
-            await self.watch_vault(vault)
-        else:
-            if old_state in (VaultState.READY,):
-                await self.unwatch_vault(vault)
-
-        #if new_state == VaultState.SYNCED:
-        #    await self.autopull_vault(vault)
-        #elif old_state == VaultState.SYNCED:
-        #    await self.unautopull_vault(vault)
-
-    async def watch_vault(self, vault):
-        'Install a watchdog for the given vault'
-        vault.check_existence()
-        folder = os.path.abspath(vault.folder)
-        logger.info('Watching %s', folder)
-        self._watchdogs[folder] = create_watchdog(self, vault)
-        self._watchdogs[folder].start()
-
-    async def autopull_vault(self, vault):
-        'Install a regular autopull for the given vault'
-        vault.check_existence()
-        folder = os.path.abspath(vault.folder)
-        logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
-        self._autopull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
-
-    async def unwatch_vault(self, vault):
-        'Remove watchdog and auto-pulls'
-        folder = os.path.abspath(vault.folder)
-        if folder in self._watchdogs:
-            logger.info('Unwatching %s', os.path.abspath(folder))
-            self._watchdogs[folder].stop()
-            del self._watchdogs[folder]
-
-    async def unautopull_vault(self, vault):
-        folder = os.path.abspath(vault.folder)
-        logger.info('Disable auto-pull on %s', os.path.abspath(folder))
-        if folder in self._autopull_tasks:
-            self._autopull_tasks[folder].cancel()
-            del self._autopull_tasks[folder]
+        pass
 
     async def clone_local(self, clone_target):
         import shutil

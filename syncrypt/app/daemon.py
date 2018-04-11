@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os.path
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 from getpass import getpass
 
@@ -10,6 +11,7 @@ from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.models import VaultState
 
 from ..utils.updates import is_update_available
+from .events import create_watchdog
 from .syncrypt import SyncryptApp
 
 logger = logging.getLogger(__name__)
@@ -71,23 +73,6 @@ class SyncryptDaemonApp(SyncryptApp):
 
         await self.refresh_vault_info()
 
-        await self.push()
-
-        #for vault in self.vaults:
-        #    try:
-        #        await self.watch_vault(vault)
-        #    except VaultFolderDoesNotExist:
-        #        logger.error('%s does not exist, removing vault from list.' % vault)
-        #        await self.remove_vault(vault)
-        #
-        #try:
-        #except Exception as e:
-        #    logger.exception(e)
-        #    logger.warn('The above exception occured while pushing vaults, we will try to continue anyway')
-        #
-        #for vault in self.vaults:
-        #    await self.autopull_vault(vault)
-
     async def stop(self):
         for vault in self.vaults:
             await self.unwatch_vault(vault)
@@ -106,3 +91,49 @@ class SyncryptDaemonApp(SyncryptApp):
     async def wait_for_shutdown(self):
         if not self.shutdown_event.is_set():
             await self.shutdown_event.wait()
+
+    async def handle_state_transition(self, vault, old_state):
+        logger.debug('State transition of %s: %s -> %s', vault, old_state,
+                     vault.state)
+        new_state = vault.state
+
+        if new_state in (VaultState.READY,):
+            await self.watch_vault(vault)
+        else:
+            if old_state in (VaultState.READY,):
+                await self.unwatch_vault(vault)
+
+        #if new_state == VaultState.SYNCED:
+        #    await self.autopull_vault(vault)
+        #elif old_state == VaultState.SYNCED:
+        #    await self.unautopull_vault(vault)
+
+    async def watch_vault(self, vault):
+        'Install a watchdog for the given vault'
+        vault.check_existence()
+        folder = os.path.abspath(vault.folder)
+        logger.info('Watching %s', folder)
+        self._watchdogs[folder] = create_watchdog(self, vault)
+        self._watchdogs[folder].start()
+
+    async def autopull_vault(self, vault):
+        'Install a regular autopull for the given vault'
+        vault.check_existence()
+        folder = os.path.abspath(vault.folder)
+        logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
+        self._autopull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
+
+    async def unwatch_vault(self, vault):
+        'Remove watchdog and auto-pulls'
+        folder = os.path.abspath(vault.folder)
+        if folder in self._watchdogs:
+            logger.info('Unwatching %s', os.path.abspath(folder))
+            self._watchdogs[folder].stop()
+            del self._watchdogs[folder]
+
+    async def unautopull_vault(self, vault):
+        folder = os.path.abspath(vault.folder)
+        logger.info('Disable auto-pull on %s', os.path.abspath(folder))
+        if folder in self._autopull_tasks:
+            self._autopull_tasks[folder].cancel()
+            del self._autopull_tasks[folder]

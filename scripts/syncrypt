@@ -225,15 +225,6 @@ class Push(MultipleVaultCmd):
         self.loop.run_until_complete(self.app.push())
 
 
-class Watch(MultipleVaultCmd):
-    command = 'watch'
-    description = 'watch directory for changes'
-
-    def run(self):
-        self.loop.run_until_complete(self.app.start())
-        self.loop.run_forever()
-
-
 class Init(SingleVaultCmd):
     command = 'init'
     description = 'register the directory as a Syncrypt vault'
@@ -362,8 +353,8 @@ class KeyExport(NoVaultCmd):
 
 
 COMMANDS = [Login(), Logout(), CheckUpdate(), Init(), ListVaults(), Clone(), Pull(), Push(),
-        Watch(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(),
-        ConfigSet(), ConfigUnset(), Export(), Import(), ListKeys(), KeyExport()]
+        AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(), ConfigSet(), ConfigUnset(),
+        Export(), Import(), ListKeys(), KeyExport()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(
