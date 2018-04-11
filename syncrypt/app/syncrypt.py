@@ -13,12 +13,12 @@ from tzlocal import get_localzone
 import syncrypt
 from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import BinaryStorageBackend, ServerError
-from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized, VaultNotFound
+from syncrypt.exceptions import (VaultAlreadyExists, VaultFolderDoesNotExist, VaultIsAlreadySyncing,
+                                 VaultNotFound, VaultNotInitialized)
 from syncrypt.models import Identity, Vault, VaultState, VirtualBundle
-from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP,
-                            FileWriter, Once, SnappyCompress, StdoutWriter)
-from syncrypt.utils.format import (format_fingerprint, format_size,
-                                   size_with_unit)
+from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
+                            SnappyCompress, StdoutWriter)
+from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
 from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
 
 from .asynccontext import AsyncContext
@@ -101,6 +101,9 @@ class SyncryptApp(object):
         return self.add_vault(Vault(path))
 
     def add_vault(self, vault):
+        for v in self.vaults:
+            if os.path.abspath(v.folder) == os.path.abspath(vault.folder):
+                raise VaultIsAlreadySyncing(v.folder)
         self.vaults.append(vault)
         with self.config.update_context():
             self.config.add_vault_dir(os.path.abspath(vault.folder))
@@ -111,6 +114,12 @@ class SyncryptApp(object):
             if v.id == vault_id:
                 return v
         raise VaultNotFound('Vault not found: {}'.format(vault_id))
+
+    def get_vault_by_path(self, path):
+        v = Vault(path)
+        if os.path.exists(v.config_path):
+            return v
+        return None
 
     async def remove_vault(self, vault):
         with self.config.update_context():
@@ -351,7 +360,15 @@ class SyncryptApp(object):
 
         decrypted_package_info = await export_pipe.readall()
 
-        vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
+        original_vault = self.get_vault_by_path(local_directory)
+        if original_vault:
+            if original_vault.config.id == vault_id:
+                logger.warn('Same vault already exists in the given location, continuing...')
+                vault = original_vault
+            else:
+                raise VaultAlreadyExists(original_vault.folder)
+        else:
+            vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
 
         self.add_vault(vault)
 
