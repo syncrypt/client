@@ -714,9 +714,6 @@ class BinaryStorageConnection(object):
         '''
         Generic API call
         '''
-        if name in ('logger',):
-            raise ValueError("x")
-
         async def myco(*args, **kwargs):
             self.logger.info('Calling generic API %s/%d', name, len(args))
             await self.write_term(name, *args)
