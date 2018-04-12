@@ -22,7 +22,7 @@ class Config(object):
         self._config = configparser.ConfigParser()
         if config_path is None:
             config_path = os.path.join(self.config_dir, 'config')
-        self._config_path = config_path
+        self._config_path = os.path.abspath(config_path)
         # set defaults
         for k in self.default_config.keys():
             self._config[k] = deepcopy(self.default_config[k])
