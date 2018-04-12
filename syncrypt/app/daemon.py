@@ -72,11 +72,14 @@ class SyncryptDaemonApp(SyncryptApp):
                 logger.exception(e)
                 continue
 
+    async def post_setup(self):
         try:
             if self.vaults:
                 await self.refresh_vault_info()
         except StorageBackendInvalidAuth:
             logger.info('Continuing without getting current vault information')
+
+        await self.push()
 
     async def stop(self):
         for vault in self.vaults:

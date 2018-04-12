@@ -53,6 +53,7 @@ def run_syncrypt():
     loop.run_until_complete(app.initialize())
 
     smokesignal.emit('post_setup', app=app)
+    loop.create_task(app.post_setup())
 
     loop.run_until_complete(app.wait_for_shutdown())
 
