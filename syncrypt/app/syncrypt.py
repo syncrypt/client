@@ -324,7 +324,7 @@ class SyncryptApp(object):
         for try_num in range(num_tries):
             if always_ask_for_creds or try_num >= 1:
                 if not auth_provider:
-                    raise ValueError('Can not login, do not have auth provider')
+                    raise StorageBackendInvalidAuth('Can not login, do not have auth provider')
                 username, password = await auth_provider.get_auth(backend)
                 backend.set_auth(username, password)
                 backend.auth = None
