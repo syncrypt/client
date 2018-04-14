@@ -55,7 +55,10 @@ def run_syncrypt():
     smokesignal.emit('post_setup', app=app)
     loop.create_task(app.post_setup())
 
-    loop.run_until_complete(app.wait_for_shutdown())
+    try:
+        loop.run_until_complete(app.wait_for_shutdown())
+    except KeyboardInterrupt:
+        pass
 
     smokesignal.emit('shutdown', app=app)
 
