@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 class AccessLogger(AbstractAccessLogger):
 
     def log(self, request, response, time):
-        self.logger.debug(f'{request.method} {request.path} {response.status} {time:.3f}s')
+        self.logger.debug(
+            f'API "{request.method} {request.path_qs} '
+            f'HTTP/{request.version.major}.{request.version.minor}" '
+            f'{response.status} '
+            f'{response.body_length} '
+            f'{time:.3f}s')
 
 
 class SyncryptAPI():
