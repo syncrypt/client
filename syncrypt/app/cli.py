@@ -8,14 +8,13 @@ from tzlocal import get_localzone
 
 import syncrypt
 from syncrypt.app.auth import AuthenticationProvider
-from syncrypt.backends.base import StorageBackendInvalidAuth
-from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
 from syncrypt.vendor.keyart import draw_art
 
+from ..exceptions import InvalidAuthentification, VaultNotInitialized
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp
 
@@ -45,7 +44,7 @@ class SyncryptCLIApp(SyncryptApp):
             backend = await self.open_backend(num_tries=1)
             await backend.close()
             print("Already logged in.")
-        except StorageBackendInvalidAuth as e:
+        except InvalidAuthentification as e:
             backend = await self.open_backend(always_ask_for_creds=True)
             await backend.close()
             await self.upload_identity()

@@ -11,18 +11,20 @@ from getpass import getpass
 
 import certifi
 from erlastic import Atom
-from tenacity import (retry, retry_unless_exception_type, stop_after_attempt,
-                      wait_exponential, retry_if_exception_type)
+from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
+                      stop_after_attempt, wait_exponential)
 
 import syncrypt
 from syncrypt import __project__, __version__
-from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once,
-                            StreamReader, StreamWriter, URLReader, URLWriter)
+from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
+                                 UnexpectedResponseException, UnsuccessfulResponse,
+                                 VaultNotInitialized)
+from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter,
+                            URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 
-from .base import StorageBackend, StorageBackendInvalidAuth
+from .base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -38,26 +40,6 @@ V_USER_COUNT     = Atom('user_count')
 V_MODIFICATION_DATE = Atom('modification_date')
 
 ALL_VAULT_FIELDS = [V_BYTE_SIZE, V_FILE_COUNT, V_REVISION_COUNT, V_USER_COUNT, V_MODIFICATION_DATE]
-
-
-class BinaryStorageException(Exception):
-    pass
-
-
-class UnsuccessfulResponse(BinaryStorageException):
-    pass
-
-
-class ServerError(UnsuccessfulResponse):
-    pass
-
-
-class ConnectionResetException(BinaryStorageException):
-    pass
-
-
-class UnexpectedResponseException(BinaryStorageException):
-    pass
 
 
 def bert_val(bert_term):
@@ -220,12 +202,12 @@ class BinaryStorageConnection(object):
             response = await self.read_term(assert_ok=False)
             if response[0] != Atom('ok'):
                 await self.disconnect()
-                raise StorageBackendInvalidAuth(response)
+                raise InvalidAuthentification(response)
         else:
             if not self.manager.global_auth and (self.manager.username is None or self.manager.username == ''):
                 # we don't have auth token yet
                 await self.disconnect()
-                raise StorageBackendInvalidAuth('No username/email or auth token provided')
+                raise InvalidAuthentification('No username/email or auth token provided')
 
             if vault is None:
                 if self.manager.global_auth:
@@ -238,7 +220,7 @@ class BinaryStorageConnection(object):
 
                 if response[0] != Atom('ok'):
                     await self.disconnect()
-                    raise StorageBackendInvalidAuth(response)
+                    raise InvalidAuthentification(response)
 
                 if len(response) == 2:
                     self.manager.global_auth = response[1].decode()
@@ -254,7 +236,7 @@ class BinaryStorageConnection(object):
 
                 if response[0] != Atom('ok'):
                     await self.disconnect()
-                    raise StorageBackendInvalidAuth(response)
+                    raise InvalidAuthentification(response)
 
                 if len(response) == 2:
                     self.manager.global_auth = response[1].decode()
@@ -277,7 +259,7 @@ class BinaryStorageConnection(object):
                         })
                 else:
                     await self.disconnect()
-                    raise StorageBackendInvalidAuth(response)
+                    raise InvalidAuthentification(response)
 
             else:
                 if self.manager.global_auth:
@@ -296,7 +278,7 @@ class BinaryStorageConnection(object):
                         })
                 else:
                     await self.disconnect()
-                    raise StorageBackendInvalidAuth(login_response[1])
+                    raise InvalidAuthentification(login_response[1])
 
         self.connected = True
         self.connecting = False
@@ -810,7 +792,7 @@ class BinaryStorageManager(object):
                     await conn.disconnect()
                     break
 
-    @retry(retry=retry_if_exception_type() & retry_unless_exception_type(StorageBackendInvalidAuth),
+    @retry(retry=retry_if_exception_type() & retry_unless_exception_type(InvalidAuthentification),
            stop=stop_after_attempt(3),
            wait=wait_exponential(multiplier=1, max=10))
     async def acquire_connection(self, vault):
@@ -928,7 +910,7 @@ class BinaryStorageBackend(StorageBackend):
                 # after successful login, write back config
                 self.invalid_auth = False
                 conn.logger.info('Successfully logged in and stored auth token')
-        except StorageBackendInvalidAuth:
+        except InvalidAuthentification:
             self.invalid_auth = True
             raise
 

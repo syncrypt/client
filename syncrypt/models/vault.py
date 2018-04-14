@@ -13,7 +13,7 @@ from glob import glob
 from io import BytesIO, StringIO
 
 from syncrypt.config import VaultConfig
-from syncrypt.exceptions import SecurityError, VaultFolderDoesNotExist, VaultNotInitialized
+from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
 

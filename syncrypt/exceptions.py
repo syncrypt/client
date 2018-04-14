@@ -1,8 +1,8 @@
-class SecurityError(Exception):
-    pass
+class SyncryptBaseException(Exception):
+    status = 500
 
 
-class VaultException(Exception):
+class VaultException(SyncryptBaseException):
     pass
 
 
@@ -14,20 +14,42 @@ class VaultFolderDoesNotExist(VaultException):
     pass
 
 
-# the vault already exists on disk
 class VaultAlreadyExists(VaultException):
     pass
 
 
-## Daemon exceptions
+class VaultNotFound(VaultException):
+    status = 404
 
 
-class VaultNotFound(ValueError):
+class VaultIsAlreadySyncing(VaultException):
+    status = 400
+
+    def __str__(self):
+        return "The given folder is already in the list of syncing vaults: {0}".format(
+            self.args[0]
+        )
+
+
+class BinaryStorageException(SyncryptBaseException):
     pass
 
 
-# the vault is already in the daemons list of syncing vaults
-class VaultIsAlreadySyncing(ValueError):
-    def __str__(self):
-        return "The given folder is already in the list of syncing vaults: {0}"\
-                .format(self.args[0])
+class InvalidAuthentification(BinaryStorageException):
+    status = 401
+
+
+class UnsuccessfulResponse(BinaryStorageException):
+    status = 400
+
+
+class ServerError(UnsuccessfulResponse):
+    pass
+
+
+class ConnectionResetException(BinaryStorageException):
+    pass
+
+
+class UnexpectedResponseException(BinaryStorageException):
+    pass

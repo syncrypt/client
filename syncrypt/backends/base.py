@@ -1,12 +1,5 @@
-import asyncio
-
-class StorageBackendException(Exception):
-    pass
-
-class StorageBackendInvalidAuth(StorageBackendException):
-    pass
-
 class StorageBackend(object):
+
     def __init__(self, vault):
         self.vault = vault
         self.connected = False

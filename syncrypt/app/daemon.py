@@ -10,7 +10,7 @@ from syncrypt.app.auth import AuthenticationProvider
 from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.models import VaultState
 
-from ..backends.base import StorageBackendInvalidAuth
+from ..exceptions import InvalidAuthentification
 from ..utils.updates import is_update_available
 from .events import create_watchdog
 from .syncrypt import SyncryptApp
@@ -76,7 +76,7 @@ class SyncryptDaemonApp(SyncryptApp):
         try:
             if self.vaults:
                 await self.refresh_vault_info()
-        except StorageBackendInvalidAuth:
+        except InvalidAuthentification:
             logger.info('Continuing without getting current vault information')
 
         await self.push()

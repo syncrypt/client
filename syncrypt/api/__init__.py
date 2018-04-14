@@ -8,9 +8,9 @@ from aiohttp import web
 
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
-from syncrypt.backends.base import StorageBackendInvalidAuth
 from syncrypt.backends.binary import get_manager_instance
 
+from ..exceptions import InvalidAuthentification, SyncryptBaseException
 from ..utils.updates import is_update_available
 from .auth import generate_api_auth_token, require_auth_token
 from .client import APIClient
@@ -115,7 +115,7 @@ class SyncryptAPI():
             return JSONResponse({
                 'status': 'ok'
             })
-        except StorageBackendInvalidAuth:
+        except InvalidAuthentification:
             return JSONResponse({
                 'status': 'error',
                 'text': 'Invalid authentification'
@@ -131,7 +131,7 @@ class SyncryptAPI():
             await backend.open()
             await backend.close()
             connected = True
-        except StorageBackendInvalidAuth:
+        except InvalidAuthentification:
             pass
         return JSONResponse({
                 'status': 'ok',
@@ -231,11 +231,16 @@ class SyncryptAPI():
 
         return JSONResponse({'status': 'ok', 'filename': path})
 
-    def json_error(self,  message):
+    def exception_response(self, exc):
         return web.Response(
-            status=500,
-            body=json.dumps({'status': 'error', 'reason': message}).encode('utf-8'),
-            content_type='application/json')
+            status = exc.status if hasattr(exc, 'status') else 500,
+            body = json.dumps({
+                'status': 'error',
+                'reason': str(exc),
+                'code': str(exc.__class__.__name__)
+            }).encode('utf-8'),
+            content_type='application/json'
+        )
 
     @web.middleware
     async def error_middleware(self, request, handler):
@@ -244,11 +249,10 @@ class SyncryptAPI():
             return response
         except web.HTTPException as ex:
             if ex.status == 404:
-                return self.json_error(ex.reason)
+                return self.exception_response(ex)
             raise
-        except Exception as ex:
-            logger.exception(ex)
-            return self.json_error(str(ex))
+        except (SyncryptBaseException, Exception) as ex:
+            return self.exception_response(ex)
 
     def initialize(self):
         loop = asyncio.get_event_loop()

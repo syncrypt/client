@@ -3,18 +3,14 @@ import logging
 import os.path
 import socket
 import sys
-from io import StringIO
 from zipfile import ZipFile
 
-import iso8601
 from tenacity import retry, stop_after_attempt, wait_exponential
-from tzlocal import get_localzone
 
 import syncrypt
-from syncrypt.backends.base import StorageBackendInvalidAuth
-from syncrypt.backends.binary import BinaryStorageBackend, ServerError
-from syncrypt.exceptions import (VaultAlreadyExists, VaultFolderDoesNotExist, VaultIsAlreadySyncing,
-                                 VaultNotFound, VaultNotInitialized)
+from syncrypt.exceptions import (InvalidAuthentification, VaultAlreadyExists,
+                                 VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
+                                 VaultNotInitialized)
 from syncrypt.models import Identity, Vault, VaultState, VirtualBundle
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
@@ -171,7 +167,7 @@ class SyncryptApp(object):
             await vault.backend.open()
             logger.warn('Vault %s already initialized', vault.folder)
             return
-        except (StorageBackendInvalidAuth, VaultNotInitialized):
+        except (InvalidAuthentification, VaultNotInitialized):
             pass
         logger.info("Initializing %s", vault)
         await vault.identity.init()
@@ -181,7 +177,7 @@ class SyncryptApp(object):
             vault.backend.global_auth = global_auth
         try:
             await vault.backend.init()
-        except StorageBackendInvalidAuth:
+        except InvalidAuthentification:
             vault.backend.global_auth = None
             username, password = await self.auth_provider.get_auth(vault.backend)
             vault.backend.set_auth(username, password)
@@ -211,7 +207,7 @@ class SyncryptApp(object):
     async def open_or_init(self, vault):
         try:
             await vault.backend.open()
-        except (StorageBackendInvalidAuth, VaultNotInitialized):
+        except (InvalidAuthentification, VaultNotInitialized):
             # retry after logging in & getting auth token
             # use the host from the app config
             await self.init_vault(vault, host=self.config.remote.get('host'))
@@ -324,7 +320,7 @@ class SyncryptApp(object):
         for try_num in range(num_tries):
             if always_ask_for_creds or try_num >= 1:
                 if not auth_provider:
-                    raise StorageBackendInvalidAuth('Can not login, do not have auth provider')
+                    raise InvalidAuthentification('Can not login, do not have auth provider')
                 username, password = await auth_provider.get_auth(backend)
                 backend.set_auth(username, password)
                 backend.auth = None
@@ -337,7 +333,7 @@ class SyncryptApp(object):
                     with cfg.update_context():
                         cfg.update('remote', {'auth': backend.global_auth})
                 return backend
-            except StorageBackendInvalidAuth as e:
+            except InvalidAuthentification as e:
                 if (try_num + 1) < num_tries:
                     logger.error('Invalid login: %s' % e)
                     continue
