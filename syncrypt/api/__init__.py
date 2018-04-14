@@ -5,6 +5,7 @@ import os.path
 
 import smokesignal
 from aiohttp import web
+from aiohttp.abc import AbstractAccessLogger
 
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
@@ -19,6 +20,12 @@ from .resources import (BundleResource, FlyingVaultResource, UserResource, Vault
 from .responses import JSONResponse
 
 logger = logging.getLogger(__name__)
+
+
+class AccessLogger(AbstractAccessLogger):
+
+    def log(self, request, response, time):
+        self.logger.debug(f'{request.method} {request.path} {response.status} {time:.3f}s')
 
 
 class SyncryptAPI():
@@ -301,7 +308,7 @@ class SyncryptAPI():
 
         loop = asyncio.get_event_loop()
 
-        self.handler = self.web_app.make_handler()
+        self.handler = self.web_app.make_handler(access_log_class=AccessLogger)
         self.server = await loop.create_server(self.handler,
                 self.app.config.api['host'], self.app.config.api['port'])
         logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
