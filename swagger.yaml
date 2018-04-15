@@ -38,6 +38,10 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Vault'
+        '400': # 4XX
+          description: An error occurred during operation
+          schema:
+            $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
   '/vault/{vaultId}/':
@@ -67,6 +71,10 @@ paths:
           description: successful operation
           schema:
             $ref: '#/definitions/ApiResponse'
+        '400': # 4XX
+          description: An error occurred during operation
+          schema:
+            $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
   '/vault/{vaultId}/users/':
@@ -109,6 +117,10 @@ paths:
       responses:
         '200':
           description: successful operation
+        '400': # 4XX
+          description: An error occurred during operation
+          schema:
+            $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
   /flying-vault/:
@@ -126,6 +138,10 @@ paths:
             type: array
             items:
               $ref: '#/definitions/FlyingVault'
+        '400': # 4XX
+          description: An error occurred during operation
+          schema:
+            $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
   '/flying-vault/{remoteId}/':
@@ -152,6 +168,10 @@ paths:
           description: successful operation
           schema:
             $ref: '#/definitions/ApiResponse'
+        '400': # 4XX
+          description: An error occurred during operation
+          schema:
+            $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
   /user_key_export/:
@@ -276,6 +296,24 @@ definitions:
       status:
         type: string
         example: ok
+  ApiErrorResponse:
+    type: object
+    properties:
+      status:
+        type: string
+        example: error
+      reason:
+        type: string
+        example: An error occurred.
+      code:
+        type: string
+        enum:
+        - InvalidAuthentifaction
+        - VaultNotFound
+        - VaultIsAlreadySyncing
+        - VaultAlreadyExists
+        - VaultNotInitialized
+        - ServerError
   User:
     type: object
     required:
