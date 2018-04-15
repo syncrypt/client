@@ -12,12 +12,13 @@ from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
 
+from sqlalchemy import Column, Integer, String
 from syncrypt.config import VaultConfig
 from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
 
-from .base import MetadataHolder
+from .base import Base, MetadataHolder
 from .bundle import Bundle
 from .identity import Identity
 
@@ -53,7 +54,11 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
         return (msg, dict(kwargs, extra={'vault_id': self.vault.id}))
 
 
-class Vault(MetadataHolder):
+class Vault(MetadataHolder, Base):
+    __tablename__ = 'vault'
+    id = Column(Integer(), primary_key=True)
+    byte_size = Column(Integer())
+
     vault_info = None
 
     def __init__(self, folder):
