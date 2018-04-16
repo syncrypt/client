@@ -95,7 +95,7 @@ class Vault(MetadataHolder, Base):
             with self.config.update_context():
                 self.config.vault['icon'] = metadata['icon']
 
-    metadata = property(__get_metadata, __set_metadata)
+    _metadata = property(__get_metadata, __set_metadata)
 
     @property
     def identity(self):

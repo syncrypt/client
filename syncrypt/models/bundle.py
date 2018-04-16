@@ -42,7 +42,7 @@ class Bundle(MetadataHolder):
             self.store_hash = store_hash
 
     @property
-    def metadata(self):
+    def _metadata(self):
         return {
             'filename': self.encode_path(self.relpath),
             'key': self.key,
@@ -217,21 +217,21 @@ class VirtualBundle(Bundle):
     filesystem
     '''
 
-    __slots__ = Bundle.__slots__ + ('_metadata',)
+    __slots__ = Bundle.__slots__ + ('_virtual_metadata',)
 
     def __get_metadata(self):
-        return self._metadata
+        return self._virtual_metadata
 
     def __set_metadata(self, metadata):
-        self._metadata = metadata
+        self._virtual_metadata = metadata
         if 'filename' in metadata:
             self.relpath = self.decode_path(metadata['filename'])
             self.path = os.path.join(self.vault.folder, self.relpath)
 
-    metadata = property(__get_metadata, __set_metadata)
+    _metadata = property(__get_metadata, __set_metadata)
 
     def load_key(self):
-        self.key = self.metadata[b'key']
+        self.key = self._metadata[b'key']
 
     async def update_serialized_metadata(self, stream):
         await MetadataHolder.update_serialized_metadata(self, stream)

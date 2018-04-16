@@ -13,11 +13,11 @@ Base = declarative_base()
 class MetadataHolder:
 
     @property
-    def metadata(self):
+    def _metadata(self):
         raise NotImplementedError()
 
-    @metadata.setter
-    def metadata_setter(self):
+    @_metadata.setter
+    def _metadata_setter(self):
         raise NotImplementedError()
 
     @property
@@ -26,7 +26,7 @@ class MetadataHolder:
 
     @property
     def serialized_metadata(self):
-        return umsgpack.packb(self.metadata)
+        return umsgpack.packb(self._metadata)
 
     def encrypted_metadata_reader(self):
         return Once(self.serialized_metadata) \
@@ -41,5 +41,5 @@ class MetadataHolder:
 
     async def update_serialized_metadata(self, stream):
         serialized_metadata = await stream.read()
-        self.metadata = umsgpack.unpackb(serialized_metadata)
+        self._metadata = umsgpack.unpackb(serialized_metadata)
 

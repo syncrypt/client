@@ -121,7 +121,7 @@ class VaultResource(Resource):
         dct = super(VaultResource, self).dehydrate(v)
 
         dct.update(folder=v.folder, state=v.state, remote_id=v.config.id,
-                   metadata=v.metadata, ignore=v.config.get('vault.ignore').split(','))
+                   metadata=v._metadata, ignore=v.config.get('vault.ignore').split(','))
 
         # Compile some information about the underlying crypto system(s)
         crypt_info = {
