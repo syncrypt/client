@@ -56,7 +56,15 @@ class VaultLoggerAdapter(logging.LoggerAdapter):
 
 class Vault(MetadataHolder, Base):
     __tablename__ = 'vault'
-    id = Column(Integer(), primary_key=True)
+
+    # id: The value to uniquely identify a vault locally. It needs to be a seperate value from
+    # the "remote id" because
+    # 1) We might clone the same remote id to multiple local vaults (each local vault needs to
+    #    be identifyable)
+    # 2) We might be in the UNINITIALIZED state, where we don't even know the remote id yet.
+    # Still we need to be able to identify the vault.
+    id = Column(String(128), primary_key=True)
+    folder = Column(String(255))
     byte_size = Column(Integer())
 
     vault_info = None
@@ -68,6 +76,10 @@ class Vault(MetadataHolder, Base):
 
         self.logger = VaultLoggerAdapter(self, logger)
         self.vault_info = VaultInfo()
+
+        hash_obj = hashlib.new('sha256')
+        hash_obj.update(os.path.normpath(self.folder).encode())
+        self.id = hash_obj.hexdigest()
 
     @property
     def config(self):
@@ -116,25 +128,6 @@ class Vault(MetadataHolder, Base):
             kwargs = self.config.backend_kwargs
             self._backend = Backend(self, **kwargs)
             return self._backend
-
-    @property
-    def id(self):
-        """
-        The value to uniquely identify a vault locally. It needs to be a seperate value from
-        the "remote id" because
-        1) We might clone the same remote id to multiple local vaults (each local vault needs to
-           be identifyable)
-        2) We might be in the UNINITIALIZED state, where we don't even know the remote id yet.
-           Still we need to be able to identify the vault.
-        We'll take a hash of the expanded path for now.
-        """
-        try:
-            return self._local_id
-        except AttributeError:
-            hash_obj = hashlib.new('sha256')
-            hash_obj.update(os.path.normpath(self.folder).encode())
-            self._local_id = hash_obj.hexdigest()
-            return self._local_id
 
     # Deprecated
     @property
