@@ -294,7 +294,10 @@ class SyncryptAPI():
             if ex.status == 404:
                 return self.exception_response(ex)
             raise
-        except (SyncryptBaseException, Exception) as ex:
+        except SyncryptBaseException as ex:
+            return self.exception_response(ex)
+        except Exception as ex:
+            logger.exception(ex)
             return self.exception_response(ex)
 
     def initialize(self):
