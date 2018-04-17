@@ -7,11 +7,10 @@ from getpass import getpass
 import syncrypt
 from syncrypt.api import APIClient, SyncryptAPI
 from syncrypt.app.auth import AuthenticationProvider
-from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
+from syncrypt.exceptions import (InvalidAuthentification, VaultFolderDoesNotExist,
+                                 VaultNotInitialized)
 from syncrypt.models import VaultState
 
-from ..exceptions import InvalidAuthentification
-from ..utils.updates import is_update_available
 from .events import create_watchdog
 from .syncrypt import SyncryptApp
 
@@ -62,6 +61,8 @@ class SyncryptDaemonApp(SyncryptApp):
                 self.shutdown_event.set()
                 return
 
+    async def post_setup(self):
+
         for vault in self.vaults:
             try:
                 await self.check_vault(vault)
@@ -69,11 +70,12 @@ class SyncryptDaemonApp(SyncryptApp):
             except VaultFolderDoesNotExist:
                 logger.error('%s does not exist, removing vault from list.' % vault)
                 await self.remove_vault(vault)
+            except InvalidAuthentification:
+                logger.exception(e)
+                await self.set_vault_state(vault, VaultState.FAILURE)
             except Exception as e:
                 logger.exception(e)
-                continue
 
-    async def post_setup(self):
         try:
             if self.vaults:
                 await self.refresh_vault_info()
