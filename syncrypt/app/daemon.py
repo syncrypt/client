@@ -24,6 +24,7 @@ class SyncryptDaemonApp(SyncryptApp):
 
         self.shutdown_event = asyncio.Event()
         self.restart_flag = False
+        self.initial_push = kwargs.pop('initial_push', True)
 
         super(SyncryptDaemonApp, self).__init__(config, **kwargs)
 
@@ -79,7 +80,8 @@ class SyncryptDaemonApp(SyncryptApp):
         except InvalidAuthentification:
             logger.info('Continuing without getting current vault information')
 
-        await self.push()
+        if self.initial_push:
+            await self.push()
 
     async def stop(self):
         for vault in self.vaults:

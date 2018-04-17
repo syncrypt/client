@@ -30,6 +30,8 @@ parser.add_argument('-d,--detach', action='store_true',
         dest='detach', help='Detach from console')
 parser.add_argument('-c,--config', action='store', type=str,
         dest='config', help='Config file')
+parser.add_argument('--no-initial-push', action='store_false',
+        dest='initial_push', help='Do not push all vaults after daemon started')
 parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
         dest='loglevel', choices=LOGLEVELS, help='Log level: ' + ', '.join(LOGLEVELS))
 
@@ -44,7 +46,7 @@ setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.lo
 
 
 def run_syncrypt():
-    app = SyncryptDaemonApp(app_config)
+    app = SyncryptDaemonApp(app_config, initial_push=config.initial_push)
 
     smokesignal.emit('pre_setup', app=app)
 
