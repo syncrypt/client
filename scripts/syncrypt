@@ -64,6 +64,7 @@ class SyncryptCmd():
     def run(self):
         raise NotImplementedError()
 
+
 class SingleVaultCmd(SyncryptCmd):
     '''command that supports only a single vault directory'''
 
@@ -80,6 +81,7 @@ class SingleVaultCmd(SyncryptCmd):
     def setup(self):
         self.vault_dirs = [self.config.directory]
         super(SingleVaultCmd, self).setup()
+
 
 class MultipleVaultCmd(SyncryptCmd):
     '''command that supports multiple vault directories'''
@@ -296,6 +298,14 @@ class Login(NoVaultCmd):
         self.loop.run_until_complete(self.app.login())
 
 
+class Register(NoVaultCmd):
+    command = 'register'
+    description = 'register a new user'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.register())
+
+
 class Logout(NoVaultCmd):
     command = 'logout'
     description = 'logout and remove auth token'
@@ -352,9 +362,9 @@ class KeyExport(NoVaultCmd):
         self.loop.run_until_complete(self.app.export_user_key(self.config.filename))
 
 
-COMMANDS = [Login(), Logout(), CheckUpdate(), Init(), ListVaults(), Clone(), Pull(), Push(),
-        AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(), ConfigSet(), ConfigUnset(),
-        Export(), Import(), ListKeys(), KeyExport()]
+COMMANDS = [Register(), Login(), Logout(), CheckUpdate(), Init(), ListVaults(), Clone(), Pull(),
+        Push(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(), ConfigSet(),
+        ConfigUnset(), Export(), Import(), ListKeys(), KeyExport()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

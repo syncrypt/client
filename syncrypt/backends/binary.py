@@ -160,7 +160,7 @@ class BinaryStorageConnection(object):
         self.writer.write(packet)
         await self.writer.drain()
 
-    async def connect(self, vault=None):
+    async def connect(self):
 
         if not self.connected:
             if self.manager.ssl:
@@ -191,9 +191,11 @@ class BinaryStorageConnection(object):
 
             self.logger.debug('Connected (client: %s; server; %s)', client_version, self.server_version)
 
+    async def login(self, vault=None):
+
         self.vault = vault
         if vault and vault.config.id:
-            logger.debug('Login to vault %s', vault.config.id)
+            self.logger.debug('Login to vault %s', vault.config.id)
 
         auth = self.vault and self.vault.config.get('remote.auth')
 
@@ -416,7 +418,6 @@ class BinaryStorageConnection(object):
 
         # if all went well, store revision_id in vault
         self.vault.update_revision(server_info['id'])
-
 
     async def vault_metadata(self):
         self.logger.debug('Getting metadata for %s', self.vault)
@@ -654,7 +655,6 @@ class BinaryStorageConnection(object):
 
         return map(transform_key, keys)
 
-
     async def list_vault_user_key_fingerprints(self):
         await self.write_term('list_vault_user_key_fingerprints')
         fingerprints = [fp.decode() for fp in (await self.read_response())]
@@ -795,7 +795,7 @@ class BinaryStorageManager(object):
     @retry(retry=retry_if_exception_type() & retry_unless_exception_type(InvalidAuthentification),
            stop=stop_after_attempt(3),
            wait=wait_exponential(multiplier=1, max=10))
-    async def acquire_connection(self, vault):
+    async def acquire_connection(self, vault, skip_login=False):
         'return an available connection or block until one is free'
         if self._monitor_task is None:
             self._monitor_task = \
@@ -811,7 +811,9 @@ class BinaryStorageManager(object):
                     logger.debug('Found an available connection, but we need to switch the vault to %s', vault)
                     conn.connecting = True
                     try:
-                        await conn.connect(vault)
+                        await conn.connect()
+                        if not skip_login:
+                            await conn.login(vault)
                     except:
                         conn._clear_connection()
                         raise
@@ -827,7 +829,9 @@ class BinaryStorageManager(object):
             if not conn.connected and not conn.connecting:
                 conn.connecting = True
                 try:
-                    await conn.connect(vault)
+                    await conn.connect()
+                    if not skip_login:
+                        await conn.login(vault)
                     conn.available.clear()
                     logger.debug("Choosing %s", conn)
                     return conn
@@ -900,8 +904,8 @@ class BinaryStorageBackend(StorageBackend):
         manager.username = username
         manager.password = password
 
-    async def _acquire_connection(self):
-        return await get_manager_instance().acquire_connection(self.vault)
+    async def _acquire_connection(self, **kwargs):
+        return await get_manager_instance().acquire_connection(self.vault, **kwargs)
 
     async def init(self):
         self.auth = None
@@ -969,6 +973,10 @@ class BinaryStorageBackend(StorageBackend):
                 await conn.download(bundle)
             except UnsuccessfulResponse:
                 conn.logger.error('Could not download bundle: %s', str(bundle))
+
+    async def signup(self, username, password, firstname, surname):
+        async with (await self._acquire_connection(skip_login=True)) as conn:
+            return await conn.signup(username, password, firstname, surname)
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):

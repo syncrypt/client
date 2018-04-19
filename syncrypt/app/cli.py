@@ -49,6 +49,27 @@ class SyncryptCLIApp(SyncryptApp):
             await backend.close()
             await self.upload_identity()
 
+    async def register(self):
+        #cfg = self.config
+        #auth_provider = auth_provider or self.auth_provider
+
+        username = None
+        while not username:
+            username = input('Email: ')
+        firstname = None
+        while not firstname:
+            firstname = input('First name: ')
+        surname = None
+        while not surname:
+            surname = input('Surname: ')
+        password = getpass()
+        password_again = getpass('Password (again): ')
+        if password != password_again:
+            raise ValueError('Passwords do not match')
+        backend = self.config.backend_cls(**self.config.backend_kwargs)
+        await backend.signup(username, password, firstname, surname)
+        print("Please check your inbox for the confirmation mail.")
+
     async def logout(self):
         with self.config.update_context():
             self.config.update('remote', {'auth': ''})
