@@ -117,22 +117,21 @@ class SyncryptAPI():
         content = await request.content.read()
         credentials = json.loads(content.decode())
         logger.info('Login requested with email: %s', credentials['email'])
-        try:
-            backend = await self.app.open_backend(always_ask_for_creds=True,
-                    auth_provider=CredentialsAuthenticationProvider(
-                        credentials['email'], credentials['password']),
-                    num_tries=1)
-            logger.info('Successfully logged in and stored auth token.')
-            await backend.close()
-            await self.app.upload_identity()
-            return JSONResponse({
-                'status': 'ok'
-            })
-        except InvalidAuthentification:
-            return JSONResponse({
-                'status': 'error',
-                'text': 'Invalid authentification'
-            }, status=401)
+        backend = await self.app.open_backend(always_ask_for_creds=True,
+                auth_provider=CredentialsAuthenticationProvider(
+                    credentials['email'], credentials['password']),
+                num_tries=1)
+        logger.info('Successfully logged in and stored auth token.')
+        await backend.close()
+        await self.app.upload_identity()
+        return JSONResponse({
+            'status': 'ok'
+        })
+        await backend.close()
+        await self.app.upload_identity()
+        return JSONResponse({
+            'status': 'ok'
+        })
 
     @require_auth_token
     async def get_auth_check(self, request):
