@@ -7,6 +7,8 @@ info:
 host: '127.0.0.1:28080'
 basePath: /v1
 tags:
+  - name: account
+    description: Registration and login calls
   - name: vault
     description: Everything about your Vaults
   - name: keys
@@ -172,6 +174,42 @@ paths:
           description: An error occurred during operation
           schema:
             $ref: '#/definitions/ApiErrorResponse'
+      security:
+        - api_key: []
+  /auth/signup/:
+    post:
+      tags:
+        - account
+      summary: Register a new user account
+      description: ''
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - name: params
+          in: body
+          description: Account parameters
+          schema:
+            type: object
+            required:
+              - username
+              - password
+              - first_name
+              - last_name
+            properties:
+              username:
+                type: string
+                example: mail@example.com
+              password:
+                type: string
+              first_name:
+                type: string
+              last_name:
+                type: string
+      responses:
+        '200':
+          description: successful operation
       security:
         - api_key: []
   /user_key_export/:

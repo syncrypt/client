@@ -66,9 +66,8 @@ class SyncryptCLIApp(SyncryptApp):
         password_again = getpass('Password (again): ')
         if password != password_again:
             raise ValueError('Passwords do not match')
-        backend = self.config.backend_cls(**self.config.backend_kwargs)
-        await backend.signup(username, password, firstname, surname)
-        print("Please check your inbox for the confirmation mail.")
+        await self.signup(username, password, firstname, surname)
+        print("Registration successful, please check your inbox for the confirmation mail.")
 
     async def logout(self):
         with self.config.update_context():

@@ -127,8 +127,14 @@ class SyncryptAPI():
         return JSONResponse({
             'status': 'ok'
         })
-        await backend.close()
-        await self.app.upload_identity()
+
+    @require_auth_token
+    async def post_auth_signup(self, request):
+        content = await request.content.read()
+        credentials = json.loads(content.decode())
+        logger.info('Signup requested with email: %s', credentials['email'])
+        await self.app.signup(credentials['email'], credentials['password'],
+                              credentials['first_name'], credentials['last_name'])
         return JSONResponse({
             'status': 'ok'
         })
@@ -276,6 +282,7 @@ class SyncryptAPI():
         VaultUserResource(self.app).add_routes(self.web_app.router)
         FlyingVaultResource(self.app).add_routes(self.web_app.router)
 
+        self.web_app.router.add_route('POST', '/v1/auth/signup/', self.post_auth_signup)
         self.web_app.router.add_route('POST', '/v1/auth/login/', self.post_auth_login)
         self.web_app.router.add_route('GET', '/v1/auth/check/', self.get_auth_check)
         self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
@@ -285,7 +292,6 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/version/', self.get_version)
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)
-
 
         self.web_app.router.add_route('OPTIONS', '/v1/version/', self.dispatch_options)
         self.web_app.router.add_route('OPTIONS', '/v1/shutdown/', self.dispatch_options)

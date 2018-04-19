@@ -91,6 +91,10 @@ class SyncryptApp(object):
     async def initialize(self):
         await self.identity.init()
 
+    async def signup(self, username, password, firstname, surname):
+        backend = self.config.backend_cls(**self.config.backend_kwargs)
+        await backend.signup(username, password, firstname, surname)
+
     def add_vault_by_path(self, path):
         return self.add_vault(Vault(path))
 
