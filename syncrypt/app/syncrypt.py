@@ -5,8 +5,6 @@ import socket
 import sys
 from zipfile import ZipFile
 
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 import syncrypt
 from syncrypt.exceptions import (InvalidAuthentification, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
@@ -307,7 +305,6 @@ class SyncryptApp(object):
             with vault.config.update_context():
                 vault.config.unset(setting)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     async def check_vault(self, vault: Vault):
         await vault.backend.open()
 
@@ -456,7 +453,6 @@ class SyncryptApp(object):
 
         await backend.close()
 
-    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     async def push(self):
         "Push all registered vaults"
         async with AsyncContext(concurrency=3) as ctx:
@@ -507,7 +503,6 @@ class SyncryptApp(object):
             vault.logger.exception(e)
             await self.set_vault_state(vault, VaultState.FAILURE)
 
-    #@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, max=10))
     async def push_bundle(self, bundle):
         'update bundle and maybe upload'
 
