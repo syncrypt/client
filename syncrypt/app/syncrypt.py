@@ -9,7 +9,7 @@ import syncrypt
 from syncrypt.exceptions import (InvalidAuthentification, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
-from syncrypt.models import Identity, Vault, VaultState, VirtualBundle
+from syncrypt.models import Identity, Vault, VaultState, VirtualBundle, IdentityState
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
@@ -177,6 +177,8 @@ class SyncryptApp(object):
             pass
         logger.info("Initializing %s", vault)
         await vault.identity.init()
+        if vault.identity.state != IdentityState.INITIALIZED:
+            await vault.identity.generate_keys()
         global_auth = self.config.remote.get('auth')
         if global_auth:
             logger.debug('Using user auth token to initialize vault.')

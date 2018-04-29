@@ -10,7 +10,7 @@ from aiohttp.abc import AbstractAccessLogger
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.binary import get_manager_instance
-from syncrypt.models.identity import IdentityState
+from syncrypt.models import IdentityState
 
 from ..exceptions import InvalidAuthentification, SyncryptBaseException
 from ..utils.updates import is_update_available
