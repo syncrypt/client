@@ -6,7 +6,7 @@ import sys
 from zipfile import ZipFile
 
 import syncrypt
-from syncrypt.exceptions import (InvalidAuthentification, VaultAlreadyExists,
+from syncrypt.exceptions import (InvalidAuthentification, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
 from syncrypt.models import Identity, Vault, VaultState, VirtualBundle
@@ -78,18 +78,22 @@ class SyncryptApp(object):
         # register vault objects
         if vault_dirs is None:
             vault_dirs = self.config.vault_dirs
+
         for vault_dir in vault_dirs:
             vault = Vault(vault_dir)
-            try:
-                vault.check_existence()
-                self.vaults.append(vault)
-            except VaultFolderDoesNotExist:
-                logger.warn('Ignoring %s, because its folder does not exist', vault)
+            self.vaults.append(vault)
 
         super(SyncryptApp, self).__init__()
 
     async def initialize(self):
         await self.identity.init()
+        for vault in self.vaults:
+            try:
+                vault.check_existence()
+                self.identity.assert_initialized()
+            except SyncryptBaseException as e:
+                logger.exception(e)
+                await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def signup(self, username, password, firstname, surname):
         backend = self.config.backend_cls(**self.config.backend_kwargs)
@@ -462,9 +466,10 @@ class SyncryptApp(object):
         async with AsyncContext(concurrency=3) as ctx:
             for vault in self.vaults:
 
-                #if vault.state != VaultState.READY:
-                #    logger.warning("Skipping %s because it state is %s", vault, vault.state)
-                #    continue
+                if not self.identity.is_initialized():
+                    logger.error('Identity is not initialized yet')
+                    await self.set_vault_state(vault, VaultState.FAILURE)
+                    continue
 
                 await ctx.create_task(vault, self.push_vault(vault))
                 for result in ctx.completed_tasks():
@@ -490,6 +495,8 @@ class SyncryptApp(object):
     async def push_vault(self, vault):
         "Push a single vault"
         logger.info('Pushing %s', vault)
+
+        self.identity.assert_initialized()
 
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
@@ -534,12 +541,19 @@ class SyncryptApp(object):
     async def pull(self, full=False):
         "Pull all registered vaults"
 
+        self.identity.assert_initialized()
+
         async with AsyncContext(concurrency=3) as ctx:
             for vault in self.vaults:
 
                 #if vault.state == VaultState.SYNCING:
                 #    logger.warning("Skipping %s because it state is %s", vault, vault.state)
                 #    continue
+
+                if not self.identity.is_initialized():
+                    logger.error('Identity is not initialized yet')
+                    await self.set_vault_state(vault, VaultState.FAILURE)
+                    continue
 
                 await ctx.create_task(vault, self.pull_vault(vault, full=full))
                 for result in ctx.completed_tasks():

@@ -59,10 +59,9 @@ class IdentityError(SyncryptBaseException):
     pass
 
 
-class IdentityNotInitialized(IdentityError):
-    pass
+class IdentityStateError(IdentityError):
+    status = 400
 
 
-class IdentityIsInitializing(IdentityError):
-    pass
-
+class IdentityNotInitialized(IdentityStateError):
+    status = 401

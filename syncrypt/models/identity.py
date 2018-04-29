@@ -11,7 +11,7 @@ import Cryptodome.Util.number
 from Cryptodome.PublicKey import RSA
 
 from syncrypt.pipes import Once
-from syncrypt.exceptions import IdentityError, IdentityNotInitialized, IdentityIsInitializing
+from syncrypt.exceptions import IdentityError, IdentityNotInitialized, IdentityStateError
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class Identity(object):
 
     def read(self):
         if self.state == IdentityState.INITIALIZING:
-            raise IdentityIsInitializing()
+            raise IdentityStateError()
 
         if not os.path.exists(self.id_rsa_path) or not os.path.exists(
             self.id_rsa_pub_path
@@ -87,19 +87,11 @@ class Identity(object):
         return Cryptodome.Util.number.size(self.private_key.n)
 
     async def init(self):
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self._init)
+        if os.path.exists(self.id_rsa_path) and os.path.exists(self.id_rsa_pub_path):
+            self.read()
 
     def is_initialized(self):
         return self.state == IdentityState.INITIALIZED
-
-    def _init(self):
-        if not os.path.exists(self.id_rsa_path) or not os.path.exists(
-            self.id_rsa_pub_path
-        ):
-            self.generate_keys()
-        else:
-            self.read()
 
     # Do NOT enforce a specific key length yet
     # if Crypto.Util.number.size(self.public_key.n) != self.config.rsa_key_len or \
@@ -113,24 +105,35 @@ class Identity(object):
         'return the public key serialized as bytes'
         return self.public_key.exportKey('DER')
 
-    def generate_keys(self):
+    async def generate_keys(self):
+        if self.state != IdentityState.UNINITIALIZED:
+            raise IdentityStateError()
         self.state = IdentityState.INITIALIZING
-        if not os.path.exists(os.path.dirname(self.id_rsa_path)):
-            os.makedirs(os.path.dirname(self.id_rsa_path))
-        logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
-        keys = RSA.generate(self.config.rsa_key_len)
-        logger.debug('Finished generating RSA key pair.')
-        with open(self.id_rsa_pub_path, 'wb') as id_rsa_pub:
-            id_rsa_pub.write(keys.publickey().exportKey())
-        with open(self.id_rsa_path, 'wb') as id_rsa:
-            id_rsa.write(keys.exportKey())
-        self._keypair = (keys.publickey(), keys)
-        assert self._keypair[0] is not None
+
+        async def _generate():
+            if not os.path.exists(os.path.dirname(self.id_rsa_path)):
+                os.makedirs(os.path.dirname(self.id_rsa_path))
+            logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
+            keys = RSA.generate(self.config.rsa_key_len)
+            logger.debug('Finished generating RSA key pair.')
+            with open(self.id_rsa_pub_path, 'wb') as id_rsa_pub:
+                id_rsa_pub.write(keys.publickey().exportKey())
+            with open(self.id_rsa_path, 'wb') as id_rsa:
+                id_rsa.write(keys.exportKey())
+            self._keypair = (keys.publickey(), keys)
+            assert self._keypair[0] is not None
+
+        loop = asyncio.get_event_loop()
+        await (await loop.run_in_executor(None, _generate))
+
         self.state = IdentityState.INITIALIZED
 
-    def get_fingerprint(self):
+    def assert_initialized(self):
         if not self.is_initialized():
             raise IdentityNotInitialized()
+
+    def get_fingerprint(self):
+        self.assert_initialized()
 
         assert self.public_key
         pk_hash = hashlib.new(self.config.hash_algo)

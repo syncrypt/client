@@ -22,3 +22,13 @@ def require_auth_token(f):
         else:
             raise aiohttp.web.HTTPForbidden()
     return inner
+
+def require_identity(f):
+    '''
+    An API resource with this decorator requires that the identity is initialized, i.e. that the
+    user keys have been generated.
+    '''
+    def inner(resource, request, *args, **kwargs):
+        resource.app.identity.assert_initialized()
+        return f(resource, request, *args, **kwargs)
+    return inner

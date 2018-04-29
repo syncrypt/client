@@ -212,7 +212,20 @@ paths:
           description: successful operation
       security:
         - api_key: []
-  /user_key_export/:
+  /identity/generate/:
+    get:
+      tags:
+        - keys
+      summary: Generate the user key
+      description: ''
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+      security:
+        - api_key: []
+  /identity/export/:
     post:
       tags:
         - keys
@@ -245,6 +258,18 @@ paths:
         - admin
       summary: Get the current version
       description: ''
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+      security:
+        - api_key: []
+  /stats/:
+    get:
+      tags:
+        - admin
+      summary: Runtime statistics about the daemon
       produces:
         - application/json
       responses:

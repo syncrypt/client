@@ -10,10 +10,11 @@ from aiohttp.abc import AbstractAccessLogger
 import syncrypt
 from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.binary import get_manager_instance
+from syncrypt.models.identity import IdentityState
 
 from ..exceptions import InvalidAuthentification, SyncryptBaseException
 from ..utils.updates import is_update_available
-from .auth import generate_api_auth_token, require_auth_token
+from .auth import generate_api_auth_token, require_auth_token, require_identity
 from .client import APIClient
 from .resources import (BundleResource, FlyingVaultResource, UserResource, VaultResource,
                         VaultUserResource)
@@ -50,7 +51,8 @@ class SyncryptAPI():
         vault_resource = VaultResource(self.app)
         return JSONResponse({
             'stats': self.app.stats,
-            'user_key_state': self.app.identity.state,
+            'identity_state': self.app.identity.state,
+            'user_key_state': self.app.identity.state, # deprecated
             'slots': get_manager_instance().get_stats()
         })
 
@@ -231,7 +233,13 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
-    async def post_user_key_export(self, request):
+    async def get_identity_generate(self, request):
+        await self.app.identity.generate_keys()
+        return JSONResponse({'status': 'ok'})
+
+    @require_auth_token
+    @require_identity
+    async def post_identity_export(self, request):
         try:
             content = await request.content.read()
             request_dict = json.loads(content.decode())
@@ -288,7 +296,12 @@ class SyncryptAPI():
         self.web_app.router.add_route('GET', '/v1/auth/logout/', self.get_auth_logout)
         self.web_app.router.add_route('GET', '/v1/auth/user/', self.get_user_info)
         self.web_app.router.add_route('POST', '/v1/feedback/', self.post_user_feedback)
-        self.web_app.router.add_route('POST', '/v1/user_key_export/', self.post_user_key_export)
+
+        self.web_app.router.add_route('GET', '/v1/identity/generate/', self.get_identity_generate)
+        self.web_app.router.add_route('POST', '/v1/identity/export/', self.post_identity_export)
+        # Following is deprecated; only for backward compat
+        self.web_app.router.add_route('POST', '/v1/user_key_export/', self.post_identity_export)
+
         self.web_app.router.add_route('GET', '/v1/version/', self.get_version)
         self.web_app.router.add_route('GET', '/v1/shutdown/', self.get_shutdown)
         self.web_app.router.add_route('GET', '/v1/restart/', self.get_restart)

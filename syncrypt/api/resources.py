@@ -486,4 +486,3 @@ class BundleResource(Resource):
 
     async def get_obj(self, request):
         raise NotImplementedError
-

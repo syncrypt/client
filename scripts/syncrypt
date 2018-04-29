@@ -350,6 +350,14 @@ class CheckUpdate(NoVaultCmd):
         self.loop.run_until_complete(self.app.check_update())
 
 
+class GenerateKey(NoVaultCmd):
+    command = 'generate-key'
+    description = 'generate your user key'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.identity.generate_keys())
+
+
 class KeyExport(NoVaultCmd):
     command = 'export-key'
     description = 'export your user-key'
@@ -364,7 +372,7 @@ class KeyExport(NoVaultCmd):
 
 COMMANDS = [Register(), Login(), Logout(), CheckUpdate(), Init(), ListVaults(), Clone(), Pull(),
         Push(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(), ConfigSet(),
-        ConfigUnset(), Export(), Import(), ListKeys(), KeyExport()]
+        ConfigUnset(), Export(), Import(), ListKeys(), GenerateKey(), KeyExport()]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(

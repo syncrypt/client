@@ -14,7 +14,7 @@ from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWr
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
 from syncrypt.vendor.keyart import draw_art
 
-from ..exceptions import InvalidAuthentification, VaultNotInitialized
+from ..exceptions import IdentityNotInitialized, InvalidAuthentification, VaultNotInitialized
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp
 
@@ -39,6 +39,13 @@ class SyncryptCLIApp(SyncryptApp):
                                              **kwargs)
 
     async def login(self):
+        try:
+            self.identity.assert_initialized()
+        except IdentityNotInitialized:
+            print("Your user key hasn't been generated yet. Please either")
+            print(" 1) generate a new key with 'syncrypt generate-key'")
+            print(" 2) import an existing key with 'syncrypt import-key'")
+            return
         # Already logged in?
         try:
             backend = await self.open_backend(num_tries=1)
