@@ -3,7 +3,6 @@ import os
 import os.path
 
 import asynctest
-import pytest
 
 from syncrypt.config import AppConfig
 from syncrypt.models import Identity
@@ -35,7 +34,6 @@ class IdentityTests(VaultTestCase):
         self.assertEqual(fp, identity2.get_fingerprint())
         self.assertEqual(identity2.key_size(), 4096)
 
-    @pytest.mark.skip(reason="bad way of testing async code (flaky)")
     async def test_async_key_generation(self):
         'check wether key generation can happen concurrently'
 
@@ -52,14 +50,14 @@ class IdentityTests(VaultTestCase):
         x = [0]
         async def counter():
             while True:
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.001)
                 x[0] += 1
 
-        task = loop.create_task(counter())
         await identity.init()
+        task = loop.create_task(counter())
         await identity.generate_keys()
         task.cancel()
 
         # Make sure the inner loop of counter ran more than 20 times, which
-        # assumes that key generation took more than 200 ms
+        # assumes that key generation took more than 20 ms
         self.assertGreater(x[0], 20)

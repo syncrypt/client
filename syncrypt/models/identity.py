@@ -110,7 +110,7 @@ class Identity(object):
             raise IdentityStateError()
         self.state = IdentityState.INITIALIZING
 
-        async def _generate():
+        def _generate():
             if not os.path.exists(os.path.dirname(self.id_rsa_path)):
                 os.makedirs(os.path.dirname(self.id_rsa_path))
             logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
@@ -124,7 +124,7 @@ class Identity(object):
             assert self._keypair[0] is not None
 
         loop = asyncio.get_event_loop()
-        await (await loop.run_in_executor(None, _generate))
+        await loop.run_in_executor(None, _generate)
 
         self.state = IdentityState.INITIALIZED
 
