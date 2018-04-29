@@ -11,6 +11,7 @@ import Cryptodome.Util.number
 from Cryptodome.PublicKey import RSA
 
 from syncrypt.pipes import Once
+from syncrypt.exceptions import IdentityError, IdentityNotInitialized, IdentityIsInitializing
 
 logger = logging.getLogger(__name__)
 
@@ -19,18 +20,6 @@ class IdentityState(Enum):
     UNINITIALIZED = "uninitialized"
     INITIALIZING = "initializing"
     INITIALIZED = "initialized"
-
-
-class IdentityError(RuntimeError):
-    pass
-
-
-class IdentityNotInitialized(IdentityError):
-    pass
-
-
-class IdentityIsInitializing(IdentityError):
-    pass
 
 
 class Identity(object):

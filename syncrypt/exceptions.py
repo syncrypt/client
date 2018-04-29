@@ -53,3 +53,16 @@ class ConnectionResetException(BinaryStorageException):
 
 class UnexpectedResponseException(BinaryStorageException):
     pass
+
+
+class IdentityError(SyncryptBaseException):
+    pass
+
+
+class IdentityNotInitialized(IdentityError):
+    pass
+
+
+class IdentityIsInitializing(IdentityError):
+    pass
+

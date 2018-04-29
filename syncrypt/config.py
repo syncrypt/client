@@ -196,4 +196,3 @@ class AppConfig(Config, BackendConfigMixin):
         except ValueError:
             pass
         self.vault_dirs = a
-
