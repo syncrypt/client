@@ -257,6 +257,23 @@ class SyncryptAPI():
 
         return JSONResponse({'status': 'ok', 'filename': path})
 
+    @require_auth_token
+    async def post_identity_import(self, request):
+        try:
+            content = await request.content.read()
+            request_dict = json.loads(content.decode())
+        except:
+            return web.Response(status=400, text='Need JSON request body.')
+
+        if not 'path' in request_dict:
+            return web.Response(status=400, text='Missing parameter "path".')
+
+        path = request_dict['path']
+
+        await self.app.import_user_key(path)
+
+        return JSONResponse({'status': 'ok'})
+
     def exception_response(self, exc):
         return web.Response(
             status = exc.status if hasattr(exc, 'status') else 500,
@@ -299,6 +316,7 @@ class SyncryptAPI():
 
         self.web_app.router.add_route('GET', '/v1/identity/generate/', self.get_identity_generate)
         self.web_app.router.add_route('POST', '/v1/identity/export/', self.post_identity_export)
+        self.web_app.router.add_route('POST', '/v1/identity/import/', self.post_identity_import)
         # Following is deprecated; only for backward compat
         self.web_app.router.add_route('POST', '/v1/user_key_export/', self.post_identity_export)
 

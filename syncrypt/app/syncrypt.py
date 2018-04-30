@@ -419,7 +419,7 @@ class SyncryptApp(object):
 
     async def import_user_key(self, filename):
         self.identity.import_from_package(filename)
-        logger.info("Imported user key.")
+        logger.info("Imported user key with fingerprint: %s", self.identity.get_fingerprint())
 
     async def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package
