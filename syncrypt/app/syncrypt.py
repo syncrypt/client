@@ -415,7 +415,11 @@ class SyncryptApp(object):
             export_pipe = export_pipe >> FileWriter(filename)
         await export_pipe.consume()
         if filename:
-            logger.info("Key has been written to: %s" % filename)
+            logger.info("Key has been written to: %s", filename)
+
+    async def import_user_key(self, filename):
+        self.identity.import_from_package(filename)
+        logger.info("Imported user key.")
 
     async def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package

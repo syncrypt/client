@@ -156,3 +156,12 @@ class Identity(object):
         zipf.close()
         memview.seek(0)
         return Once(memview.read())
+
+    def import_from_package(self, filename):
+        with zipfile.ZipFile(filename, 'r') as package:
+            with open(self.id_rsa_path, 'wb') as f:
+                f.write(package.read('id_rsa'))
+            with open(self.id_rsa_pub_path, 'wb') as f:
+                f.write(package.read('id_rsa.pub'))
+        self.read()
+

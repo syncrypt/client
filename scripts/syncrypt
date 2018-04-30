@@ -358,21 +358,54 @@ class GenerateKey(NoVaultCmd):
         self.loop.run_until_complete(self.app.identity.generate_keys())
 
 
-class KeyExport(NoVaultCmd):
-    command = 'export-key'
-    description = 'export your user-key'
+class ExportKey(NoVaultCmd):
+    command = "export-key"
+    description = "export your user-key"
 
     def configure_parser(self, parser):
-        super(KeyExport, self).configure_parser(parser)
-        parser.add_argument('-o', '--output', dest='filename', help='export filename')
+        super(ExportKey, self).configure_parser(parser)
+        parser.add_argument(dest="filename", help="filename of the package")
 
     def run(self):
         self.loop.run_until_complete(self.app.export_user_key(self.config.filename))
 
 
-COMMANDS = [Register(), Login(), Logout(), CheckUpdate(), Init(), ListVaults(), Clone(), Pull(),
-        Push(), AddUser(), UploadVaultKey(), DeleteVault(), Info(), Log(), ConfigSet(),
-        ConfigUnset(), Export(), Import(), ListKeys(), GenerateKey(), KeyExport()]
+class ImportKey(NoVaultCmd):
+    command = "import-key"
+    description = "import your user-key"
+
+    def configure_parser(self, parser):
+        super(ImportKey, self).configure_parser(parser)
+        parser.add_argument(dest="filename", help="filename of the package")
+
+    def run(self):
+        self.loop.run_until_complete(self.app.import_user_key(self.config.filename))
+
+
+COMMANDS = [
+    Register(),
+    Login(),
+    Logout(),
+    CheckUpdate(),
+    Init(),
+    ListVaults(),
+    Clone(),
+    Pull(),
+    Push(),
+    AddUser(),
+    UploadVaultKey(),
+    DeleteVault(),
+    Info(),
+    Log(),
+    ConfigSet(),
+    ConfigUnset(),
+    Export(),
+    Import(),
+    ListKeys(),
+    GenerateKey(),
+    ExportKey(),
+    ImportKey(),
+]
 COMMAND_NAMES = [c.command for c in COMMANDS]
 
 global_parser = argparse.ArgumentParser(
