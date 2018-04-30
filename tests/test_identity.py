@@ -9,17 +9,20 @@ from syncrypt.models import Identity
 
 from .base import VaultTestCase
 
-__all__ = ('IdentityTests',)
+__all__ = ("IdentityTests",)
+
 
 class IdentityTests(VaultTestCase):
 
     async def test_creation(self):
 
-        key = os.path.join(self.working_dir, 'id_rsa')
-        key_pub = os.path.join(self.working_dir, 'id_rsa.pub')
+        key = os.path.join(self.working_dir, "id_rsa")
+        key_pub = os.path.join(self.working_dir, "id_rsa.pub")
 
-        if os.path.exists(key): os.unlink(key)
-        if os.path.exists(key_pub): os.unlink(key_pub)
+        if os.path.exists(key):
+            os.unlink(key)
+        if os.path.exists(key_pub):
+            os.unlink(key_pub)
 
         identity = Identity(key, key_pub, AppConfig())
         await identity.init()
@@ -35,19 +38,22 @@ class IdentityTests(VaultTestCase):
         self.assertEqual(identity2.key_size(), 4096)
 
     async def test_async_key_generation(self):
-        'check wether key generation can happen concurrently'
+        "check wether key generation can happen concurrently"
 
-        key = os.path.join(self.working_dir, 'id_rsa')
-        key_pub = os.path.join(self.working_dir, 'id_rsa.pub')
+        key = os.path.join(self.working_dir, "id_rsa")
+        key_pub = os.path.join(self.working_dir, "id_rsa.pub")
 
-        if os.path.exists(key): os.unlink(key)
-        if os.path.exists(key_pub): os.unlink(key_pub)
+        if os.path.exists(key):
+            os.unlink(key)
+        if os.path.exists(key_pub):
+            os.unlink(key_pub)
 
         identity = Identity(key, key_pub, AppConfig())
 
         loop = asyncio.get_event_loop()
 
         x = [0]
+
         async def counter():
             while True:
                 await asyncio.sleep(0.001)
