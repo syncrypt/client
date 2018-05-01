@@ -46,6 +46,37 @@ paths:
             $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
+    post:
+      tags:
+        - vault
+      summary: Create, clone or import a new vault
+      description: ''
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - name: params
+          in: body
+          description: Account parameters
+          schema:
+            type: object
+            required:
+              - folder
+            properties:
+              folder:
+                type: string
+                example: /home/user/vaults/new_vault
+              id:
+                type: string
+              import_package:
+                type: string
+                example: /home/user/vault_export.zip
+      responses:
+        '200':
+          description: successful operation
+      security:
+        - api_key: []
   '/vault/{vaultId}/':
     delete:
       tags:
@@ -106,7 +137,7 @@ paths:
     get:
       tags:
         - vault
-      summary: export the vault package including the vault key to a given path
+      summary: Export the vault package including the vault key to a given path
       description: ''
       produces:
         - application/json
