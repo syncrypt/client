@@ -118,9 +118,9 @@ class SyncryptApp(object):
         raise VaultNotFound('Vault not found: {}'.format(vault_id))
 
     def get_vault_by_path(self, path):
-        v = Vault(path)
-        if os.path.exists(v.config_path):
-            return v
+        vault = Vault(path)
+        if os.path.exists(vault.config_path):
+            return vault
         return None
 
     async def remove_vault(self, vault):
