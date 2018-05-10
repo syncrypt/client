@@ -32,6 +32,9 @@ class TestAppConfig(AppConfig):
             # Change default API port so that tests can be run alongside the daemon
             self.set('api.port', '28081')
 
+            # Store DB is in memory for tests
+            self.set('store.path', ':memory:')
+
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
