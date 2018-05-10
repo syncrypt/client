@@ -1,3 +1,4 @@
+import os.path
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
@@ -15,8 +16,11 @@ class Store:
     def __init__(self):
         pass
 
-    def init(self):
-        engine = create_engine('sqlite:////tmp/syncrypt.sqlite', echo=True)
+    def init(self, config):
+        engine = config.get('store.engine')
+        db = os.path.join(config.config_dir, config.get('store.path'))
+        uri = '{engine}:///{db}'.format(engine=engine, db=db)
+        engine = create_engine(uri, echo=True)
         #engine = create_engine('sqlite:///:memory:', echo=True)
         self._session = sessionmaker(bind=engine, expire_on_commit=False)
         Base.metadata.create_all(engine)

@@ -73,7 +73,7 @@ class SyncryptApp(object):
             logger.error("Unhandled exception in event loop: %s, %s", args, kwargs)
         asyncio.get_event_loop().set_exception_handler(handler)
 
-        store.init()
+        store.init(config)
 
         self.flying_vaults = FlyingVaultManager(self)
 

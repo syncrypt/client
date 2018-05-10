@@ -170,6 +170,10 @@ class AppConfig(Config, BackendConfigMixin):
             'port': '28080',
             'auth_token': ''
         },
+        'store': {
+            'engine': 'sqlite',
+            'path': 'syncrypt.db'
+        },
         'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }
 
