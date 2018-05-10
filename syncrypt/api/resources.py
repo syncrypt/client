@@ -9,13 +9,12 @@ import os.path
 import iso8601
 from aiohttp import web
 from tzlocal import get_localzone
+from datetime import timezone
 
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity
 from syncrypt.utils.format import format_size
 
-from ..models.bundle import VirtualBundle
-from ..pipes import Once
 from .auth import require_auth_token
 from .responses import JSONResponse
 
@@ -181,25 +180,16 @@ class VaultResource(Resource):
     async def dispatch_history(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
-        local_tz = get_localzone()
-        queue = await vault.backend.changes(None, None, verbose=True)
         log_items = []
-        while True:
-            item = await queue.get()
-            if item is None:
-                break
-            store_hash, metadata, server_info = item
-            bundle = VirtualBundle(None, vault, store_hash=store_hash)
-            await bundle.write_encrypted_metadata(Once(metadata))
-            rev_id = server_info['id'].decode(vault.config.encoding)
-            created_at = server_info['created_at'].decode(vault.config.encoding)
-            operation = server_info['operation'].decode(vault.config.encoding)
-            user_email = server_info['email'].decode(vault.config.encoding)
+        local_tz = get_localzone()
+        for rev in self.app.revisions.list_for_vault(vault):
             log_items.append({
-                'operation': operation,
-                'user_email': user_email,
-                'created_at': created_at,
-                'path': bundle.relpath
+                'operation': rev.operation,
+                'user_email': rev.user_email,
+                'created_at': rev.created_at.replace(tzinfo=timezone.utc)\
+                                            .astimezone(local_tz)\
+                                            .strftime('%x %X'),
+                'path': rev.path
             })
         return JSONResponse({'items': log_items})
 

@@ -14,9 +14,6 @@ class FlyingVaultManager:
         self.app = app
 
     def get_or_create_by_id(self, session, id):
-        """
-        Get or create a model instance while preserving integrity.
-        """
         try:
             return session.query(self.model)\
                     .filter(self.model.id==id).one()

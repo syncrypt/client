@@ -11,7 +11,7 @@ import syncrypt
 from syncrypt.exceptions import (InvalidAuthentification, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
-from syncrypt.managers import FlyingVaultManager
+from syncrypt.managers import FlyingVaultManager, RevisionManager
 from syncrypt.models import Identity, IdentityState, Vault, VaultState, VirtualBundle, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
@@ -76,6 +76,7 @@ class SyncryptApp(object):
         store.init(config)
 
         self.flying_vaults = FlyingVaultManager(self)
+        self.revisions = RevisionManager(self)
 
         # generate or read users identity
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
@@ -477,6 +478,9 @@ class SyncryptApp(object):
                         modification_date = v_info.get('modification_date') or b''
                         v.modification_date = modification_date.decode()
                         session.add(v)
+
+        for vault in self.vaults:
+            await self.revisions.update_for_vault(vault)
 
         await backend.close()
 

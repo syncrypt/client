@@ -10,6 +10,7 @@ from .bundle import Bundle, VirtualBundle
 from .flying_vault import FlyingVault
 from .identity import Identity, IdentityState
 from .vault import Vault, VaultState
+from .revision import Revision
 
 
 class Store:

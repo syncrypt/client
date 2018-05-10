@@ -79,6 +79,7 @@ class SyncryptDaemonApp(SyncryptApp):
         try:
             if self.vaults:
                 await self.refresh_vault_info()
+
         except InvalidAuthentification:
             logger.info('Continuing without getting current vault information')
 

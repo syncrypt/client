@@ -1,10 +1,14 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
 from .base import Base
 
 
 class Revision(Base):
     __tablename__ = 'revision'
 
-    id = Column(Integer(), primary_key=True)
-    file_hash = Column(String(50))
-    user_email = Column(String(50))
+    id = Column(String(128), primary_key=True)
+    vault_id = Column(String(128))
+    file_hash = Column(String(250))
+    path = Column(String(255))
+    user_email = Column(String(250))
+    created_at = Column(DateTime())
+    operation = Column(String(32))
