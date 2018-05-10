@@ -784,8 +784,11 @@ class BinaryStorageManager(object):
                 elif state == 'closed':
                     return '-'
                 return ' '
-            logger.debug('Slots: [%s]',
-                         ''.join([sign_for_state(slot.state) for slot in self.slots]))
+
+            if BINARY_DEBUG:
+                logger.debug('Slots: [%s]',
+                             ''.join([sign_for_state(slot.state) for slot in self.slots]))
+
             for conn in self.slots:
                 if conn.connected and conn.available.is_set():
                     logger.debug('Closing due to idleness: %s', conn)
