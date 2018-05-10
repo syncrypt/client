@@ -12,7 +12,8 @@ from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, orm
+
 from syncrypt.config import VaultConfig
 from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
 from syncrypt.pipes import Once
@@ -25,16 +26,6 @@ from .identity import Identity
 logger = logging.getLogger(__name__)
 
 IGNORE_EMPTY_FILES = ['.DS_Store']
-
-
-class VaultInfo():
-    "Vault information from the server"
-
-    byte_size = 0
-    file_count = 0
-    modification_date = ''
-    revision_count = 0
-    user_count = 1
 
 
 class VaultState(Enum):
@@ -66,8 +57,10 @@ class Vault(MetadataHolder, Base):
     id = Column(String(128), primary_key=True)
     folder = Column(String(255))
     byte_size = Column(Integer())
-
-    vault_info = None
+    file_count = Column(Integer())
+    modification_date = Column(String(255)) # date?
+    revision_count = Column(Integer())
+    user_count = Column(Integer())
 
     def __init__(self, folder):
         self.state = VaultState.UNINITIALIZED
@@ -75,11 +68,17 @@ class Vault(MetadataHolder, Base):
         self._bundle_cache = {}
 
         self.logger = VaultLoggerAdapter(self, logger)
-        self.vault_info = VaultInfo()
 
         hash_obj = hashlib.new('sha256')
         hash_obj.update(os.path.normpath(self.folder).encode())
         self.id = hash_obj.hexdigest()
+
+    @orm.reconstructor
+    def init_on_load(self):
+        if not hasattr(self, 'state'):
+            self.state = VaultState.UNINITIALIZED
+        self._bundle_cache = {}
+        self.logger = VaultLoggerAdapter(self, logger)
 
     @property
     def config(self):

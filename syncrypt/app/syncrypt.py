@@ -5,11 +5,14 @@ import socket
 import sys
 from zipfile import ZipFile
 
+from sqlalchemy.orm.exc import NoResultFound
+
 import syncrypt
 from syncrypt.exceptions import (InvalidAuthentification, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
-from syncrypt.models import Identity, Vault, VaultState, VirtualBundle, IdentityState
+from syncrypt.managers import FlyingVaultManager
+from syncrypt.models import Identity, IdentityState, Vault, VaultState, VirtualBundle, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
@@ -70,23 +73,30 @@ class SyncryptApp(object):
             logger.error("Unhandled exception in event loop: %s, %s", args, kwargs)
         asyncio.get_event_loop().set_exception_handler(handler)
 
+        store.init()
+
+        self.flying_vaults = FlyingVaultManager(self)
+
         # generate or read users identity
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
         id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
         self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
 
-        # register vault objects
-        if vault_dirs is None:
-            vault_dirs = self.config.vault_dirs
-
-        for vault_dir in vault_dirs:
-            vault = Vault(vault_dir)
-            self.vaults.append(vault)
+        # Load vaults from config file
+        with store.session() as session:
+            for vault_dir in self.config.vault_dirs:
+                try:
+                    vault = session.query(Vault).filter(Vault.folder==vault_dir).one()
+                except NoResultFound:
+                    vault = Vault(vault_dir)
+                    session.add(vault)
+                self.vaults.append(vault)
 
         super(SyncryptApp, self).__init__()
 
     async def initialize(self):
         await self.identity.init()
+
         for vault in self.vaults:
             try:
                 vault.check_existence()
@@ -453,17 +463,20 @@ class SyncryptApp(object):
         logger.info('Refreshing vault information')
         backend = await self.open_backend()
 
-        for remote_info in (await backend.list_vaults()):
+        with store.session() as session:
+            for v_info in (await backend.list_vaults()):
 
-            remote_id = remote_info['id'].decode()
+                remote_id = v_info['id'].decode()
 
-            for v in self.vaults:
-                if v.config.id == remote_id:
-                    v.vault_info.byte_size = int(remote_info.get('byte_size', 0))
-                    v.vault_info.file_count = int(remote_info.get('file_count', 0))
-                    v.vault_info.revision_count = int(remote_info.get('revision_count', 0))
-                    modification_date = remote_info.get('modification_date') or b''
-                    v.vault_info.modification_date = modification_date.decode()
+                for v in self.vaults:
+                    if v.config.id == remote_id:
+                        v.byte_size = int(v_info.get('byte_size', 0))
+                        v.file_count = int(v_info.get('file_count', 0))
+                        v.user_count = int(v_info.get('user_count', 0))
+                        v.revision_count = int(v_info.get('revision_count', 0))
+                        modification_date = v_info.get('modification_date') or b''
+                        v.modification_date = modification_date.decode()
+                        session.add(v)
 
         await backend.close()
 
@@ -483,20 +496,6 @@ class SyncryptApp(object):
             await ctx.wait()
             for result in ctx.completed_tasks():
                 pass
-                #try:
-                    #logger.info('Pushing %s', vault)
-                    #await vault.backend.open()
-                    #await vault.backend.set_vault_metadata()
-
-                    #for bundle in vault.walk_disk():
-                    #    await ctx.create_task(bundle, self._push_bundle(bundle))
-                #except VaultNotInitialized:
-                #    logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-                #    continue
-                #except VaultFolderDoesNotExist:
-                #    logger.error('%s does not exist, removing vault from list.' % vault)
-                #    await self.remove_vault(vault)
-                #   continue
 
     async def push_vault(self, vault):
         "Push a single vault"
@@ -567,24 +566,6 @@ class SyncryptApp(object):
             await ctx.wait()
             for result in ctx.completed_tasks():
                 pass
-
-        """
-        for vault in self.vaults:
-            try:
-                await self.pull_vault(vault, full=full)
-            except VaultNotInitialized:
-                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-                continue
-            except VaultFolderDoesNotExist:
-                logger.error('%s does not exist, removing vault from list.' % vault)
-                await this.remove_vault(vault)
-                continue
-            except Exception as e:
-                print("EXCEPTION")
-                logger.exception(e)
-                continue
-        await self.wait()
-        """
 
     async def pull_vault_periodically(self, vault):
         while True:

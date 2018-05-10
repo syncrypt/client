@@ -135,14 +135,13 @@ class VaultResource(Resource):
         }
         dct.update(crypt_info=crypt_info)
 
-        # Annotate each obj with vault information from the server
-        vault_info = v.vault_info
+        # Annotate each obj with vault information from the model
         dct.update(
-            size=vault_info.byte_size,
-            user_count=vault_info.user_count,
-            file_count=vault_info.file_count,
-            revision_count=vault_info.revision_count,
-            modification_date=vault_info.modification_date,
+            size=v.byte_size,
+            user_count=v.user_count,
+            file_count=v.file_count,
+            revision_count=v.revision_count,
+            modification_date=v.modification_date,
         )
         return dct
 
@@ -282,72 +281,38 @@ class FlyingVaultResource(Resource):
     resource_name = 'flying-vault'
 
     def get_id(self, obj):
-        return obj['id']
+        return obj.id
 
     def dehydrate(self, obj):
         deh_obj = super(FlyingVaultResource, self).dehydrate(obj)
-        deh_obj['metadata'] = obj.get('metadata', {})
-        deh_obj['size'] = obj.get('byte_size')
-        deh_obj['user_count'] = obj.get('user_count')
-        deh_obj['file_count'] = obj.get('file_count')
-        deh_obj['revision_count'] = obj.get('revision_count')
-        deh_obj['modification_date'] = obj.get('modification_date')
-        deh_obj['remote_id'] = obj.get('id')
-        ignored = set(obj.keys()) - set(deh_obj.keys())
-        if len(ignored) > 0:
-            logger.debug('Ignored vault keys: %s', ignored)
+        deh_obj['metadata'] = obj.vault_metadata
+        deh_obj['size'] = obj.byte_size
+        deh_obj['user_count'] = obj.user_count
+        deh_obj['file_count'] = obj.file_count
+        deh_obj['revision_count'] = obj.revision_count
+        deh_obj['modification_date'] = obj.modification_date
+        deh_obj['remote_id'] = obj.id
         return deh_obj
 
     async def get_obj_list(self, request):
-        vaults = []
-        backend = await self.app.open_backend()
-
-        # Make a map from vault id -> vault info
-        v_info = {v['id'].decode(): v for v in (await backend.list_vaults())}
-
-        my_fingerprint = self.app.identity.get_fingerprint()
-
-        for (vault, user_vault_key, encrypted_metadata) in \
-                (await backend.list_vaults_by_fingerprint(my_fingerprint)):
-
-            await asyncio.sleep(0.001)
-
-            vault_id = vault['id'].decode('utf-8')
-
-            logger.debug("Received vault: %s (with%s metadata)", vault_id, '' if encrypted_metadata else 'out')
-
-            if encrypted_metadata:
-                metadata = await self.app._decrypt_metadata(encrypted_metadata, user_vault_key)
-            else:
-                metadata = None
-
-            vault_info = v_info.get(vault_id, {})
-            vault_size = vault_info.get('byte_size', 0)
-            modification_date = vault_info.get('modification_date')
-            if isinstance(modification_date, bytes):
-                modification_date = modification_date.decode()
-            vaults.append(dict(vault, id=vault_id, metadata=metadata,
-                size=vault_size,
-                user_count=vault_info.get('user_count', 0),
-                file_count=vault_info.get('file_count', 0),
-                revision_count=vault_info.get('revision_count', 0),
-                modification_date=modification_date
-            ))
-
-        await backend.close()
-        return vaults
+        # TODO: schedule update task at most once
+        asyncio.get_event_loop().create_task(
+            self.app.flying_vaults.update()
+        )
+        return self.app.flying_vaults.all()
 
     async def get_obj(self, request):
-        return dict(id=request.match_info['id'])
+        return self.app.flying_vaults.get(request.match_info['id'])
 
     async def delete_obj(self, request, obj):
         if request.GET.get('wipe') == '1':
-            vault_id = obj['id']
+            vault_id = obj.id
             logger.warn('Deleting/wiping flying vault: %s', vault_id)
             backend = await self.app.open_backend()
             await backend.delete_vault(vault_id=vault_id)
         else:
             raise NotImplementedError
+
 
 class UserResource(Resource):
     resource_name = 'user'
