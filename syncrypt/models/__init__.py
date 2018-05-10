@@ -19,9 +19,9 @@ class Store:
     def init(self, config):
         engine = config.get('store.engine')
         db = os.path.join(config.config_dir, config.get('store.path'))
+        os.makedirs(os.path.dirname(db), exist_ok=True)
         uri = '{engine}:///{db}'.format(engine=engine, db=db)
         engine = create_engine(uri, echo=True)
-        #engine = create_engine('sqlite:///:memory:', echo=True)
         self._session = sessionmaker(bind=engine, expire_on_commit=False)
         Base.metadata.create_all(engine)
 
