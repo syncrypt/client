@@ -122,6 +122,15 @@ class VaultResource(Resource):
         dct.update(folder=v.folder, state=v.state, remote_id=v.config.id,
                    metadata=v._metadata, ignore=v.config.get('vault.ignore').split(','))
 
+        # Annotate each obj with vault information from the model
+        dct.update(
+            size=v.byte_size,
+            user_count=v.user_count,
+            file_count=v.file_count,
+            revision_count=v.revision_count,
+            modification_date=v.modification_date,
+        )
+
         # Compile some information about the underlying crypto system(s)
         crypt_info = {
             'aes_key_len': v.config.aes_key_len,
@@ -133,15 +142,6 @@ class VaultResource(Resource):
                     if v.identity and v.identity.is_initialized() else None
         }
         dct.update(crypt_info=crypt_info)
-
-        # Annotate each obj with vault information from the model
-        dct.update(
-            size=v.byte_size,
-            user_count=v.user_count,
-            file_count=v.file_count,
-            revision_count=v.revision_count,
-            modification_date=v.modification_date,
-        )
         return dct
 
     async def get_obj_list(self, request):
@@ -180,6 +180,7 @@ class VaultResource(Resource):
     async def dispatch_history(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
+
         log_items = []
         local_tz = get_localzone()
         for rev in self.app.revisions.list_for_vault(vault):
@@ -191,6 +192,12 @@ class VaultResource(Resource):
                                             .strftime('%x %X'),
                 'path': rev.path
             })
+
+        # Not sure if this is the best place to trigger update
+        asyncio.get_event_loop().create_task(
+            self.app.revisions.update_for_vault(vault)
+        )
+
         return JSONResponse({'items': log_items})
 
     async def dispatch_export(self, request):
