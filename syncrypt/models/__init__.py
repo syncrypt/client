@@ -9,8 +9,8 @@ from syncrypt.models.base import Base
 from .bundle import Bundle, VirtualBundle
 from .flying_vault import FlyingVault
 from .identity import Identity, IdentityState
-from .vault import Vault, VaultState
 from .revision import Revision
+from .vault import Vault, VaultState
 
 
 class Store:
@@ -24,7 +24,7 @@ class Store:
             db = os.path.join(config.config_dir, db)
             os.makedirs(os.path.dirname(db), exist_ok=True)
         uri = '{engine}:///{db}'.format(engine=engine, db=db)
-        engine = create_engine(uri, echo=True)
+        engine = create_engine(uri, echo=False)
         self._session = sessionmaker(bind=engine, expire_on_commit=False)
         Base.metadata.create_all(engine)
 
