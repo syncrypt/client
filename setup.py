@@ -154,7 +154,6 @@ setup(
         'python-snappy',
         'smokesignal',
         'sqlalchemy>=1.2.6',
-        'sqlalchemy-aio',
         'tenacity',
         'tzlocal',
         'umsgpack',
