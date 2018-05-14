@@ -56,6 +56,10 @@ class FlyingVaultManager:
 
                 v_info = v_infos.get(vault_id)
 
+                if v_info is None:
+                    logger.warning("No information for vault: %s, ignoring.", vault_id)
+                    continue
+
                 modification_date = v_info.get('modification_date')
                 if isinstance(modification_date, bytes):
                     modification_date = modification_date.decode()

@@ -25,7 +25,7 @@ class Store:
             os.makedirs(os.path.dirname(db), exist_ok=True)
         uri = '{engine}:///{db}'.format(engine=engine, db=db)
         engine = create_engine(uri, echo=False)
-        self._session = sessionmaker(bind=engine, expire_on_commit=False)
+        self._session = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
         Base.metadata.create_all(engine)
 
     @contextmanager
