@@ -1,3 +1,10 @@
+0.5.0
+-----
+
+* Client-side caching using sqlite database
+* API documentation with OpenAPI/Swagger
+* Using Python async/await syntax
+
 0.4.0
 -----
 
