@@ -116,12 +116,16 @@ setup(
 
         'Intended Audience :: End Users/Desktop',
 
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         'Topic :: Communications :: File Sharing',
         'Topic :: System :: Archiving',
+        'Topic :: Security :: Cryptography',
 
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7'
     ],
 
     # You can just specify the packages manually here if your project is
