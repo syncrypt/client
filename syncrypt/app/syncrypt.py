@@ -83,9 +83,12 @@ class SyncryptApp(object):
         id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
         self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
 
-        # Load vaults from config file
+        if vault_dirs is None:
+            vault_dirs = self.config.vault_dirs
+
+        # Load cached vault information from config file
         with store.session() as session:
-            for vault_dir in self.config.vault_dirs:
+            for vault_dir in vault_dirs:
                 try:
                     vault = session.query(Vault).filter(Vault.folder==vault_dir).one()
                 except NoResultFound:
