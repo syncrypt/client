@@ -63,7 +63,7 @@ class SyncryptDaemonApp(SyncryptApp):
 
     async def post_setup(self):
 
-        for vault in self.vaults:
+        for vault in list(self.vaults):
             try:
                 await self.check_vault(vault)
                 await self.set_vault_state(vault, VaultState.READY)
