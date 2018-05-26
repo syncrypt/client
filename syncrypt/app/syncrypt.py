@@ -10,11 +10,12 @@ from sqlalchemy.orm.exc import NoResultFound
 import syncrypt
 from syncrypt.exceptions import (InvalidAuthentification, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
-                                 VaultNotInitialized)
+                                 VaultNotInitialized, FolderExistsAndIsNotEmpty)
 from syncrypt.managers import FlyingVaultManager, RevisionManager
 from syncrypt.models import Identity, IdentityState, Vault, VaultState, VirtualBundle, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
+from syncrypt.utils.filesystem import is_empty
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
 from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
 
@@ -394,8 +395,9 @@ class SyncryptApp(object):
         return vault
 
     async def import_package(self, filename, target_folder, pull_vault=False):
-        if os.path.exists(target_folder):
-            raise ValueError('Folder "{0}" already exists.'.format(target_folder))
+
+        if os.path.exists(target_folder) and not is_empty(target_folder):
+            raise FolderExistsAndIsNotEmpty(target_folder)
 
         with ZipFile(filename, 'r') as myzip:
             myzip.extractall(target_folder)

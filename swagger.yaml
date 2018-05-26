@@ -429,12 +429,13 @@ definitions:
       code:
         type: string
         enum:
+        - FolderExistsAndIsNotEmpty
         - InvalidAuthentifaction
-        - VaultNotFound
-        - VaultIsAlreadySyncing
-        - VaultAlreadyExists
-        - VaultNotInitialized
         - ServerError
+        - VaultAlreadyExists
+        - VaultIsAlreadySyncing
+        - VaultNotFound
+        - VaultNotInitialized
   User:
     type: object
     required:

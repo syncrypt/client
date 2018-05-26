@@ -2,6 +2,15 @@ class SyncryptBaseException(Exception):
     status = 500
 
 
+class FolderExistsAndIsNotEmpty(SyncryptBaseException):
+    status = 400
+
+    def __str__(self):
+        return "The given folder does already exists and is not empty: {0}".format(
+            self.args[0]
+        )
+
+
 class VaultException(SyncryptBaseException):
     pass
 
