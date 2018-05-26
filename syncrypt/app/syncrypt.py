@@ -386,6 +386,11 @@ class SyncryptApp(object):
             else:
                 raise VaultAlreadyExists(original_vault.folder)
         else:
+            # There is no vault present, but we want to make sure that this folder is nonexistent or
+            # empty:
+            if os.path.exists(local_directory) and not is_empty(local_directory):
+                raise FolderExistsAndIsNotEmpty(local_directory)
+
             vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
 
         self.add_vault(vault)
