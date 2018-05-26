@@ -230,7 +230,7 @@ class Vault(MetadataHolder, Base):
         zipf = zipfile.ZipFile(memview, 'w', zipfile.ZIP_DEFLATED)
 
         cloned_config = configparser.ConfigParser()
-        cloned_config.read(self.config._config)
+        cloned_config.read_dict(self.config._config)
 
         # include config but strip auth information
         if 'remote' in cloned_config:
