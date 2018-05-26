@@ -46,7 +46,7 @@ class Config(object):
 
     def read(self):
         if os.path.exists(self._config_path):
-            self._config.read(self._config_path)
+            self._config.read(self._config_path, encoding='utf-8')
 
     def write(self):
         cfg_dir = os.path.dirname(self._config_path)
