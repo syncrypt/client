@@ -9,6 +9,7 @@ import sys
 from syncrypt import __project__, __version__
 from syncrypt.app import SyncryptCLIApp
 from syncrypt.config import AppConfig
+from syncrypt.exceptions import SyncryptBaseException
 from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
 
@@ -25,6 +26,8 @@ Licensed under the GPLv3 | Source: https://github.com/syncrypt/client'''\
 
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']
+
+logger = logging.getLogger('syncrypt')
 
 
 class SyncryptCmd():
@@ -452,7 +455,13 @@ if __name__ == '__main__':
             if c.command == args.command:
                 c.parse(sys.argv[2:])
                 c.setup()
-                c.run()
+                try:
+                    c.run()
+                except SyncryptBaseException as e:
+                    # For SyncryptBaseExceptions we will output the abbreviated form. Full stack
+                    # backtrace can be printed by running the command with -l DEBUG
+                    logger.debug('Command failed because of the following exception:', exc_info=e)
+                    logger.error(str(e))
                 c.shutdown()
     else:
         global_parser.print_help()
