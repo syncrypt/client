@@ -8,9 +8,10 @@ from zipfile import ZipFile
 from sqlalchemy.orm.exc import NoResultFound
 
 import syncrypt
-from syncrypt.exceptions import (InvalidAuthentification, SyncryptBaseException, VaultAlreadyExists,
+from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentification,
+                                 InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
-                                 VaultNotInitialized, FolderExistsAndIsNotEmpty)
+                                 VaultNotInitialized)
 from syncrypt.managers import FlyingVaultManager, RevisionManager
 from syncrypt.models import Identity, IdentityState, Vault, VaultState, VirtualBundle, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
@@ -413,7 +414,8 @@ class SyncryptApp(object):
 
         vault = Vault(target_folder)
         if not vault.config.id:
-            raise VaultException()
+            raise InvalidVaultPackage()
+
         await self.open_or_init(vault)
 
         if pull_vault:

@@ -40,6 +40,10 @@ class VaultIsAlreadySyncing(VaultException):
         )
 
 
+class InvalidVaultPackage(VaultException):
+    status = 400
+
+
 class BinaryStorageException(SyncryptBaseException):
     pass
 
