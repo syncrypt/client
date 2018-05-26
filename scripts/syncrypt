@@ -314,24 +314,24 @@ class Logout(NoVaultCmd):
         self.loop.run_until_complete(self.app.logout())
 
 
-class Export(SingleVaultCmd):
-    command = 'export'
+class ExportVault(SingleVaultCmd):
+    command = 'export-vault'
     description = 'export vault config and keys to backup or share'
 
     def configure_parser(self, parser):
-        super(Export, self).configure_parser(parser)
+        super(ExportVault, self).configure_parser(parser)
         parser.add_argument('-o', '--output', dest='filename', help='export filename')
 
     def run(self):
         self.loop.run_until_complete(self.app.export_package(self.config.filename))
 
 
-class Import(SingleVaultCmd):
-    command = 'import'
+class ImportVault(SingleVaultCmd):
+    command = 'import-vault'
     description = 'import vault package that has previously been exported'
 
     def configure_parser(self, parser):
-        super(Import, self).configure_parser(parser)
+        super(ImportVault, self).configure_parser(parser)
         parser.add_argument(dest='filename', help='filename of the package')
         parser.add_argument(dest='target', help='vault folder to create')
 
@@ -383,24 +383,29 @@ class ImportKey(NoVaultCmd):
 
 
 COMMANDS = [
+    # Administrative
     Register(),
     Login(),
     Logout(),
     CheckUpdate(),
+
+    # Vault
     Init(),
-    ListVaults(),
-    Clone(),
     Pull(),
     Push(),
-    AddUser(),
+    ListVaults(),
+    ExportVault(),
+    ImportVault(),
     UploadVaultKey(),
     DeleteVault(),
+    Clone(),
+    AddUser(),
     Info(),
     Log(),
     ConfigSet(),
     ConfigUnset(),
-    Export(),
-    Import(),
+
+    # Key Management
     ListKeys(),
     GenerateKey(),
     ExportKey(),
