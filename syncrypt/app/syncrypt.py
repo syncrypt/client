@@ -122,9 +122,11 @@ class SyncryptApp(object):
             if os.path.abspath(v.folder) == os.path.abspath(vault.folder):
                 raise VaultIsAlreadySyncing(v.folder)
         self.vaults.append(vault)
+        return vault
+
+    def save_vault_dir_in_config(self, vault):
         with self.config.update_context():
             self.config.add_vault_dir(os.path.abspath(vault.folder))
-        return vault
 
     def find_vault_by_id(self, vault_id):
         for v in self.vaults:

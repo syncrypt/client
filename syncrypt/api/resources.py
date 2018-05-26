@@ -242,13 +242,16 @@ class VaultResource(Resource):
 
         if 'id' in request_dict:
             vault = await self.app.clone(request_dict['id'], request_dict['folder'])
+            self.app.save_vault_dir_in_config(vault)
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         elif 'import_package' in request_dict:
             vault = await self.app.import_package(
                     request_dict['import_package'], request_dict['folder'])
+            self.app.save_vault_dir_in_config(vault)
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
             vault = self.app.add_vault_by_path(request_dict['folder'])
+            self.app.save_vault_dir_in_config(vault)
             asyncio.get_event_loop().create_task(init_and_push(vault))
         return vault
 
