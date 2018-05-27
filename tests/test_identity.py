@@ -67,3 +67,23 @@ class IdentityTests(VaultTestCase):
         # Make sure the inner loop of counter ran more than 20 times, which
         # assumes that key generation took more than 20 ms
         self.assertGreater(x[0], 20)
+
+    async def test_signing(self):
+        "test our sign and verify functions"
+
+        key = os.path.join(self.working_dir, "id_rsa")
+        key_pub = os.path.join(self.working_dir, "id_rsa.pub")
+
+        if os.path.exists(key):
+            os.unlink(key)
+        if os.path.exists(key_pub):
+            os.unlink(key_pub)
+
+        identity = Identity(key, key_pub, AppConfig())
+        await identity.init()
+        await identity.generate_keys()
+
+        signature = identity.sign(b'I did say that.')
+
+        self.assertTrue(identity.verify(b'I did say that.', signature))
+        self.assertFalse(identity.verify(b'I did not say that.', signature))

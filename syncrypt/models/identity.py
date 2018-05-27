@@ -8,10 +8,12 @@ from enum import Enum
 from io import BytesIO
 
 import Cryptodome.Util.number
+from Cryptodome.Hash import SHA256
 from Cryptodome.PublicKey import RSA
+from Cryptodome.Signature import pkcs1_15
 
-from syncrypt.pipes import Once
 from syncrypt.exceptions import IdentityError, IdentityNotInitialized, IdentityStateError
+from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +141,19 @@ class Identity(object):
         pk_hash = hashlib.new(self.config.hash_algo)
         pk_hash.update(self.public_key.exportKey('DER'))
         return pk_hash.hexdigest()[:self.config.fingerprint_length]
+
+    def sign(self, message):
+        self.assert_initialized()
+        h = SHA256.new(message)
+        return pkcs1_15.new(self.private_key).sign(h)
+
+    def verify(self, message, signature):
+        h = SHA256.new(message)
+        try:
+            pkcs1_15.new(self.private_key).verify(h, signature)
+            return True
+        except (ValueError, TypeError):
+            return False
 
     def package_info(self):
         '''
