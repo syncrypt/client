@@ -1,57 +1,51 @@
-Sign chain (draft)
-==================
+# Sign chain (draft)
 
-Integrity
----------
+## Integrity
 
 The Syncrypt protocol employs a chain of all transactions for each a Vault. This chain is a
 merkle-tree and each new transaction is signed by the sender. This way, each client can verify
 the history of the vault and a malicious server can not spoof transactions or files.
 
-Web of trust
-------------
+## Web of trust
 
 Besides the vault history, the chain can used to establish a web of trust between all invited
 users of the vault. Because the transaction of each newly added user key is signed, the added key
 is from then on trusted for all other participants and can thus be used to sign transactions.
 
-Transaction types
------------------
+## Transaction types
 
 A technical description of all transaction types follows. In the current implementation the User ID
 is the user's email.
 
-Create Vault
-............
+### Create Vault
 
 The genesis transaction for each vault. It is signed by the vault creator. The given public key is
 added to the trusted key list for this vault.
 
 Signed contents: User public key
 
-Set Metadata
-............
+### Set Metadata
 
 Signed contents: Vault Metadata
 
-Upload Revision
-...............
+### Upload Revision
 
 Signed contents: Hash of encrypted filename, Hash of encrypted blob, Encrypted File Metadata, file size of
 encrypted blob
 
-Add User
-........
+### Delete File
+
+Signed contents: Hash of encrypted filename
+
+### Add User
 
 Signed contents: User ID
 
-Add User Vault Key
-..................
+### Add User Vault Key
 
 Signed contents: User ID, User Public Key
 
-Example
--------
+## Example
 
 * Alice creates a new vault thus creates a new *Create Vault* message including her public key.
 * Alice adds a *Set Metadata* transaction to the chain.
