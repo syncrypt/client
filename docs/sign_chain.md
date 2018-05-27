@@ -26,9 +26,13 @@ Signed contents: User public key
 
 ### Set Metadata
 
-Signed contents: Vault Metadata
+The signing user made changes to the vault metadata, such as the vault name.
+
+Signed contents: Encrypted Vault Metadata
 
 ### Upload Revision
+
+The signing user uploaded a new file or a new revision for an existing file.
 
 Signed contents: Hash of encrypted filename, Hash of encrypted blob, Encrypted File Metadata, file size of
 encrypted blob
