@@ -109,7 +109,7 @@ class Vault(MetadataHolder, Base):
     _metadata = property(__get_metadata, __set_metadata)
 
     @property
-    def identity(self):
+    def identity(self) -> Identity:
         try:
             return self._identity
         except AttributeError:

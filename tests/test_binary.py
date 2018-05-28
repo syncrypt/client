@@ -14,8 +14,6 @@ from syncrypt.backends import BinaryStorageBackend
 from syncrypt.backends.binary import get_manager_instance
 from tests.base import VaultTestCase
 
-__all__ = ('BinaryServerTests',)
-
 
 @pytest.mark.requires_server
 class BinaryServerTests(VaultTestCase):
@@ -183,7 +181,6 @@ class BinaryServerTests(VaultTestCase):
 
         files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
         self.assertEqual(files_in_new_vault, 8)
-
 
     async def test_revision_increase_after_push(self):
         app = SyncryptApp(self.app_config)

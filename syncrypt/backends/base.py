@@ -1,4 +1,7 @@
+from syncrypt.models import Vault
+
 class StorageBackend(object):
+    vault: Vault
 
     def __init__(self, vault):
         self.vault = vault
@@ -11,6 +14,9 @@ class StorageBackend(object):
     async def open(self):
         raise NotImplementedError()
 
+    async def init(self):
+        raise NotImplementedError()
+
     async def upload(self, bundle):
         raise NotImplementedError()
 
@@ -19,3 +25,13 @@ class StorageBackend(object):
 
     async def stat(self, bundle):
         raise NotImplementedError()
+
+    async def upload_identity(self, identity, description=""):
+        pass
+
+    async def user_info(self):
+        raise NotImplementedError
+
+    async def add_user_vault_key(self, vault, email, identity):
+        pass
+

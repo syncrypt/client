@@ -4,9 +4,3 @@
 [remote]
     type = local
     folder = ../teststore
-
-;[remote]
-;    type = binary
-;    auth = foo
-;    host = 127.0.0.1
-;    port = 1337
