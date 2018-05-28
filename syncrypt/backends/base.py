@@ -35,3 +35,5 @@ class StorageBackend(object):
     async def add_user_vault_key(self, vault, email, identity):
         pass
 
+    async def changes(self, since_rev, to_rev, verbose=False):
+        raise NotImplementedError

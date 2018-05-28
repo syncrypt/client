@@ -161,5 +161,8 @@ class LocalStorageBackend(StorageBackend):
     async def user_info(self):
         return {"email": "user@localhost"}
 
+    async def changes(self, since_rev, to_rev, verbose=False):
+        raise NotImplementedError
+
     async def close(self):
         pass

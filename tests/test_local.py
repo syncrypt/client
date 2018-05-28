@@ -62,3 +62,36 @@ class LocalStorageTestCase(VaultTestCase):
         post_rev = self.vault.revision
         self.assertNotEqual(prev_rev, post_rev)
         self.assertTrue(not post_rev is None)
+
+    async def test_two_local_one_remote(self):
+        other_vault_path = os.path.join(VaultTestCase.working_dir, 'othervault')
+
+        # remove "other vault" folder first
+        if os.path.exists(other_vault_path):
+            shutil.rmtree(other_vault_path)
+
+        app = self.app
+        app.add_vault(self.vault)
+
+        await app.open_or_init(self.vault)
+        await app.push() # init all vaults
+
+        # now we will clone the initialized vault by copying the vault config
+        shutil.copytree(os.path.join(self.vault.folder, '.vault'),
+                        os.path.join(other_vault_path, '.vault'))
+        self.other_vault = Vault(other_vault_path)
+        with self.other_vault.config.update_context():
+            self.other_vault.config.unset('vault.revision')
+
+        await app.open_or_init(self.other_vault)
+        app.add_vault(self.other_vault)
+
+        # TODO this is not yet working
+        #await app.pull()
+
+        #assert not self.vault.active
+        #assert not self.other_vault.active
+
+        #files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
+        #self.assertEqual(files_in_new_vault, 8)
+        #raise NotImplementedError
