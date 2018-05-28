@@ -23,6 +23,7 @@ class LocalStorageTestCase(VaultTestCase):
 
     async def test_upload(self):
         app = self.app
+        await app.initialize()
         await app.open_or_init(self.vault)
         backend = self.vault.backend
 
@@ -40,6 +41,7 @@ class LocalStorageTestCase(VaultTestCase):
 
     async def test_vault_metadata(self):
         app = self.app
+        await app.initialize()
         await app.open_or_init(self.vault)
         backend = self.vault.backend
         await backend.open()
@@ -56,6 +58,7 @@ class LocalStorageTestCase(VaultTestCase):
     async def test_revision_increase_after_push(self):
         app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
+        await app.initialize()
         await app.open_or_init(self.vault)
         prev_rev = self.vault.revision
         await app.push()
@@ -71,6 +74,8 @@ class LocalStorageTestCase(VaultTestCase):
             shutil.rmtree(other_vault_path)
 
         app = self.app
+        await self.app.initialize()
+
         app.add_vault(self.vault)
 
         await app.open_or_init(self.vault)

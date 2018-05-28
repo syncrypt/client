@@ -178,6 +178,8 @@ class SyncryptApp(object):
         self._scheduled_pushes[bundle] = loop.call_later(1.0, push_scheduled, bundle)
 
     async def init_vault(self, vault, host=None, upload_vault_key=True, upload_identity=True):
+        self.identity.assert_initialized()
+
         if host:
             # If host was explicitly given, use it
             vault.config.set('remote.host', host)
@@ -461,6 +463,7 @@ class SyncryptApp(object):
         await vault.backend.add_user_vault_key(email, identity.get_fingerprint(), content)
 
     async def upload_vault_key(self, vault=None):
+        self.identity.assert_initialized()
         if vault is None:
             vault = self.vaults[0]
         await vault.backend.open()
