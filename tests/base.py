@@ -61,6 +61,7 @@ class VaultTestCase(asynctest.TestCase):
 
         self.app_config = TestAppConfig(app_config_file)
         self.app = self.app_cls(self.app_config, auth_provider=TestAuthenticationProvider())
+        asyncio.get_event_loop().run_until_complete(self.app.identity.generate_keys())
         asyncio.get_event_loop().run_until_complete(self.app.initialize())
 
     def tearDown(self):
