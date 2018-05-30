@@ -1,7 +1,7 @@
 from syncrypt.models import Vault
 
 class StorageBackend(object):
-    vault: Vault
+    vault = None # type: Vault
 
     def __init__(self, vault):
         self.vault = vault
