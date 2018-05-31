@@ -1,5 +1,5 @@
 import asyncio
-from Crypto.Random.random import randint
+from Cryptodome.Random.random import randint
 import math
 import pickle
 import logging
