@@ -1,4 +1,6 @@
 import asyncio
+from Crypto.Random.random import randint
+import math
 import pickle
 import logging
 import os
@@ -9,6 +11,7 @@ from uuid import uuid4
 
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.pipes import FileReader, FileWriter
+from syncrypt.models import Revision, RevisionOp
 
 from .base import StorageBackend
 
@@ -51,17 +54,11 @@ class LocalStorageBackend(StorageBackend):
         with open(os.path.join(self.path, "txchain"), "wb") as txchain:
             pass
 
-        # TODO use random number here
-        nonce = str(vault.id).encode()
+        transaction = Revision(operation=RevisionOp.CreateVault)
+        transaction.nonce = randint(0, 0xffffffff)
+        transaction.sign(identity=self.vault.identity) # TODO use user identity here
 
-        # TODO This needs to be signed with the user key, not vault key
-        signature = self.vault.identity.sign(b'create_vault|' + nonce)
-
-        revision = self.add_transaction({
-            'type': 'create_vault',
-            'nonce': nonce,
-            'signature': signature,
-        })
+        return self.add_transaction(transaction)
 
     async def upload(self, bundle):
         assert self.vault.revision is not None
@@ -73,16 +70,6 @@ class LocalStorageBackend(StorageBackend):
         metadata = await bundle.encrypted_metadata_reader().readall()
         metadata_size = len(metadata)
 
-        message = b''
-        message += str(self.vault.revision).encode() + b'|'
-        message += str(bundle.store_hash).encode() + b'|'
-        message += str(bundle.crypt_hash).encode() + b'|'
-        message += metadata + b'|'
-        message += str(bundle.file_size_crypt).encode() + b'|'
-
-        # TODO This needs to be signed with the user key, not vault key
-        signature = self.vault.identity.sign(message)
-
         await bundle.load_key()
         s = bundle.read_encrypted_stream() >> FileWriter(dest_path)
         await s.consume()
@@ -91,27 +78,33 @@ class LocalStorageBackend(StorageBackend):
         with open(dest_path + ".hash", "w") as hashfile:
             hashfile.write(bundle.crypt_hash)
 
-        self.add_transaction({
-            'type': 'upload',
-            'metadata': metadata,
-            'signature': signature,
-            'store_hash': str(bundle.store_hash).encode(),
-            'crypt_hash': str(bundle.crypt_hash).encode(),
-            'file_size_crypt': bundle.file_size_crypt
-        })
+        transaction = Revision(operation=RevisionOp.Upload)
+        transaction.parent_id = self.vault.revision
+        transaction.file_hash = bundle.store_hash
+        transaction.revision_metadata = metadata
+        transaction.crypt_hash = bundle.crypt_hash
+        transaction.file_size_crypt = bundle.file_size_crypt
+        transaction.sign(identity=self.vault.identity) # TODO use user identity here
 
-    def add_transaction(self, obj):
-        revision_id = str(uuid4())
-        revision = dict(obj, id=revision_id)
+        self.add_transaction(transaction)
+
+    def add_transaction(self, revision: Revision):
+        if revision.id is not None:
+            raise ValueError('Transaction already has an id.')
+
+        if revision.signature is None:
+            raise ValueError('Transaction is not signed.')
+
+        revision.id = str(uuid4())
 
         with open(os.path.join(self.path, "txchain"), "ab") as txchain:
-            logger.debug('Adding revision %s to signchain.', revision['id'])
+            logger.debug('Adding revision %s to signchain.', revision.id)
             binary_tx = pickle.dumps(revision)
             txchain.write(binary_tx)
 
         # update vault revision
         # TODO is there a better way to do this? Outside of storage backend?
-        self.vault.update_revision(revision['id'])
+        self.vault.update_revision(revision)
 
         return revision
 

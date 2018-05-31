@@ -9,7 +9,7 @@ from syncrypt.models.base import Base
 from .bundle import Bundle, VirtualBundle
 from .flying_vault import FlyingVault
 from .identity import Identity, IdentityState
-from .revision import Revision
+from .revision import Revision, RevisionOp
 from .vault import Vault, VaultState
 
 

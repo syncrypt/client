@@ -22,6 +22,7 @@ from syncrypt.utils.filesystem import folder_size
 from .base import Base, MetadataHolder
 from .bundle import Bundle
 from .identity import Identity
+from .revision import Revision
 
 logger = logging.getLogger(__name__)
 
@@ -214,12 +215,14 @@ class Vault(MetadataHolder, Base):
 
         return self._bundle_cache[relpath]
 
-    def update_revision(self, revision_id):
-        if isinstance(revision_id, bytes):
-            revision_id = revision_id.decode(self.config.encoding)
-        self.logger.debug('Update vault revision to "%s"', revision_id)
+    def update_revision(self, revision: Revision):
+        if not isinstance(revision, Revision):
+            raise ValueError('Unknown type of revision: ' + str(revision))
+        #if isinstance(revision_id, bytes):
+        #    revision_id = revision_id.decode(self.config.encoding)
+        self.logger.debug('Update vault revision to "%s"', revision.id)
         with self.config.update_context():
-            self.config.update('vault', {'revision': revision_id})
+            self.config.update('vault', {'revision': revision.id})
 
     def package_info(self):
         '''
