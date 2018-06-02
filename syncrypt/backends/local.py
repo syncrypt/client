@@ -44,9 +44,10 @@ class LocalStorageBackend(StorageBackend):
 
     async def init(self):
         vault = self.vault
+        new_vault_id = str(uuid4())
         if not vault.config.get("vault.id"):
             with vault.config.update_context():
-                vault.config.update("vault", {"id": str(uuid4())})
+                vault.config.update("vault", {"id": new_vault_id})
 
         await self.open()  # create directory
 
@@ -54,9 +55,15 @@ class LocalStorageBackend(StorageBackend):
         with open(os.path.join(self.path, "txchain"), "wb") as txchain:
             pass
 
+        identity = vault.identity # TODO use user identity here
+
         transaction = Revision(operation=RevisionOp.CreateVault)
         transaction.nonce = randint(0, 0xffffffff)
-        transaction.sign(identity=self.vault.identity) # TODO use user identity here
+        transaction.vault_id = new_vault_id
+        transaction.user_id = 'user@localhost'
+        transaction.user_fingerprint = identity.get_fingerprint()
+        transaction.public_key = identity.public_key.exportKey('DER')
+        transaction.sign(identity=identity)
 
         return self.add_transaction(transaction)
 
@@ -78,13 +85,18 @@ class LocalStorageBackend(StorageBackend):
         with open(dest_path + ".hash", "w") as hashfile:
             hashfile.write(bundle.crypt_hash)
 
+        identity = self.vault.identity # TODO use user identity here
+
         transaction = Revision(operation=RevisionOp.Upload)
+        transaction.vault_id = self.vault.id
         transaction.parent_id = self.vault.revision
+        transaction.user_id = 'user@localhost'
+        transaction.user_fingerprint = identity.get_fingerprint()
         transaction.file_hash = bundle.store_hash
         transaction.revision_metadata = metadata
         transaction.crypt_hash = bundle.crypt_hash
         transaction.file_size_crypt = bundle.file_size_crypt
-        transaction.sign(identity=self.vault.identity) # TODO use user identity here
+        transaction.sign(identity=identity)
 
         self.add_transaction(transaction)
 
@@ -155,7 +167,30 @@ class LocalStorageBackend(StorageBackend):
         return {"email": "user@localhost"}
 
     async def changes(self, since_rev, to_rev, verbose=False):
-        raise NotImplementedError
+        assert since_rev is None or isinstance(since_rev, str)
+
+        queue = asyncio.Queue(8)
+        task = asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
+        return queue
+
+    async def _changes(self, since_rev, to_rev, queue):
+        with open(os.path.join(self.path, "txchain"), "rb") as txchain:
+            try:
+                if since_rev:
+                    # Skip until since_rev
+                    rev = pickle.load(txchain)
+                    while rev.id != since_rev:
+                        rev = pickle.load(txchain)
+
+                rev = pickle.load(txchain)
+
+                while rev.id != to_rev:
+                    await queue.put(rev)
+                    rev = pickle.load(txchain)
+            except EOFError:
+                pass
+            finally:
+                await queue.put(None)
 
     async def close(self):
         pass

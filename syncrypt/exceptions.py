@@ -11,6 +11,10 @@ class FolderExistsAndIsNotEmpty(SyncryptBaseException):
         )
 
 
+class InvalidRevision(SyncryptBaseException):
+    pass
+
+
 class VaultException(SyncryptBaseException):
     pass
 

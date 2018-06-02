@@ -15,8 +15,7 @@ class FlyingVaultManager:
 
     def get_or_create_by_id(self, session, id):
         try:
-            return session.query(self.model)\
-                    .filter(self.model.id==id).one()
+            return session.query(self.model).filter(self.model.id==id).one()
         except NoResultFound:
             return self.model(id=id)
 

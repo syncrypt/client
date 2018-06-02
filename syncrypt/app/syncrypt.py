@@ -595,6 +595,18 @@ class SyncryptApp(object):
             await asyncio.sleep(int(vault.config.get('vault.pull_interval')))
             await self.pull_vault(vault)
 
+    async def sync_vault(self, vault, full=False):
+
+        await self.open_or_init(vault)
+        queue = await vault.backend.changes(vault.revision if not full else None, None)
+
+        while True:
+            revision = await queue.get()
+            if revision is None:
+                break
+
+            await self.revisions.apply(revision, vault)
+
     async def pull_vault(self, vault, full=False):
         vault.logger.info('Pulling %s', vault)
         latest_revision = None
@@ -605,13 +617,13 @@ class SyncryptApp(object):
 
         await self.retrieve_metadata(vault)
 
-        # TODO: do a change detection (.vault/metadata store vs filesystem)
-        await self.open_or_init(vault)
-        if not vault.revision or full:
-            queue = await vault.backend.list_files()
-        else:
-            queue = await vault.backend.changes(vault.revision, None)
+        # First, we will iterate through the changes, validate the chain and build up the state of
+        # the vault (files, keys, ...). This is called "syncing".
+        await self.sync_vault(vault, full=full)
 
+        # Then, we will do a change detection for the local folder and download every bundle that
+        # has changed.
+        # TODO: do a change detection (.vault/metadata store vs filesystem)
         async with AsyncContext(self._bundle_actions) as ctx:
             while True:
                 item = await queue.get()

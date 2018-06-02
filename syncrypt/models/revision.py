@@ -1,5 +1,9 @@
-from sqlalchemy import Column, Integer, String, DateTime, Binary, LargeBinary, ForeignKey
 from enum import Enum
+
+from sqlalchemy import Binary, Column, DateTime, ForeignKey, Integer, LargeBinary, String
+
+from syncrypt.exceptions import InvalidRevision
+
 from .base import Base
 
 
@@ -17,12 +21,14 @@ class Revision(Base):
 
     # These are the core fields that every transaction has to have.
     operation = Column(String(32))
-    user_email = Column(String(250))
     created_at = Column(DateTime())
+    user_id = Column(String(250))
+    user_fingerprint = Column(String(64))
     signature = Column(Binary(512))
 
     # Additional fields for OP_CREATE_VAULT
     nonce = Column(Integer(), nullable=True)
+    public_key = Column(Binary(4096), nullable=True)
 
     # Additional fields for OP_UPLOAD
     file_hash = Column(String(250), nullable=True)
@@ -31,13 +37,33 @@ class Revision(Base):
     crypt_hash = Column(String(250), nullable=True)
     file_size_crypt = Column(Integer(), nullable=True)
 
-    def sign(self, identity):
+    def assert_valid(self):
+        if self.vault_id is None:
+            raise InvalidRevision('Invalid vault_id: {0}'.format(self.vault_id))
+        if self.user_id is None:
+            raise InvalidRevision('Invalid user_id: {0}'.format(self.user_id))
+        if self.user_fingerprint is None:
+            raise InvalidRevision('Invalid user_fingerprint: {0}'.format(self.user_fingerprint))
+
         if self.operation == RevisionOp.CreateVault:
             assert self.parent_id is None
-            self.signature = identity.sign(b'OP_CREATE_VAULT|' + str(self.nonce).encode())
+            if not isinstance(self.public_key, bytes):
+                raise InvalidRevision('Wrong type for public_key')
+
         elif self.operation == RevisionOp.Upload:
             assert self.parent_id is not None
-            message = b''
+        else:
+            raise NotImplementedError()
+
+    def sign(self, identity):
+        self.assert_valid()
+        if self.operation == RevisionOp.CreateVault:
+            message = str(self.operation).encode() + b'|'
+            message += str(self.nonce).encode() + b'|'
+            message += self.public_key
+            self.signature = identity.sign(message)
+        elif self.operation == RevisionOp.Upload:
+            message = str(self.operation).encode() + b'|'
             message += str(self.parent_id).encode() + b'|'
             message += str(self.file_hash).encode() + b'|'
             message += str(self.crypt_hash).encode() + b'|'

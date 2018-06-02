@@ -3,14 +3,16 @@ import logging
 from datetime import timezone
 
 import iso8601
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import desc
+from sqlalchemy.orm.exc import NoResultFound
 
-from syncrypt.models import Revision, store
+from syncrypt.exceptions import InvalidRevision
+from syncrypt.models import Revision, RevisionOp, UserVaultKey, Vault, store
 from syncrypt.models.bundle import VirtualBundle
 from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
+
 
 class RevisionManager:
     model = Revision
@@ -60,8 +62,38 @@ class RevisionManager:
                             .replace(tzinfo=None)
                 rev.path = bundle.relpath
                 rev.operation = server_info['operation'].decode(vault.config.encoding)
-                rev.user_email = server_info['email'].decode(vault.config.encoding)
+                rev.user_id = server_info['email'].decode(vault.config.encoding)
                 session.add(rev)
                 if count % 20 == 0:
                     session.commit()
                     session.expunge_all()
+
+    async def apply(self, revision: Revision, vault: Vault):
+
+        revision.assert_valid()
+
+        # 1. Check preconditions for this to be a valid revision (current revision must be parent)
+        if vault.revision != revision.parent_id:
+            raise InvalidRevision("parent does not match: {0}".format(revision.parent_id))
+
+        with store.session() as session:
+
+            # 2. Check if signing user's key is in the user vault key list
+            # TODO
+
+            # 3. Verify transaction signature
+            # TODO
+
+            # 4. Based on the revision type, perform an action to our state of the vault
+            logger.info("Applying %s (%s)", revision.operation, revision.id)
+
+            if revision.operation == RevisionOp.CreateVault:
+                session.add(UserVaultKey(vault_id=revision.vault_id, user_id=revision.user_id,
+                                         fingerprint=revision.user_fingerprint,
+                                         public_key=revision.public_key))
+                session.commit()
+            else:
+                raise NotImplementedError()
+
+            # 5. Store the revision in config and db
+            vault.update_revision(revision)

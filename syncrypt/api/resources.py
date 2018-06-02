@@ -186,7 +186,7 @@ class VaultResource(Resource):
         for rev in self.app.revisions.list_for_vault(vault):
             log_items.append({
                 'operation': rev.operation,
-                'user_email': rev.user_email,
+                'user_email': rev.user_id,
                 'created_at': rev.created_at.replace(tzinfo=timezone.utc)\
                                             .astimezone(local_tz)\
                                             .strftime('%x %X'),
