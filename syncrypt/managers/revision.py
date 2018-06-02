@@ -7,7 +7,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import InvalidRevision
-from syncrypt.models import Revision, RevisionOp, UserVaultKey, Vault, store
+from syncrypt.models import Bundle, Revision, RevisionOp, UserVaultKey, Vault, store
 from syncrypt.models.bundle import VirtualBundle
 from syncrypt.pipes import Once
 
@@ -85,12 +85,16 @@ class RevisionManager:
             # TODO
 
             # 4. Based on the revision type, perform an action to our state of the vault
-            logger.info("Applying %s (%s)", revision.operation, revision.id)
+            logger.debug("Applying %s (%s)", revision.operation, revision.id)
 
             if revision.operation == RevisionOp.CreateVault:
                 session.add(UserVaultKey(vault_id=revision.vault_id, user_id=revision.user_id,
                                          fingerprint=revision.user_fingerprint,
                                          public_key=revision.public_key))
+                session.commit()
+            elif revision.operation == RevisionOp.Upload:
+                # TODO: get relpath from revision.metadata
+                session.add(Bundle(vault_id=revision.vault_id, store_hash=revision.file_hash))
                 session.commit()
             else:
                 raise NotImplementedError()

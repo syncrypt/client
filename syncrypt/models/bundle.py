@@ -1,45 +1,53 @@
+import asyncio
 import hashlib
-import sys
 import logging
 import os
 import posixpath
+import sys
+from enum import Enum
 
 import aiofiles
-import asyncio
 import umsgpack
+from sqlalchemy import Binary, Column, DateTime, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy.orm import relationship
 
-from syncrypt.pipes import (Buffered, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
-                    EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once,
-                    PadAES, UnpadAES, SnappyCompress, SnappyDecompress, Count)
-from .base import MetadataHolder
+from syncrypt.pipes import (Buffered, Count, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
+                            EncryptRSA_PKCS1_OAEP, FileReader, FileWriter, Hash, Once, PadAES,
+                            SnappyCompress, SnappyDecompress, UnpadAES)
 from syncrypt.utils.filesystem import splitpath
+
+from .base import Base, MetadataHolder
+
 
 logger = logging.getLogger(__name__)
 
 
-class Bundle(MetadataHolder):
+class Bundle(MetadataHolder, Base):
     'A Bundle represents a file and some additional information'
+    __tablename__ = 'bundle'
 
-    __slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
-            'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
-            'key', 'bytes_written')
+    id = Column(Integer(), primary_key=True)
+    vault_id = Column(String(128), ForeignKey("vault.id"))
+    vault = relationship("Vault", foreign_keys=[vault_id])
+    relpath = Column(String(512))
+    file_size = Column(Integer())
+    store_hash = Column(String(128))
+    key = Column(Binary(512)) # AES key used
 
-    def __init__(self, abspath, vault, store_hash=None):
-        self.vault = vault
-        self.path = abspath
+    #__slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
+    #        'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
+    #        'key', 'bytes_written')
+
+    def __init__(self, *args, **kwargs):
+        super(Bundle, self).__init__(*args, **kwargs)
         self.uptodate = False
         self.remote_crypt_hash = None
-        self.key = None
         self.bytes_written = 0
-        self.relpath = None
 
-        if self.path is not None:
-            self.relpath = os.path.relpath(self.path, self.vault.folder)
-            h = hashlib.new(self.vault.config.hash_algo)
-            h.update(self.encode_path(self.relpath))
-            self.store_hash = h.hexdigest()
-        if store_hash is not None:
-            self.store_hash = store_hash
+    def update_store_hash(self):
+        h = hashlib.new(self.vault.config.hash_algo)
+        h.update(self.encode_path(self.relpath))
+        self.store_hash = h.hexdigest()
 
     @property
     def _metadata(self):
@@ -82,15 +90,14 @@ class Bundle(MetadataHolder):
             metadata_contents = await metadata_file.read()
             metadata = umsgpack.loads(metadata_contents)
             self.key = metadata[b'key']
-            filename = self.decode_path(metadata[b'filename'])
-            if self.path is None:
-                self.path = os.path.join(self.vault.folder, filename)
-                self.relpath = os.path.relpath(self.path, self.vault.folder)
-            else:
-                assert self.relpath == filename
+            self.relpath = self.decode_path(metadata[b'filename'])
             assert len(self.key) == self.key_size
         finally:
             await metadata_file.close()
+
+    @property
+    def path(self):
+        return os.path.join(self.vault.folder, self.relpath)
 
     async def generate_key(self):
         self.key = os.urandom(self.key_size)
@@ -211,13 +218,14 @@ class Bundle(MetadataHolder):
                 self.store_hash[:2], self.store_hash[2:])
 
 
-class VirtualBundle(Bundle):
+class VirtualBundle(object):
     '''
     A VirtualBundle is a Bundle that will never change anything on the
     filesystem
     '''
+    __tablename__ = 'virtual_bundle'
 
-    __slots__ = Bundle.__slots__ + ('_virtual_metadata',)
+    #__slots__ = Bundle.__slots__ + ('_virtual_metadata',)
 
     def __get_metadata(self):
         return self._virtual_metadata

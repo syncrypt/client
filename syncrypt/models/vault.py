@@ -210,8 +210,8 @@ class Vault(MetadataHolder, Base):
             return None
 
         if not relpath in self._bundle_cache:
-            self._bundle_cache[relpath] =\
-                    Bundle(os.path.join(self.folder, relpath), vault=self)
+            self._bundle_cache[relpath] = Bundle(relpath=relpath, vault=self, vault_id=self.id)
+            self._bundle_cache[relpath].update_store_hash()
 
         return self._bundle_cache[relpath]
 
