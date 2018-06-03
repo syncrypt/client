@@ -28,10 +28,11 @@ class Bundle(MetadataHolder, Base):
 
     id = Column(Integer(), primary_key=True)
     vault_id = Column(String(128), ForeignKey("vault.id"))
-    vault = relationship("Vault", foreign_keys=[vault_id])
-    relpath = Column(String(512))
+    vault = relationship("Vault", foreign_keys=[vault_id], lazy='noload')
+    relpath = Column(String(512), nullable=False)
     file_size = Column(Integer())
-    store_hash = Column(String(128))
+    store_hash = Column(String(128), nullable=False)
+    hash = Column(String(128), nullable=False)
     key = Column(Binary(512)) # AES key used
 
     #__slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
@@ -243,4 +244,3 @@ class VirtualBundle(object):
 
     async def update_serialized_metadata(self, stream):
         await MetadataHolder.update_serialized_metadata(self, stream)
-

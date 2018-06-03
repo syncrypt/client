@@ -94,10 +94,19 @@ class RevisionManager:
                 session.commit()
             elif revision.operation == RevisionOp.Upload:
                 # TODO: get relpath from revision.metadata
-                session.add(Bundle(vault_id=revision.vault_id, store_hash=revision.file_hash))
+                bundle = await self.create_bundle_from_revision(revision, vault)
+                session.add(bundle)
                 session.commit()
             else:
                 raise NotImplementedError()
 
             # 5. Store the revision in config and db
             vault.update_revision(revision)
+
+    async def create_bundle_from_revision(self, revision, vault):
+        bundle = Bundle(vault=vault, store_hash=revision.file_hash)
+        metadata = await bundle.decrypt_metadata(revision.revision_metadata)
+        bundle.relpath = metadata['filename']
+        bundle.hash = metadata['hash']
+        bundle.key = metadata['key']
+        return bundle

@@ -92,11 +92,10 @@ class LocalStorageTestCase(VaultTestCase):
         app.add_vault(self.other_vault)
 
         # TODO this is not yet working
-        #await app.pull()
+        await app.pull_vault(self.other_vault)
 
         #assert not self.vault.active
         #assert not self.other_vault.active
 
-        #files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
-        #self.assertEqual(files_in_new_vault, 8)
-        #raise NotImplementedError
+        files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
+        self.assertEqual(files_in_new_vault, 8)

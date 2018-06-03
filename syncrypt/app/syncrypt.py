@@ -12,7 +12,7 @@ from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentificat
                                  InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
-from syncrypt.managers import FlyingVaultManager, RevisionManager
+from syncrypt.managers import FlyingVaultManager, RevisionManager, BundleManager
 from syncrypt.models import Identity, IdentityState, Vault, VaultState, VirtualBundle, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
@@ -79,6 +79,7 @@ class SyncryptApp(object):
 
         self.flying_vaults = FlyingVaultManager(self)
         self.revisions = RevisionManager(self)
+        self.bundles = BundleManager(self)
 
         # generate or read users identity
         id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
@@ -625,41 +626,33 @@ class SyncryptApp(object):
         # has changed.
         # TODO: do a change detection (.vault/metadata store vs filesystem)
         async with AsyncContext(self._bundle_actions) as ctx:
-            while True:
-                item = await queue.get()
-                if item is None:
-                    break
-                total += 1
-                store_hash, metadata, server_info = item
-                try:
-                    bundle = await vault.add_bundle_by_metadata(store_hash, metadata)
-                    await ctx.create_task(bundle, self.pull_bundle(bundle))
-                except Exception as e:
-                    vault.logger.exception(e)
-                for result in ctx.completed_tasks():
-                    if not result.exception():
-                        successful.append(result)
-                latest_revision = server_info.get('id') or latest_revision
+
+            for bundle in (await self.bundles.download_bundles_for_vault(vault)):
+                await ctx.create_task(bundle, self.pull_bundle(bundle))
+                ctx.raise_for_failures()
+
             await ctx.wait()
             for result in ctx.completed_tasks():
                 if not result.exception():
                     successful.append(result)
 
-        success = len(successful) == total
-
-        if success:
-            if total == 0:
-                vault.logger.info('No changes in %s', vault)
-            else:
-                vault.logger.info('Successfully pulled %d revisions for %s', total, vault)
-                if latest_revision:
-                    vault.update_revision(latest_revision)
-
             await self.set_vault_state(vault, VaultState.READY)
-        else:
-            vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
-                    total - len(successful), total, vault)
-            await self.set_vault_state(vault, VaultState.FAILURE)
+
+        #success = len(successful) == total
+
+        #if success:
+        #    if total == 0:
+        #        vault.logger.info('No changes in %s', vault)
+        #    else:
+        #        vault.logger.info('Successfully pulled %d revisions for %s', total, vault)
+        #        if latest_revision:
+        #            vault.update_revision(latest_revision)
+
+        #    await self.set_vault_state(vault, VaultState.READY)
+        #else:
+        #    vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
+        #            total - len(successful), total, vault)
+        #    await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'

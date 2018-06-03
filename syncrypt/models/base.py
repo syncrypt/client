@@ -33,10 +33,18 @@ class MetadataHolder:
                 >> SnappyCompress() \
                 >> EncryptRSA_PKCS1_OAEP(self.identity.public_key)
 
-    async def write_encrypted_metadata(self, stream):
-        sink = stream \
+    def encrypted_metadata_decoder(self, stream):
+        return stream \
                 >> DecryptRSA_PKCS1_OAEP(self.identity.private_key) \
                 >> SnappyDecompress()
+
+    async def decrypt_metadata(self, metadata):
+        sink = self.encrypted_metadata_decoder(Once(metadata))
+        serialized_metadata = await sink.read()
+        return umsgpack.unpackb(serialized_metadata)
+
+    async def write_encrypted_metadata(self, stream):
+        sink = self.encrypted_metadata_decoder(stream)
         await self.update_serialized_metadata(sink)
 
     async def update_serialized_metadata(self, stream):
