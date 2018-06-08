@@ -6,7 +6,7 @@ import time
 from erlastic import ErlangTermDecoder, ErlangTermEncoder, Atom
 
 try:
-    basestring
+    basestring # type: ignore
 except NameError:
     basestring = str
 

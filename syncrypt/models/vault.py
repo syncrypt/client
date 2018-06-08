@@ -67,6 +67,7 @@ class Vault(MetadataHolder, Base):
         self.state = VaultState.UNINITIALIZED
         self.folder = folder
         self._bundle_cache = {}
+        self._identity = None # type: Identity
 
         self.logger = VaultLoggerAdapter(self, logger)
 
@@ -111,13 +112,11 @@ class Vault(MetadataHolder, Base):
 
     @property
     def identity(self) -> Identity:
-        try:
-            return self._identity
-        except AttributeError:
+        if self._identity is None:
             id_rsa_path = os.path.join(self.folder, '.vault', 'id_rsa')
             id_rsa_pub_path = os.path.join(self.folder, '.vault', 'id_rsa.pub')
             self._identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
-            return self._identity
+        return self._identity
 
     @property
     def backend(self):

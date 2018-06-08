@@ -181,6 +181,7 @@ setup(
             'pytest>=2.8.0',
             'asynctest',
             'hypothesis',
+            'mypy',  # used for static type checking
             'pylint'  # used for static code analysis
         ],
         'uvloop': [

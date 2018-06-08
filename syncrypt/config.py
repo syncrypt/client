@@ -1,8 +1,8 @@
+import configparser
 import logging
 import os.path
 from copy import deepcopy
-
-import configparser
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class Config(object):
     # characters we show of the hexadecimal representation
     fingerprint_length = 16
 
-    default_config = {}
+    default_config = {} # type: Dict[str, Any]
 
     def __init__(self, config_path=None):
         self._config = configparser.ConfigParser()
