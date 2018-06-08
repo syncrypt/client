@@ -1,16 +1,18 @@
+import asyncio
 import logging
-from glob import glob
 import os
 import os.path
 import shutil
 import unittest
+from glob import glob
 
-import pytest
-import asyncio
 import asynctest
-from syncrypt.models import Bundle, Vault
+import pytest
+
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
+from syncrypt.managers import UserVaultKeyManager
+from syncrypt.models import Bundle, Vault
 from tests.base import VaultTestCase
 
 
@@ -91,11 +93,12 @@ class LocalStorageTestCase(VaultTestCase):
         await app.open_or_init(self.other_vault)
         app.add_vault(self.other_vault)
 
-        # TODO this is not yet working
         await app.pull_vault(self.other_vault)
-
-        #assert not self.vault.active
-        #assert not self.other_vault.active
 
         files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
         self.assertEqual(files_in_new_vault, 8)
+
+        keys = UserVaultKeyManager()
+        # We have one valid key for both vaults
+        self.assertEqual(len(keys.list_for_vault(self.other_vault)), 1)
+        self.assertEqual(len(keys.list_for_vault(self.vault)), 1)
