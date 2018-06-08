@@ -88,7 +88,7 @@ class RevisionManager:
             logger.debug("Applying %s (%s)", revision.operation, revision.id)
 
             if revision.operation == RevisionOp.CreateVault:
-                session.add(UserVaultKey(vault_id=revision.vault_id, user_id=revision.user_id,
+                session.add(UserVaultKey(vault_id=vault.id, user_id=revision.user_id,
                                          fingerprint=revision.user_fingerprint,
                                          public_key=revision.public_key))
                 session.commit()

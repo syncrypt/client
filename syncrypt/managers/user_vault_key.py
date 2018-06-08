@@ -13,4 +13,4 @@ class UserVaultKeyManager:
     def list_for_vault(self, vault):
         with store.session() as session:
             return session.query(UserVaultKey)\
-                    .filter(UserVaultKey.vault_id==vault.config.id).all()
+                    .filter(UserVaultKey.vault_id==vault.id).all()
