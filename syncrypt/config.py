@@ -77,8 +77,8 @@ class Config(object):
     @property
     def config_dir(self):
         if hasattr(self, '_config') and 'app' in self._config \
-                and 'directory' in self._config['app']:
-            return self._config['app']['directory']
+                and 'config_dir' in self._config['app']:
+            return self._config['app']['config_dir']
         else:
             return os.path.join(os.path.expanduser('~'), '.config', 'syncrypt')
 
@@ -169,6 +169,10 @@ class AppConfig(Config, BackendConfigMixin):
             'host': '127.0.0.1',
             'port': '28080',
             'auth_token': ''
+        },
+        'identity': {
+            'public_key': 'id_rsa', # absolute or relative to config dir
+            'private_key': 'id_rsa.pub' # absolute or relative to config dir
         },
         'store': {
             'engine': 'sqlite',

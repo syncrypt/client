@@ -81,10 +81,11 @@ class SyncryptApp(object):
         self.revisions = RevisionManager(self)
         self.bundles = BundleManager(self)
 
-        # generate or read users identity
-        id_rsa_path = os.path.join(self.config.config_dir, 'id_rsa')
-        id_rsa_pub_path = os.path.join(self.config.config_dir, 'id_rsa.pub')
-        self.identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
+        self.identity = Identity(os.path.join(self.config.config_dir,
+                                              self.config.get('identity.private_key')),
+                                 os.path.join(self.config.config_dir,
+                                              self.config.get('identity.public_key')),
+                                 self.config)
 
         if vault_dirs is None:
             vault_dirs = self.config.vault_dirs

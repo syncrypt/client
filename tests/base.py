@@ -35,6 +35,8 @@ class TestAppConfig(AppConfig):
             # Store DB is in memory for tests
             self.set('store.path', ':memory:')
 
+            self.set('app.config_dir', os.path.join(os.path.dirname(__file__), 'testconfigdir'))
+
 
 class VaultTestCase(asynctest.TestCase):
     folder = None
@@ -61,7 +63,6 @@ class VaultTestCase(asynctest.TestCase):
 
         self.app_config = TestAppConfig(app_config_file)
         self.app = self.app_cls(self.app_config, auth_provider=TestAuthenticationProvider())
-        asyncio.get_event_loop().run_until_complete(self.app.identity.generate_keys())
         asyncio.get_event_loop().run_until_complete(self.app.initialize())
 
     def tearDown(self):
