@@ -1,4 +1,5 @@
 import asyncio
+from typing import Dict
 
 import logging
 from syncrypt.utils.semaphores import JoinableSemaphore
@@ -11,9 +12,9 @@ class AsyncContext:
     def __init__(self, semaphore=None, concurrency: int = 8) -> None:
         self.loop = asyncio.get_event_loop()
         self.semaphore = semaphore or JoinableSemaphore(concurrency)
-        self.running_tasks = {}
-        self.failed_tasks = {}
-        self._completed_tasks = asyncio.Queue(maxsize=concurrency)
+        self.running_tasks = {} # type: Dict[str, asyncio.Task]
+        self.failed_tasks = {} # type: Dict[str, asyncio.Task]
+        self._completed_tasks = asyncio.Queue(maxsize=concurrency) # type: asyncio.Queue
 
     async def __aenter__(self):
         return self

@@ -16,7 +16,7 @@ class MetadataHolder:
     def _metadata(self):
         raise NotImplementedError()
 
-    @_metadata.setter
+    @_metadata.setter # type: ignore
     def _metadata_setter(self):
         raise NotImplementedError()
 

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Resource(object):
     version = 'v1'
-    resource_name = None
+    resource_name = None # type: str
 
     def __init__(self, app):
         self.app = app
