@@ -1,8 +1,9 @@
+import asyncio
 from abc import abstractmethod
 
 from typing_extensions import Protocol
 
-from syncrypt.models import Revision, Vault, Identity, Bundle
+from syncrypt.models import Bundle, Identity, Revision, Vault
 
 
 class StorageBackend(Protocol):
@@ -20,6 +21,14 @@ class StorageBackend(Protocol):
     async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
         raise NotImplementedError()
 
+    @abstractmethod
+    async def set_vault_metadata(self, identity: Identity) -> Revision:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def changes(self, since_rev, to_rev) -> asyncio.Queue:
+        raise NotImplementedError
+
     async def download(self, bundle):
         raise NotImplementedError()
 
@@ -35,5 +44,3 @@ class StorageBackend(Protocol):
     async def add_user_vault_key(self, vault, email, identity):
         pass
 
-    async def changes(self, since_rev, to_rev, verbose=False):
-        raise NotImplementedError

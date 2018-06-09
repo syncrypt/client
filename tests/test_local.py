@@ -50,7 +50,7 @@ class LocalStorageTestCase(VaultTestCase):
 
         self.vault.config.vault['name'] = 'My Library'
 
-        await backend.set_vault_metadata()
+        await backend.set_vault_metadata(self.app.identity)
         await backend.vault_metadata()
 
         # new connection

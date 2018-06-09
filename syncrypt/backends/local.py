@@ -129,12 +129,23 @@ class LocalStorageBackend(StorageBackend):
             bundle.remote_crypt_hash = content_hash
             metadata.close()
 
-    async def set_vault_metadata(self):
+    async def set_vault_metadata(self, identity: Identity) -> Revision:
         dest_path = os.path.join(self.path, "metadata")
         writer = self.vault.encrypted_metadata_reader() >> FileWriter(
             dest_path, create_dirs=True
         )
         await writer.consume()
+
+        metadata = b''
+
+        transaction = Revision(operation=RevisionOp.SetMetadata)
+        transaction.vault_id = self.vault.id
+        transaction.parent_id = self.vault.revision
+        transaction.user_id = 'user@localhost'
+        transaction.user_fingerprint = identity.get_fingerprint()
+        transaction.revision_metadata = metadata
+        transaction.sign(identity)
+        return transaction
 
     async def vault_metadata(self):
         dest_path = os.path.join(self.path, "metadata")
@@ -154,10 +165,10 @@ class LocalStorageBackend(StorageBackend):
     async def user_info(self):
         return {"email": "user@localhost"}
 
-    async def changes(self, since_rev, to_rev, verbose=False):
+    async def changes(self, since_rev, to_rev) -> asyncio.Queue:
         assert since_rev is None or isinstance(since_rev, str)
 
-        queue = asyncio.Queue(8)
+        queue = asyncio.Queue(8) # type: asyncio.Queue[Revision]
         task = asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
         return queue
 
