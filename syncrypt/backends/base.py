@@ -1,6 +1,11 @@
-from syncrypt.models import Vault
+from abc import abstractmethod
 
-class StorageBackend(object):
+from typing_extensions import Protocol
+
+from syncrypt.models import Revision, Vault
+
+
+class StorageBackend(Protocol):
     vault = None # type: Vault
 
     def __init__(self, vault):
@@ -14,10 +19,12 @@ class StorageBackend(object):
     async def open(self):
         raise NotImplementedError()
 
-    async def init(self):
+    @abstractmethod
+    async def init(self) -> Revision:
         raise NotImplementedError()
 
-    async def upload(self, bundle):
+    @abstractmethod
+    async def upload(self, bundle) -> Revision:
         raise NotImplementedError()
 
     async def download(self, bundle):

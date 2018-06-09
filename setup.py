@@ -151,6 +151,7 @@ setup(
         'certifi',
         'colorlog',
         'erlastic',
+        'typing_extensions',
         'hachiko>=0.1',
         'iso8601',
         'msgpack-python>=0.4.0',

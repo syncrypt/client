@@ -1,17 +1,18 @@
 import asyncio
-from Cryptodome.Random.random import randint
-import math
-import pickle
 import logging
+import math
 import os
+import pickle
 import shutil
 import time
 from glob import glob
 from uuid import uuid4
 
+from Cryptodome.Random.random import randint
+
 from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.pipes import FileReader, FileWriter
 from syncrypt.models import Revision, RevisionOp
+from syncrypt.pipes import FileReader, FileWriter
 
 from .base import StorageBackend
 
@@ -42,7 +43,7 @@ class LocalStorageBackend(StorageBackend):
         if not os.path.isdir(self.path):
             os.makedirs(self.path, exist_ok=True)
 
-    async def init(self):
+    async def init(self) -> Revision:
         vault = self.vault
         new_vault_id = str(uuid4())
         if not vault.config.get("vault.id"):
@@ -67,7 +68,7 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_transaction(transaction)
 
-    async def upload(self, bundle):
+    async def upload(self, bundle) -> Revision:
         assert self.vault.revision is not None
 
         logger.info("Uploading %s", bundle)
