@@ -171,8 +171,8 @@ class AppConfig(Config, BackendConfigMixin):
             'auth_token': ''
         },
         'identity': {
-            'public_key': 'id_rsa', # absolute or relative to config dir
-            'private_key': 'id_rsa.pub' # absolute or relative to config dir
+            'public_key': 'id_rsa.pub', # absolute or relative to config dir
+            'private_key': 'id_rsa' # absolute or relative to config dir
         },
         'store': {
             'engine': 'sqlite',

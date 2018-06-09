@@ -11,7 +11,7 @@ from uuid import uuid4
 from Cryptodome.Random.random import randint
 
 from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.models import Revision, RevisionOp, Vault
+from syncrypt.models import Revision, RevisionOp, Vault, Identity, Bundle
 from syncrypt.pipes import FileReader, FileWriter
 
 from .base import StorageBackend
@@ -38,7 +38,7 @@ class LocalStorageBackend(StorageBackend):
         if not os.path.isdir(self.path):
             os.makedirs(self.path, exist_ok=True)
 
-    async def init(self) -> Revision:
+    async def init(self, identity: Identity) -> Revision:
         vault = self.vault
         new_vault_id = str(uuid4())
         if not vault.config.get("vault.id"):
@@ -51,8 +51,6 @@ class LocalStorageBackend(StorageBackend):
         with open(os.path.join(self.path, "txchain"), "wb") as txchain:
             pass
 
-        identity = vault.identity # TODO use user identity here
-
         transaction = Revision(operation=RevisionOp.CreateVault)
         transaction.nonce = randint(0, 0xffffffff)
         transaction.vault_id = new_vault_id
@@ -63,7 +61,7 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_transaction(transaction)
 
-    async def upload(self, bundle) -> Revision:
+    async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
         assert self.vault.revision is not None
 
         logger.info("Uploading %s", bundle)
@@ -80,8 +78,6 @@ class LocalStorageBackend(StorageBackend):
         #await s.consume()
         with open(dest_path + ".hash", "w") as hashfile:
             hashfile.write(bundle.crypt_hash)
-
-        identity = self.vault.identity # TODO use user identity here
 
         transaction = Revision(operation=RevisionOp.Upload)
         transaction.vault_id = self.vault.id

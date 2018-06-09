@@ -45,6 +45,7 @@ class VaultTestCase(asynctest.TestCase):
     # If available, use filesystem mounted shared memory in order to save
     # disk IO operations during testing
     working_dir = '/dev/shm' if os.access('/dev/shm', os.W_OK) else 'tests/'
+    vault = None # type: Vault
 
     def setUp(self):
         if self.folder:

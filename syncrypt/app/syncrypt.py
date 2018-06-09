@@ -12,8 +12,8 @@ from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentificat
                                  InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
-from syncrypt.managers import FlyingVaultManager, RevisionManager, BundleManager
-from syncrypt.models import Identity, IdentityState, Vault, VaultState, store
+from syncrypt.managers import BundleManager, FlyingVaultManager, RevisionManager
+from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
 from syncrypt.utils.filesystem import is_empty
@@ -206,12 +206,12 @@ class SyncryptApp(object):
             logger.debug('Using user auth token to initialize vault.')
             vault.backend.global_auth = global_auth
         try:
-            revision = await vault.backend.init()
+            revision = await vault.backend.init(self.identity)
         except InvalidAuthentification:
             vault.backend.global_auth = None
             username, password = await self.auth_provider.get_auth(vault.backend)
             vault.backend.set_auth(username, password)
-            revision = await vault.backend.init()
+            revision = await vault.backend.init(self.identity)
 
         logger.debug('Vault has been created by %s', revision)
 
@@ -548,7 +548,7 @@ class SyncryptApp(object):
             vault.logger.exception(e)
             await self.set_vault_state(vault, VaultState.FAILURE)
 
-    async def push_bundle(self, bundle):
+    async def push_bundle(self, bundle: Bundle):
         'update bundle and maybe upload'
 
         await self.semaphores['update'].acquire(bundle)
@@ -567,7 +567,7 @@ class SyncryptApp(object):
         if bundle.remote_hash_differs:
             await self.semaphores['upload'].acquire(bundle)
             try:
-                revision = await bundle.vault.backend.upload(bundle)
+                revision = await bundle.vault.backend.upload(bundle, self.identity)
                 await self.revisions.apply(revision, bundle.vault)
                 self.stats['uploads'] += 1
             finally:

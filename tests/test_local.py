@@ -37,7 +37,7 @@ class LocalStorageTestCase(VaultTestCase):
             self.assertEqual(bundle.remote_hash_differs, True)
             await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, True)
-            await backend.upload(bundle)
+            await backend.upload(bundle, self.app.identity)
             await backend.stat(bundle)
             self.assertEqual(bundle.remote_hash_differs, False)
 
@@ -102,3 +102,10 @@ class LocalStorageTestCase(VaultTestCase):
         # We have one valid key for both vaults
         self.assertEqual(len(keys.list_for_vault(self.other_vault)), 1)
         self.assertEqual(len(keys.list_for_vault(self.vault)), 1)
+
+        key = keys.list_for_vault(self.vault)[0]
+        other_key = keys.list_for_vault(self.other_vault)[0]
+
+        self.assertEqual(key.fingerprint, other_key.fingerprint)
+        self.assertNotEqual(key.fingerprint, self.vault.identity.get_fingerprint())
+        self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
