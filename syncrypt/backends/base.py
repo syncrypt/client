@@ -6,13 +6,6 @@ from syncrypt.models import Revision, Vault
 
 
 class StorageBackend(Protocol):
-    vault = None # type: Vault
-
-    def __init__(self, vault):
-        self.vault = vault
-        self.connected = False
-        self.invalid_auth = False
-
     def version(self):
         raise NotImplementedError()
 

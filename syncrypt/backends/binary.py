@@ -888,8 +888,8 @@ class BinaryStorageBackend(StorageBackend):
         # Vault specific login information
         self.vault = vault
         self.auth = auth
-
-        super(BinaryStorageBackend, self).__init__(vault)
+        self.connected = False
+        self.invalid_auth = False
 
     @property
     def global_auth(self):

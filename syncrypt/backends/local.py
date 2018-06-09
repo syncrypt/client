@@ -20,14 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class LocalStorageBackend(StorageBackend):
+    vault = None # type: Vault
 
     def __init__(self, vault, folder, **kwargs):
         self.folder = folder
-        super(LocalStorageBackend, self).__init__(vault)
-
-        # local storage is always authed
-        self.invalid_auth = False
-        self.connected = True
+        self.vault = vault
 
     @property
     def path(self):
