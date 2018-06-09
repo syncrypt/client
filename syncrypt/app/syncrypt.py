@@ -13,7 +13,7 @@ from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentificat
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
 from syncrypt.managers import FlyingVaultManager, RevisionManager, BundleManager
-from syncrypt.models import Identity, IdentityState, Vault, VaultState, VirtualBundle, store
+from syncrypt.models import Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
 from syncrypt.utils.filesystem import is_empty

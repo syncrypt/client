@@ -219,28 +219,28 @@ class Bundle(MetadataHolder, Base):
                 self.store_hash[:2], self.store_hash[2:])
 
 
-class VirtualBundle(object):
-    '''
-    A VirtualBundle is a Bundle that will never change anything on the
-    filesystem
-    '''
-    __tablename__ = 'virtual_bundle'
-
-    #__slots__ = Bundle.__slots__ + ('_virtual_metadata',)
-
-    def __get_metadata(self):
-        return self._virtual_metadata
-
-    def __set_metadata(self, metadata):
-        self._virtual_metadata = metadata
-        if 'filename' in metadata:
-            self.relpath = self.decode_path(metadata['filename'])
-            self.path = os.path.join(self.vault.folder, self.relpath)
-
-    _metadata = property(__get_metadata, __set_metadata)
-
-    def load_key(self):
-        self.key = self._metadata[b'key']
-
-    async def update_serialized_metadata(self, stream):
-        await MetadataHolder.update_serialized_metadata(self, stream)
+#class VirtualBundle(object):
+#    '''
+#    A VirtualBundle is a Bundle that will never change anything on the
+#    filesystem
+#    '''
+#    __tablename__ = 'virtual_bundle'
+#
+#   #__slots__ = Bundle.__slots__ + ('_virtual_metadata',)
+#
+#    def __get_metadata(self):
+#        return self._virtual_metadata
+#
+#    def __set_metadata(self, metadata):
+#        self._virtual_metadata = metadata
+#        if 'filename' in metadata:
+#            self.relpath = self.decode_path(metadata['filename'])
+#            self.path = os.path.join(self.vault.folder, self.relpath)
+#
+#    _metadata = property(__get_metadata, __set_metadata)
+#
+#    def load_key(self):
+#        self.key = self._metadata[b'key']
+#
+#    async def update_serialized_metadata(self, stream):
+#        await MetadataHolder.update_serialized_metadata(self, stream)

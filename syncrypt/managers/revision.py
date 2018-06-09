@@ -8,7 +8,6 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import InvalidRevision
 from syncrypt.models import Bundle, Revision, RevisionOp, UserVaultKey, Vault, store
-from syncrypt.models.bundle import VirtualBundle
 from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
@@ -22,51 +21,52 @@ class RevisionManager:
 
     def get_or_create_by_id(self, session, id):
         try:
-            return session.query(self.model)\
-                    .filter(self.model.id==id).one()
+            return session.query(self.model).filter(self.model.id == id).one()
         except NoResultFound:
             return self.model(id=id)
 
     def list_for_vault(self, vault):
         with store.session() as session:
-            return session.query(Revision)\
-                    .filter(Revision.vault_id==vault.config.id).all()
+            return (
+                session.query(Revision).filter(Revision.vault_id == vault.config.id).all()
+            )
 
     async def update_for_vault(self, vault):
-        with store.session() as session:
-            try:
-                latest_rev = session.query(self.model)\
-                        .filter(Revision.vault_id==vault.config.id)\
-                        .order_by(desc(Revision.created_at)).limit(1).one()
-            except NoResultFound:
-                latest_rev = None
+        raise NotImplementedError()
+        # with store.session() as session:
+        #     try:
+        #         latest_rev = session.query(self.model)\
+        #                 .filter(Revision.vault_id==vault.config.id)\
+        #                 .order_by(desc(Revision.created_at)).limit(1).one()
+        #     except NoResultFound:
+        #         latest_rev = None
 
-            queue = await vault.backend.changes(latest_rev and latest_rev.id, None, verbose=True)
-            log_items = []
-            count = 0
-            while True:
-                item = await queue.get()
-                if item is None:
-                    break
-                count += 1
-                store_hash, metadata, server_info = item
-                bundle = VirtualBundle(None, vault, store_hash=store_hash)
-                await bundle.write_encrypted_metadata(Once(metadata))
+        #     queue = await vault.backend.changes(latest_rev and latest_rev.id, None, verbose=True)
+        #     log_items = []
+        #     count = 0
+        #     while True:
+        #         item = await queue.get()
+        #         if item is None:
+        #             break
+        #         count += 1
+        #         store_hash, metadata, server_info = item
+        #         bundle = VirtualBundle(None, vault, store_hash=store_hash)
+        #         await bundle.write_encrypted_metadata(Once(metadata))
 
-                rev_id = server_info['id'].decode(vault.config.encoding)
-                rev = self.get_or_create_by_id(session, rev_id)
-                rev.vault_id = vault.config.id
-                rev.created_at = \
-                        iso8601.parse_date(server_info['created_at'].decode())\
-                            .astimezone(timezone.utc)\
-                            .replace(tzinfo=None)
-                rev.path = bundle.relpath
-                rev.operation = server_info['operation'].decode(vault.config.encoding)
-                rev.user_id = server_info['email'].decode(vault.config.encoding)
-                session.add(rev)
-                if count % 20 == 0:
-                    session.commit()
-                    session.expunge_all()
+        #         rev_id = server_info['id'].decode(vault.config.encoding)
+        #         rev = self.get_or_create_by_id(session, rev_id)
+        #         rev.vault_id = vault.config.id
+        #         rev.created_at = \
+        #                 iso8601.parse_date(server_info['created_at'].decode())\
+        #                     .astimezone(timezone.utc)\
+        #                     .replace(tzinfo=None)
+        #         rev.path = bundle.relpath
+        #         rev.operation = server_info['operation'].decode(vault.config.encoding)
+        #         rev.user_id = server_info['email'].decode(vault.config.encoding)
+        #         session.add(rev)
+        #         if count % 20 == 0:
+        #             session.commit()
+        #             session.expunge_all()
 
     async def apply(self, revision: Revision, vault: Vault):
 
@@ -88,9 +88,14 @@ class RevisionManager:
             logger.debug("Applying %s (%s)", revision.operation, revision.id)
 
             if revision.operation == RevisionOp.CreateVault:
-                session.add(UserVaultKey(vault_id=vault.id, user_id=revision.user_id,
-                                         fingerprint=revision.user_fingerprint,
-                                         public_key=revision.public_key))
+                session.add(
+                    UserVaultKey(
+                        vault_id=vault.id,
+                        user_id=revision.user_id,
+                        fingerprint=revision.user_fingerprint,
+                        public_key=revision.public_key,
+                    )
+                )
                 session.commit()
             elif revision.operation == RevisionOp.Upload:
                 # TODO: get relpath from revision.metadata
@@ -106,7 +111,7 @@ class RevisionManager:
     async def create_bundle_from_revision(self, revision, vault):
         bundle = Bundle(vault=vault, store_hash=revision.file_hash)
         metadata = await bundle.decrypt_metadata(revision.revision_metadata)
-        bundle.relpath = metadata['filename']
-        bundle.hash = metadata['hash']
-        bundle.key = metadata['key']
+        bundle.relpath = metadata["filename"]
+        bundle.hash = metadata["hash"]
+        bundle.key = metadata["key"]
         return bundle

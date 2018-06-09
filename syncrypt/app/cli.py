@@ -8,7 +8,7 @@ from tzlocal import get_localzone
 
 import syncrypt
 from syncrypt.app.auth import AuthenticationProvider
-from syncrypt.models import Identity, VirtualBundle
+from syncrypt.models import Identity
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
@@ -192,32 +192,35 @@ class SyncryptCLIApp(SyncryptApp):
         await backend.close()
 
     async def print_log(self, verbose=False):
-        local_tz = get_localzone()
-        for vault in self.vaults:
-            try:
-                await vault.backend.open()
-            except VaultNotInitialized:
-                logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-                continue
-            queue = await vault.backend.changes(None, None, verbose=verbose)
-            while True:
-                item = await queue.get()
-                if item is None:
-                    break
-                store_hash, metadata, server_info = item
-                bundle = VirtualBundle(None, vault, store_hash=store_hash)
-                await bundle.write_encrypted_metadata(Once(metadata))
-                rev_id = server_info['id'].decode(vault.config.encoding)
-                created_at = iso8601.parse_date(server_info['created_at'].decode())\
-                        .astimezone(local_tz)\
-                        .strftime('%x %X')
-                operation = server_info['operation'].decode(vault.config.encoding)
-                if verbose:
-                    user_email = server_info['email'].decode(vault.config.encoding)
-                    print("%s | %s | %s | %-9s %s" % (created_at, rev_id, user_email,
-                        operation, bundle.relpath))
-                else:
-                    print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
+        raise NotImplementedError()
+        # the following behaviour is deprecated, we want to sync the vault and then show the log
+        # from the database
+        # local_tz = get_localzone()
+        # for vault in self.vaults:
+        #     try:
+        #         await vault.backend.open()
+        #     except VaultNotInitialized:
+        #         logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
+        #         continue
+        #     queue = await vault.backend.changes(None, None, verbose=verbose)
+        #     while True:
+        #         item = await queue.get()
+        #         if item is None:
+        #             break
+        #         store_hash, metadata, server_info = item
+        #         bundle = VirtualBundle(None, vault, store_hash=store_hash)
+        #         await bundle.write_encrypted_metadata(Once(metadata))
+        #         rev_id = server_info['id'].decode(vault.config.encoding)
+        #         created_at = iso8601.parse_date(server_info['created_at'].decode())\
+        #                 .astimezone(local_tz)\
+        #                 .strftime('%x %X')
+        #         operation = server_info['operation'].decode(vault.config.encoding)
+        #         if verbose:
+        #             user_email = server_info['email'].decode(vault.config.encoding)
+        #             print("%s | %s | %s | %-9s %s" % (created_at, rev_id, user_email,
+        #                 operation, bundle.relpath))
+        #         else:
+        #             print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
 
-        await self.wait()
+        # await self.wait()
 

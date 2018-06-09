@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from syncrypt.models.base import Base
 
-from .bundle import Bundle, VirtualBundle
+from .bundle import Bundle
 from .flying_vault import FlyingVault
 from .identity import Identity, IdentityState
 from .revision import Revision, RevisionOp
