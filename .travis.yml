@@ -5,6 +5,7 @@ matrix:
       python: 3.5
     - os: linux
       python: 3.6
+      env: DEPLOY_ARTIFACT=true
     - os: osx
       sudo: required
       language: generic
@@ -18,7 +19,7 @@ matrix:
       # This will build OS X 10.11 instead of default 10.12.
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
-      env: PYTHON_VERSION=3.6.5
+      env: PYTHON_VERSION=3.6.5 DEPLOY_ARTIFACT=true
 addons:
   apt:
     packages:
@@ -68,8 +69,7 @@ deploy:
     skip_cleanup: true
     on:
       all_branches: true
-      condition: |
-        ( $TRAVIS_PYTHON_VERSION == '3.6' ) || ( $PYTHON_VERSION == '3.6.5' )
+      condition: ( $DEPLOY_ARTIFACT == 'true' )
   - provider: pypi
     user: lordi
     password:
