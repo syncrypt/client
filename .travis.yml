@@ -11,6 +11,14 @@ matrix:
       # This will build OS X 10.11 instead of default 10.12.
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
+      env: PYTHON_VERSION=3.5.5
+    - os: osx
+      sudo: required
+      language: generic
+      # This will build OS X 10.11 instead of default 10.12.
+      # We need this to get builds running on older OS X versions.
+      osx_image: xcode7.3
+      env: PYTHON_VERSION=3.6.5
 addons:
   apt:
     packages:
@@ -22,11 +30,12 @@ install: |
   # Receive tags so that our versioning works correctly
   git fetch --unshallow --tags
   if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-      brew update;
+      brew update >/dev/null;
       brew install snappy;
-      PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install 3.5.2;
-      pyenv local 3.5.2;
-      pyenv global 3.5.2;
+      brew upgrade pyenv;
+      PYTHON_CONFIGURE_OPTS="--enable-framework" pyenv install $PYTHON_VERSION;
+      pyenv local $PYTHON_VERSION;
+      pyenv global $PYTHON_VERSION;
       $(pyenv root)/shims/python -m venv venv;
       source venv/bin/activate;
       pip install 'setuptools>=38.5'
@@ -60,7 +69,7 @@ deploy:
     on:
       all_branches: true
       condition: |
-        ( $TRAVIS_PYTHON_VERSION == '3.6' ) || ( $TRAVIS_OS_NAME == 'osx' )
+        ( $TRAVIS_PYTHON_VERSION == '3.6' ) || ( $PYTHON_VERSION == '3.6.5' )
   - provider: pypi
     user: lordi
     password:
