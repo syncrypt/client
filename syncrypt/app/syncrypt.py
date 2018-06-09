@@ -205,12 +205,16 @@ class SyncryptApp(object):
             logger.debug('Using user auth token to initialize vault.')
             vault.backend.global_auth = global_auth
         try:
-            await vault.backend.init()
+            revision = await vault.backend.init()
         except InvalidAuthentification:
             vault.backend.global_auth = None
             username, password = await self.auth_provider.get_auth(vault.backend)
             vault.backend.set_auth(username, password)
-            await vault.backend.init()
+            revision = await vault.backend.init()
+
+        logger.debug('Vault has been created by %s', revision)
+
+        await self.revisions.apply(revision, vault)
 
         await self.set_vault_state(vault, VaultState.READY)
         with vault.config.update_context():
@@ -562,7 +566,8 @@ class SyncryptApp(object):
         if bundle.remote_hash_differs:
             await self.semaphores['upload'].acquire(bundle)
             try:
-                await bundle.vault.backend.upload(bundle)
+                revision = await bundle.vault.backend.upload(bundle)
+                await self.revisions.apply(revision, bundle.vault)
                 self.stats['uploads'] += 1
             finally:
                 await self.semaphores['upload'].release(bundle)

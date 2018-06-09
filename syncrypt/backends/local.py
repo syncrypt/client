@@ -98,7 +98,7 @@ class LocalStorageBackend(StorageBackend):
         transaction.file_size_crypt = bundle.file_size_crypt
         transaction.sign(identity=identity)
 
-        self.add_transaction(transaction)
+        return self.add_transaction(transaction)
 
     def add_transaction(self, revision: Revision):
         if revision.id is not None:
@@ -113,10 +113,6 @@ class LocalStorageBackend(StorageBackend):
             logger.debug('Adding revision %s to signchain.', revision.id)
             binary_tx = pickle.dumps(revision)
             txchain.write(binary_tx)
-
-        # update vault revision
-        # TODO is there a better way to do this? Outside of storage backend?
-        self.vault.update_revision(revision)
 
         return revision
 
