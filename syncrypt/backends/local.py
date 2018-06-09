@@ -11,7 +11,7 @@ from uuid import uuid4
 from Cryptodome.Random.random import randint
 
 from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.models import Revision, RevisionOp
+from syncrypt.models import Revision, RevisionOp, Vault
 from syncrypt.pipes import FileReader, FileWriter
 
 from .base import StorageBackend
@@ -20,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class LocalStorageBackend(StorageBackend):
-    vault = None # type: Vault
-
-    def __init__(self, vault, folder, **kwargs):
+    def __init__(self, vault: Vault, folder, **kwargs) -> None:
         self.folder = folder
         self.vault = vault
 
