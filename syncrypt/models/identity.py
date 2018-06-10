@@ -25,7 +25,7 @@ class IdentityState(Enum):
 
 
 class Identity(object):
-    '''represents an RSA key pair'''
+    """represents an RSA key pair"""
 
     def __init__(self, id_rsa_path, id_rsa_pub_path, config):
         self.id_rsa_path = id_rsa_path
@@ -37,7 +37,8 @@ class Identity(object):
     def from_key(cls, key, config, private_key=None):
         identity = cls(None, None, config)
         identity._keypair = (
-            RSA.importKey(key), RSA.importKey(private_key) if private_key else None
+            RSA.importKey(key),
+            RSA.importKey(private_key) if private_key else None,
         )
         identity.state = IdentityState.INITIALIZED
         return identity
@@ -78,9 +79,9 @@ class Identity(object):
             self.state = IdentityState.UNINITIALIZED
             raise IdentityNotInitialized()
 
-        with open(self.id_rsa_pub_path, 'rb') as id_rsa_pub:
+        with open(self.id_rsa_pub_path, "rb") as id_rsa_pub:
             public_key = RSA.importKey(id_rsa_pub.read())
-        with open(self.id_rsa_path, 'rb') as id_rsa:
+        with open(self.id_rsa_path, "rb") as id_rsa:
             private_key = RSA.importKey(id_rsa.read())
         self._keypair = (public_key, private_key)
         self.state = IdentityState.INITIALIZED
@@ -104,8 +105,8 @@ class Identity(object):
     #            'Vault key is not of required length of %d bit.' \
     #                    % self.config.rsa_key_len)
     def export_public_key(self):
-        'return the public key serialized as bytes'
-        return self.public_key.exportKey('DER')
+        "return the public key serialized as bytes"
+        return self.public_key.exportKey("DER")
 
     async def generate_keys(self):
         if self.state != IdentityState.UNINITIALIZED:
@@ -115,12 +116,12 @@ class Identity(object):
         def _generate():
             if not os.path.exists(os.path.dirname(self.id_rsa_path)):
                 os.makedirs(os.path.dirname(self.id_rsa_path))
-            logger.info('Generating a %d bit RSA key pair...', self.config.rsa_key_len)
+            logger.info("Generating a %d bit RSA key pair...", self.config.rsa_key_len)
             keys = RSA.generate(self.config.rsa_key_len)
-            logger.debug('Finished generating RSA key pair.')
-            with open(self.id_rsa_pub_path, 'wb') as id_rsa_pub:
+            logger.debug("Finished generating RSA key pair.")
+            with open(self.id_rsa_pub_path, "wb") as id_rsa_pub:
                 id_rsa_pub.write(keys.publickey().exportKey())
-            with open(self.id_rsa_path, 'wb') as id_rsa:
+            with open(self.id_rsa_path, "wb") as id_rsa:
                 id_rsa.write(keys.exportKey())
             self._keypair = (keys.publickey(), keys)
             assert self._keypair[0] is not None
@@ -139,8 +140,8 @@ class Identity(object):
 
         assert self.public_key
         pk_hash = hashlib.new(self.config.hash_algo)
-        pk_hash.update(self.public_key.exportKey('DER'))
-        return pk_hash.hexdigest()[:self.config.fingerprint_length]
+        pk_hash.update(self.public_key.exportKey("DER"))
+        return pk_hash.hexdigest()[: self.config.fingerprint_length]
 
     def sign(self, message):
         self.assert_initialized()
@@ -150,17 +151,17 @@ class Identity(object):
     def verify(self, message, signature):
         h = SHA256.new(message)
         try:
-            pkcs1_15.new(self.private_key).verify(h, signature)
+            pkcs1_15.new(self.public_key).verify(h, signature)
             return True
         except (ValueError, TypeError):
             return False
 
     def package_info(self):
-        '''
+        """
         return a pipe that will contain the identity info such as private and public key
-        '''
+        """
         memview = BytesIO()
-        zipf = zipfile.ZipFile(memview, 'w', zipfile.ZIP_DEFLATED)
+        zipf = zipfile.ZipFile(memview, "w", zipfile.ZIP_DEFLATED)
 
         # include private and public key
         def include(f):
@@ -173,10 +174,9 @@ class Identity(object):
         return Once(memview.read())
 
     def import_from_package(self, filename):
-        with zipfile.ZipFile(filename, 'r') as package:
-            with open(self.id_rsa_path, 'wb') as f:
-                f.write(package.read('id_rsa'))
-            with open(self.id_rsa_pub_path, 'wb') as f:
-                f.write(package.read('id_rsa.pub'))
+        with zipfile.ZipFile(filename, "r") as package:
+            with open(self.id_rsa_path, "wb") as f:
+                f.write(package.read("id_rsa"))
+            with open(self.id_rsa_pub_path, "wb") as f:
+                f.write(package.read("id_rsa.pub"))
         self.read()
-

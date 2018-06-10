@@ -80,15 +80,24 @@ class RevisionManager:
 
             # 2. Check if signing user's key is in the user vault key list
             if revision.operation != RevisionOp.CreateVault:
-                if not self.app.user_vault_keys.is_key_in_vault(
+                signer_key = self.app.user_vault_keys.find_key(
                     vault, revision.user_fingerprint
-                ):
+                )
+                if not signer_key:
                     raise InvalidRevision(
                         "Key is not in Vault {0}".format(revision.user_fingerprint)
                     )
+            else:
+                # CreateVault is the only operation that is allowed to provide its own key
+                signer_key = UserVaultKey(
+                    vault_id=vault.id,
+                    user_id=revision.user_id,
+                    fingerprint=revision.user_fingerprint,
+                    public_key=revision.public_key,
+                )
 
             # 3. Verify transaction signature
-            # TODO
+            revision.verify(signer_key.get_identity(self.app.config))
 
             # 4. Based on the revision type, perform an action to our state of the vault
             logger.debug(
@@ -99,14 +108,7 @@ class RevisionManager:
             )
 
             if revision.operation == RevisionOp.CreateVault:
-                session.add(
-                    UserVaultKey(
-                        vault_id=vault.id,
-                        user_id=revision.user_id,
-                        fingerprint=revision.user_fingerprint,
-                        public_key=revision.public_key,
-                    )
-                )
+                session.add(signer_key)
                 session.commit()
             elif revision.operation == RevisionOp.Upload:
                 # TODO: get relpath from revision.metadata

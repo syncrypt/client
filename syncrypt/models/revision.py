@@ -69,21 +69,18 @@ class Revision(Base):
             assert self.parent_id is None
             if not isinstance(self.public_key, bytes):
                 raise InvalidRevision("Wrong type for public_key")
-
         elif self.operation == RevisionOp.Upload:
             assert self.parent_id is not None
         elif self.operation == RevisionOp.SetMetadata:
             assert self.parent_id is not None
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(self.operation)
 
-    def sign(self, identity):
-        self.assert_valid()
+    def _message(self):
         if self.operation == RevisionOp.CreateVault:
             message = str(self.operation).encode() + b"|"
             message += str(self.nonce).encode() + b"|"
             message += self.public_key
-            self.signature = identity.sign(message)
         elif self.operation == RevisionOp.Upload:
             message = str(self.operation).encode() + b"|"
             message += str(self.parent_id).encode() + b"|"
@@ -91,15 +88,26 @@ class Revision(Base):
             message += str(self.crypt_hash).encode() + b"|"
             message += str(self.file_size_crypt).encode() + b"|"
             message += self.revision_metadata
-            self.signature = identity.sign(message)
         elif self.operation == RevisionOp.SetMetadata:
             message = str(self.operation).encode() + b"|"
             message += str(self.parent_id).encode() + b"|"
             message += self.revision_metadata
-            self.signature = identity.sign(message)
         else:
-            raise NotImplementedError
+            raise NotImplementedError(self.operation)
+        return message
+
+    def sign(self, identity):
+        self.assert_valid()
+        self.signature = identity.sign(self._message())
 
     def verify(self, identity):
         """Verify the signature of this revision"""
-        raise NotImplementedError
+        self.assert_valid()
+        if self.signature is None:
+            raise InvalidRevision("Revision is not signed")
+        if not identity.verify(self._message(), self.signature):
+            raise InvalidRevision(
+                "Signature verifaction failed with key {0}".format(
+                    identity.get_fingerprint()
+                )
+            )

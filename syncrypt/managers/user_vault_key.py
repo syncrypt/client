@@ -1,9 +1,7 @@
 import asyncio
 import logging
 
-from sqlalchemy.orm.exc import NoResultFound
-
-from syncrypt.models import UserVaultKey, store
+from syncrypt.models import UserVaultKey, Vault, store
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +20,11 @@ class UserVaultKeyManager:
                 .all()
             )
 
-    def is_key_in_vault(self, vault, fingerprint):
+    def find_key(self, vault: Vault, fingerprint) -> UserVaultKey:
         with store.session() as session:
             return (
                 session.query(UserVaultKey)
+                .filter(UserVaultKey.vault_id == vault.id)
                 .filter(UserVaultKey.fingerprint == fingerprint)
-                .count()
-                > 0
+                .first()
             )
