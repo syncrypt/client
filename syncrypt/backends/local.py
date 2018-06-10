@@ -6,15 +6,16 @@ import pickle
 import shutil
 import time
 from glob import glob
+from typing import cast
 from uuid import uuid4
 
 from Cryptodome.Random.random import randint
 
 from syncrypt.exceptions import VaultNotInitialized
-from syncrypt.models import Revision, RevisionOp, Vault, Identity, Bundle
+from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from syncrypt.pipes import FileReader, FileWriter
 
-from .base import StorageBackend
+from .base import RevisionQueue, StorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -165,14 +166,14 @@ class LocalStorageBackend(StorageBackend):
     async def user_info(self):
         return {"email": "user@localhost"}
 
-    async def changes(self, since_rev, to_rev) -> asyncio.Queue:
+    async def changes(self, since_rev, to_rev) -> RevisionQueue:
         assert since_rev is None or isinstance(since_rev, str)
 
-        queue = asyncio.Queue(8) # type: asyncio.Queue[Revision]
+        queue = cast(RevisionQueue, asyncio.Queue(8))
         task = asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
         return queue
 
-    async def _changes(self, since_rev, to_rev, queue):
+    async def _changes(self, since_rev, to_rev, queue: RevisionQueue):
         with open(os.path.join(self.path, "txchain"), "rb") as txchain:
             try:
                 if since_rev:

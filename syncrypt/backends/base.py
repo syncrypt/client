@@ -1,12 +1,16 @@
 import asyncio
+from typing import NewType, Union
 from abc import abstractmethod
 
 from typing_extensions import Protocol
 
 from syncrypt.models import Bundle, Identity, Revision, Vault
 
+RevisionQueue = NewType("RevisionQueue", "asyncio.Queue[Union[Revision, None]]")
+
 
 class StorageBackend(Protocol):
+
     def version(self):
         raise NotImplementedError()
 
@@ -26,7 +30,7 @@ class StorageBackend(Protocol):
         raise NotImplementedError()
 
     @abstractmethod
-    async def changes(self, since_rev, to_rev) -> asyncio.Queue:
+    async def changes(self, since_rev, to_rev) -> RevisionQueue:
         raise NotImplementedError
 
     async def download(self, bundle):
@@ -43,4 +47,3 @@ class StorageBackend(Protocol):
 
     async def add_user_vault_key(self, vault, email, identity):
         pass
-
