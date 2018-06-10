@@ -6,7 +6,7 @@ import pickle
 import shutil
 import time
 from glob import glob
-from typing import cast
+from typing import cast, Any
 from uuid import uuid4
 
 from Cryptodome.Random.random import randint
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class LocalStorageBackend(StorageBackend):
+
     def __init__(self, vault: Vault, folder, **kwargs) -> None:
         self.folder = folder
         self.vault = vault
@@ -55,9 +56,9 @@ class LocalStorageBackend(StorageBackend):
         transaction = Revision(operation=RevisionOp.CreateVault)
         transaction.nonce = randint(0, 0xffffffff)
         transaction.vault_id = new_vault_id
-        transaction.user_id = 'user@localhost'
+        transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
-        transaction.public_key = identity.public_key.exportKey('DER')
+        transaction.public_key = identity.public_key.exportKey("DER")
         transaction.sign(identity=identity)
 
         return self.add_transaction(transaction)
@@ -75,15 +76,15 @@ class LocalStorageBackend(StorageBackend):
         await bundle.load_key()
         s = bundle.read_encrypted_stream() >> FileWriter(dest_path)
         await s.consume()
-        #s = bundle.encrypted_metadata_reader() >> FileWriter(dest_path + ".metadata")
-        #await s.consume()
+        # s = bundle.encrypted_metadata_reader() >> FileWriter(dest_path + ".metadata")
+        # await s.consume()
         with open(dest_path + ".hash", "w") as hashfile:
             hashfile.write(bundle.crypt_hash)
 
         transaction = Revision(operation=RevisionOp.Upload)
         transaction.vault_id = self.vault.id
         transaction.parent_id = self.vault.revision
-        transaction.user_id = 'user@localhost'
+        transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
         transaction.file_hash = bundle.store_hash
         transaction.revision_metadata = metadata
@@ -94,18 +95,21 @@ class LocalStorageBackend(StorageBackend):
         return self.add_transaction(transaction)
 
     def add_transaction(self, revision: Revision) -> Revision:
-        'Persist the transaction in the local storage. This will also generate a transaction id.'
+        "Persist the transaction in the local storage. This will also generate a transaction id."
         if revision.revision_id is not None:
-            raise ValueError('Transaction already has an id.')
+            raise ValueError("Transaction already has an id.")
 
         if revision.signature is None:
-            raise ValueError('Transaction is not signed.')
+            raise ValueError("Transaction is not signed.")
 
         revision.revision_id = str(uuid4())
 
         with open(os.path.join(self.path, "txchain"), "ab") as txchain:
-            logger.debug('Adding revision %s to signchain (%s)', revision.revision_id,
-                    os.path.join(self.path, "txchain"))
+            logger.debug(
+                "Adding revision %s to signchain (%s)",
+                revision.revision_id,
+                os.path.join(self.path, "txchain"),
+            )
             binary_tx = pickle.dumps(revision)
             txchain.write(binary_tx)
 
@@ -144,7 +148,7 @@ class LocalStorageBackend(StorageBackend):
         transaction = Revision(operation=RevisionOp.SetMetadata)
         transaction.vault_id = self.vault.id
         transaction.parent_id = self.vault.revision
-        transaction.user_id = 'user@localhost'
+        transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
         transaction.revision_metadata = metadata
         transaction.sign(identity)
@@ -157,7 +161,7 @@ class LocalStorageBackend(StorageBackend):
 
     async def list_files(self):
         logger.info("Listing files")
-        queue = asyncio.Queue()
+        queue = asyncio.Queue()  # type: asyncio.Queue[Any]
         for f in glob(os.path.join(self.path, "*.metadata")):
             base, ext = os.path.splitext(os.path.basename(f))
             with open(f, "rb") as f:
@@ -173,11 +177,13 @@ class LocalStorageBackend(StorageBackend):
         assert since_rev is None or isinstance(since_rev, str)
 
         queue = cast(RevisionQueue, asyncio.Queue(8))
-        task = asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
+        task = asyncio.get_event_loop().create_task(
+            self._changes(since_rev, to_rev, queue)
+        )
         return queue
 
     async def _changes(self, since_rev, to_rev, queue: RevisionQueue):
-        logger.info('Reading signchain from %s', os.path.join(self.path, "txchain"))
+        logger.info("Reading signchain from %s", os.path.join(self.path, "txchain"))
         with open(os.path.join(self.path, "txchain"), "rb") as txchain:
             try:
                 if since_rev:

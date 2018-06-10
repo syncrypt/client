@@ -11,6 +11,7 @@ from enum import Enum
 from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
+from typing import Dict
 
 from sqlalchemy import Column, Integer, String, orm
 
@@ -26,11 +27,11 @@ from .revision import Revision
 
 logger = logging.getLogger(__name__)
 
-IGNORE_EMPTY_FILES = ['.DS_Store']
+IGNORE_EMPTY_FILES = [".DS_Store"]
 
 
 class VaultState(Enum):
-    #UNKNOWN = "unknown"
+    # UNKNOWN = "unknown"
     UNINITIALIZED = "uninitialized"
     SYNCING = "syncing"
     READY = "ready"
@@ -38,16 +39,17 @@ class VaultState(Enum):
 
 
 class VaultLoggerAdapter(logging.LoggerAdapter):
+
     def __init__(self, vault, logger):
         self.vault = vault
         super(VaultLoggerAdapter, self).__init__(logger, {})
 
     def process(self, msg, kwargs):
-        return (msg, dict(kwargs, extra={'vault_id': self.vault.id}))
+        return (msg, dict(kwargs, extra={"vault_id": self.vault.id}))
 
 
 class Vault(MetadataHolder, Base):
-    __tablename__ = 'vault'
+    __tablename__ = "vault"
 
     # id: The value to uniquely identify a vault locally. It needs to be a seperate value from
     # the "remote id" because
@@ -59,25 +61,25 @@ class Vault(MetadataHolder, Base):
     folder = Column(String(255))
     byte_size = Column(Integer())
     file_count = Column(Integer())
-    modification_date = Column(String(255)) # date?
+    modification_date = Column(String(255))  # date?
     revision_count = Column(Integer())
     user_count = Column(Integer())
 
     def __init__(self, folder):
         self.state = VaultState.UNINITIALIZED
         self.folder = folder
-        self._bundle_cache = {}
-        self._identity = None # type: Identity
+        self._bundle_cache = {}  # type: Dict[str, Bundle]
+        self._identity = None  # type: Identity
 
         self.logger = VaultLoggerAdapter(self, logger)
 
-        hash_obj = hashlib.new('sha256')
+        hash_obj = hashlib.new("sha256")
         hash_obj.update(os.path.normpath(self.folder).encode())
         self.id = hash_obj.hexdigest()
 
     @orm.reconstructor
     def init_on_load(self):
-        if not hasattr(self, 'state'):
+        if not hasattr(self, "state"):
             self.state = VaultState.UNINITIALIZED
         self._bundle_cache = {}
         self.logger = VaultLoggerAdapter(self, logger)
@@ -93,28 +95,28 @@ class Vault(MetadataHolder, Base):
 
     def __get_metadata(self):
         return {
-            'name': self.config.vault.get('name', ''),
-            'icon': self.config.vault.get('icon', None)
+            "name": self.config.vault.get("name", ""),
+            "icon": self.config.vault.get("icon", None),
         }
 
     def __set_metadata(self, metadata):
-        if 'name' in metadata:
-            if self.config.vault['name'] != metadata['name']:
-                self.logger.debug('Setting vault\'s name to "%s"', metadata['name'])
+        if "name" in metadata:
+            if self.config.vault["name"] != metadata["name"]:
+                self.logger.debug('Setting vault\'s name to "%s"', metadata["name"])
                 with self.config.update_context():
-                    self.config.vault['name'] = metadata['name']
-        if 'icon' in metadata and metadata['icon']:
-            logger.debug('Setting vault icon')
+                    self.config.vault["name"] = metadata["name"]
+        if "icon" in metadata and metadata["icon"]:
+            logger.debug("Setting vault icon")
             with self.config.update_context():
-                self.config.vault['icon'] = metadata['icon']
+                self.config.vault["icon"] = metadata["icon"]
 
     _metadata = property(__get_metadata, __set_metadata)
 
     @property
     def identity(self) -> Identity:
         if self._identity is None:
-            id_rsa_path = os.path.join(self.folder, '.vault', 'id_rsa')
-            id_rsa_pub_path = os.path.join(self.folder, '.vault', 'id_rsa.pub')
+            id_rsa_path = os.path.join(self.folder, ".vault", "id_rsa")
+            id_rsa_pub_path = os.path.join(self.folder, ".vault", "id_rsa.pub")
             self._identity = Identity(id_rsa_path, id_rsa_pub_path, self.config)
         return self._identity
 
@@ -134,10 +136,10 @@ class Vault(MetadataHolder, Base):
         return self.state == VaultState.SYNCING
 
     def __str__(self):
-        return '<Vault: {0}>'.format(self.folder)
+        return "<Vault: {0}>".format(self.folder)
 
     def __repr__(self):
-        return 'syncrypt.models.Vault(\'{0}\')'.format(self.folder)
+        return "syncrypt.models.Vault('{0}')".format(self.folder)
 
     def check_existence(self):
         if not os.path.exists(self.folder):
@@ -145,19 +147,19 @@ class Vault(MetadataHolder, Base):
 
     @property
     def crypt_path(self):
-        return os.path.join(self.folder, '.vault', 'data')
+        return os.path.join(self.folder, ".vault", "data")
 
     @property
     def bundle_metadata_path(self):
-        return os.path.join(self.folder, '.vault', 'metadata')
+        return os.path.join(self.folder, ".vault", "metadata")
 
     @property
     def revision(self):
-        return self.config.vault['revision'] if 'revision' in self.config.vault else None
+        return self.config.vault["revision"] if "revision" in self.config.vault else None
 
     @property
     def config_path(self):
-        return os.path.join(self.folder, '.vault', 'config')
+        return os.path.join(self.folder, ".vault", "config")
 
     def get_local_size(self):
         return folder_size(self.folder)
@@ -166,18 +168,18 @@ class Vault(MetadataHolder, Base):
         await self.backend.close()
 
     def walk(self):
-        '''
+        """
         A generator of all registered bundles in this vault
-        '''
-        for f in glob(os.path.join(self.bundle_metadata_path, '??/*')):
-            store_hash = os.path.relpath(f, self.bundle_metadata_path).replace('/', '')
+        """
+        for f in glob(os.path.join(self.bundle_metadata_path, "??/*")):
+            store_hash = os.path.relpath(f, self.bundle_metadata_path).replace("/", "")
             if len(store_hash) == 64:
                 yield Bundle(None, vault=self, store_hash=store_hash)
 
     def walk_disk(self, subfolder=None):
-        '''
+        """
         A generator of all bundles currently present on disk in this vault
-        '''
+        """
         folder = self.folder
         if subfolder:
             folder = os.path.join(folder, subfolder)
@@ -201,7 +203,7 @@ class Vault(MetadataHolder, Base):
 
     def bundle_for(self, relpath):
         # check if path should be ignored
-        for filepart in relpath.split('/'):
+        for filepart in relpath.split("/"):
             if any(fnmatch(filepart, ig) for ig in self.config.ignore_patterns):
                 return None
 
@@ -209,51 +211,54 @@ class Vault(MetadataHolder, Base):
             return None
 
         if not relpath in self._bundle_cache:
-            self._bundle_cache[relpath] = Bundle(relpath=relpath, vault=self, vault_id=self.id)
+            self._bundle_cache[relpath] = Bundle(
+                relpath=relpath, vault=self, vault_id=self.id
+            )
             self._bundle_cache[relpath].update_store_hash()
 
         return self._bundle_cache[relpath]
 
     def update_revision(self, revision: Revision) -> None:
         if not isinstance(revision, Revision):
-            raise ValueError('Unknown type of revision: ' + str(revision))
-        #if isinstance(revision_id, bytes):
+            raise ValueError("Unknown type of revision: " + str(revision))
+        # if isinstance(revision_id, bytes):
         #    revision_id = revision_id.decode(self.config.encoding)
         self.logger.debug('Update vault revision to "%s"', revision.revision_id)
         with self.config.update_context():
-            self.config.update('vault', {'revision': revision.revision_id})
+            self.config.update("vault", {"revision": revision.revision_id})
 
     def package_info(self):
-        '''
+        """
         return a pipe that will contain vault info such as id, private and
         public key
-        '''
+        """
         memview = BytesIO()
-        zipf = zipfile.ZipFile(memview, 'w', zipfile.ZIP_DEFLATED)
+        zipf = zipfile.ZipFile(memview, "w", zipfile.ZIP_DEFLATED)
 
         cloned_config = configparser.ConfigParser()
         cloned_config.read_dict(self.config._config)
 
         # include config but strip auth information
-        if 'remote' in cloned_config:
-            for key in ('auth', 'username', 'password'):
-                if key in cloned_config['remote']:
-                    del cloned_config['remote'][key]
+        if "remote" in cloned_config:
+            for key in ("auth", "username", "password"):
+                if key in cloned_config["remote"]:
+                    del cloned_config["remote"][key]
 
         # also vault info such as revision
-        if 'vault' in cloned_config:
-            for key in ('revision',):
-                if key in cloned_config['vault']:
-                    del cloned_config['vault'][key]
+        if "vault" in cloned_config:
+            for key in ("revision",):
+                if key in cloned_config["vault"]:
+                    del cloned_config["vault"][key]
 
         temp_config = StringIO()
         cloned_config.write(temp_config)
         temp_config.seek(0)
-        zipf.writestr('.vault/config', temp_config.read().encode(self.config.encoding))
+        zipf.writestr(".vault/config", temp_config.read().encode(self.config.encoding))
 
         # include private and public key
         def include(f):
             zipf.write(f, arcname=os.path.relpath(f, self.folder))
+
         include(self.identity.id_rsa_path)
         include(self.identity.id_rsa_pub_path)
 
@@ -276,21 +281,24 @@ class Vault(MetadataHolder, Base):
                 entity_path = os.path.join(local_directory, entity)
                 if os.path.isfile(entity_path) or os.path.isdir(entity_path):
                     if not entity in IGNORE_EMPTY_FILES:
-                        raise IOError('Directory "%s" already exists and is not empty.' % local_directory)
+                        raise IOError(
+                            'Directory "%s" already exists and is not empty.'
+                            % local_directory
+                        )
 
-        zipf = zipfile.ZipFile(BytesIO(package_info), 'r')
+        zipf = zipfile.ZipFile(BytesIO(package_info), "r")
         zipf.extractall(path=local_directory)
         vault = Vault(local_directory)
 
         if auth_token:
             with vault.config.update_context():
-                vault.config.update('remote', {'auth': auth_token})
+                vault.config.update("remote", {"auth": auth_token})
 
         return vault
 
     async def delete(self):
-        config_folder = os.path.join(self.folder, '.vault')
-        logger.info('Removing the vault metadata folder: %s', config_folder)
+        config_folder = os.path.join(self.folder, ".vault")
+        logger.info("Removing the vault metadata folder: %s", config_folder)
         # TODO: this should be done in a process (could take a while for big vaults)
         shutil.rmtree(config_folder, ignore_errors=True)
         self.state = VaultState.UNINITIALIZED

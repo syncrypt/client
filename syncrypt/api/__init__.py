@@ -297,7 +297,7 @@ class SyncryptAPI():
         except SyncryptBaseException as ex:
             return self.exception_response(ex)
         except Exception as ex:
-            logger.exception(ex)
+            logger.exception("The following exception occurred")
             return self.exception_response(ex)
 
     def initialize(self):
