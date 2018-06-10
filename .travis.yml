@@ -52,7 +52,7 @@ install: |
   fi
 
 before_script:
-  - mypy syncrypt tests --ignore-missing-imports
+  - mypy syncrypt tests
   - pylint -E syncrypt scripts
   - py.test -m 'not (requires_server or external_resources)'
 
