@@ -98,7 +98,7 @@ class LocalStorageTestCase(VaultTestCase):
         files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
         self.assertEqual(files_in_new_vault, 8)
 
-        keys = UserVaultKeyManager()
+        keys = UserVaultKeyManager(self.app)
         # We have one valid key for both vaults
         self.assertEqual(len(keys.list_for_vault(self.other_vault)), 1)
         self.assertEqual(len(keys.list_for_vault(self.vault)), 1)

@@ -12,7 +12,8 @@ from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentificat
                                  InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
                                  VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
-from syncrypt.managers import BundleManager, FlyingVaultManager, RevisionManager
+from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
+                               UserVaultKeyManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             SnappyCompress, StdoutWriter)
@@ -80,6 +81,7 @@ class SyncryptApp(object):
         self.flying_vaults = FlyingVaultManager(self)
         self.revisions = RevisionManager(self)
         self.bundles = BundleManager(self)
+        self.user_vault_keys = UserVaultKeyManager(self)
 
         self.identity = Identity(os.path.join(self.config.config_dir,
                                               self.config.get('identity.private_key')),

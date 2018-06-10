@@ -79,7 +79,13 @@ class RevisionManager:
         with store.session() as session:
 
             # 2. Check if signing user's key is in the user vault key list
-            # TODO
+            if revision.operation != RevisionOp.CreateVault:
+                if not self.app.user_vault_keys.is_key_in_vault(
+                    vault, revision.user_fingerprint
+                ):
+                    raise InvalidRevision(
+                        "Key is not in Vault {0}".format(revision.user_fingerprint)
+                    )
 
             # 3. Verify transaction signature
             # TODO
