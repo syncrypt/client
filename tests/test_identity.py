@@ -1,8 +1,7 @@
 import asyncio
+import pytest
 import os
 import os.path
-
-import asynctest
 
 from syncrypt.config import AppConfig
 from syncrypt.models import Identity
@@ -14,6 +13,7 @@ __all__ = ("IdentityTests",)
 
 class IdentityTests(VaultTestCase):
 
+    @pytest.mark.slow
     async def test_creation(self):
 
         key = os.path.join(self.working_dir, "id_rsa")
@@ -37,6 +37,7 @@ class IdentityTests(VaultTestCase):
         self.assertEqual(fp, identity2.get_fingerprint())
         self.assertEqual(identity2.key_size(), 4096)
 
+    @pytest.mark.slow
     async def test_async_key_generation(self):
         "check wether key generation can happen concurrently"
 
@@ -68,6 +69,7 @@ class IdentityTests(VaultTestCase):
         # assumes that key generation took more than 20 ms
         self.assertGreater(x[0], 20)
 
+    @pytest.mark.slow
     async def test_signing(self):
         "test our sign and verify functions"
 

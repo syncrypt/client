@@ -7,12 +7,11 @@ import shutil
 import unittest
 
 import aiofiles
+import asynctest
 import pytest
 
-import asynctest
-from syncrypt.pipes import (Buffered, BufferedFree, ChunkedURLWriter, Count,
-                            Hash, Once, Repeat, StdoutWriter, URLReader,
-                            URLWriter)
+from syncrypt.pipes import (Buffered, BufferedFree, ChunkedURLWriter, Count, Hash, Once, Repeat,
+                            StdoutWriter, URLReader, URLWriter)
 
 from .base import VaultTestCase
 
