@@ -1,13 +1,23 @@
-from enum import Enum
+import enum
 
-from sqlalchemy import Binary, Column, DateTime, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy import (
+    Binary,
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    UniqueConstraint,
+)
 
 from syncrypt.exceptions import InvalidRevision
 
 from .base import Base
 
 
-class RevisionOp(Enum):
+class RevisionOp(enum.Enum):
     CreateVault = "OP_CREATE_VAULT"
     Upload = "OP_UPLOAD"
     SetMetadata = "OP_SET_METADATA"
@@ -15,13 +25,20 @@ class RevisionOp(Enum):
 
 class Revision(Base):
     __tablename__ = "revision"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "local_vault_id", name="revision_vault_uniq"),
+    )
 
-    id = Column(String(128), primary_key=True)
-    parent_id = Column(String(128), ForeignKey("revision.id"), nullable=True)
+    # These are for local management
+    id = Column(Integer(), primary_key=True)
+    local_vault_id = Column(String(128), ForeignKey("vault.id"))
+
+    revision_id = Column(String(128))
+    parent_id = Column(String(128), ForeignKey("revision.revision_id"), nullable=True)
     vault_id = Column(String(128))
 
     # These are the core fields that every transaction has to have.
-    operation = Column(String(32))
+    operation = Column(Enum(RevisionOp, values_callable=lambda x: [e.value for e in x]))
     created_at = Column(DateTime())
     user_id = Column(String(250))
     user_fingerprint = Column(String(64))

@@ -214,14 +214,14 @@ class Vault(MetadataHolder, Base):
 
         return self._bundle_cache[relpath]
 
-    def update_revision(self, revision: Revision):
+    def update_revision(self, revision: Revision) -> None:
         if not isinstance(revision, Revision):
             raise ValueError('Unknown type of revision: ' + str(revision))
         #if isinstance(revision_id, bytes):
         #    revision_id = revision_id.decode(self.config.encoding)
-        self.logger.debug('Update vault revision to "%s"', revision.id)
+        self.logger.debug('Update vault revision to "%s"', revision.revision_id)
         with self.config.update_context():
-            self.config.update('vault', {'revision': revision.id})
+            self.config.update('vault', {'revision': revision.revision_id})
 
     def package_info(self):
         '''

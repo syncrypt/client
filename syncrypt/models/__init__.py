@@ -29,6 +29,16 @@ class Store:
         self._session = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
         Base.metadata.create_all(engine)
 
+    def drop(self, config):
+        engine = config.get('store.engine')
+        db = config.get('store.path')
+        if db != ':memory:':
+            db = os.path.join(config.config_dir, db)
+            os.makedirs(os.path.dirname(db), exist_ok=True)
+        uri = '{engine}:///{db}'.format(engine=engine, db=db)
+        engine = create_engine(uri, echo=False)
+        Base.metadata.drop_all(engine)
+
     @contextmanager
     def session(self, expunge_objects=True):
         """Provide a transactional scope around a series of operations."""

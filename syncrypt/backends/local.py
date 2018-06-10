@@ -93,17 +93,19 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_transaction(transaction)
 
-    def add_transaction(self, revision: Revision):
-        if revision.id is not None:
+    def add_transaction(self, revision: Revision) -> Revision:
+        'Persist the transaction in the local storage. This will also generate a transaction id.'
+        if revision.revision_id is not None:
             raise ValueError('Transaction already has an id.')
 
         if revision.signature is None:
             raise ValueError('Transaction is not signed.')
 
-        revision.id = str(uuid4())
+        revision.revision_id = str(uuid4())
 
         with open(os.path.join(self.path, "txchain"), "ab") as txchain:
-            logger.debug('Adding revision %s to signchain.', revision.id)
+            logger.debug('Adding revision %s to signchain (%s)', revision.revision_id,
+                    os.path.join(self.path, "txchain"))
             binary_tx = pickle.dumps(revision)
             txchain.write(binary_tx)
 
@@ -137,7 +139,7 @@ class LocalStorageBackend(StorageBackend):
         )
         await writer.consume()
 
-        metadata = b''
+        metadata = await self.vault.encrypted_metadata_reader().readall()
 
         transaction = Revision(operation=RevisionOp.SetMetadata)
         transaction.vault_id = self.vault.id
@@ -146,7 +148,8 @@ class LocalStorageBackend(StorageBackend):
         transaction.user_fingerprint = identity.get_fingerprint()
         transaction.revision_metadata = metadata
         transaction.sign(identity)
-        return transaction
+
+        return self.add_transaction(transaction)
 
     async def vault_metadata(self):
         dest_path = os.path.join(self.path, "metadata")
@@ -174,17 +177,18 @@ class LocalStorageBackend(StorageBackend):
         return queue
 
     async def _changes(self, since_rev, to_rev, queue: RevisionQueue):
+        logger.info('Reading signchain from %s', os.path.join(self.path, "txchain"))
         with open(os.path.join(self.path, "txchain"), "rb") as txchain:
             try:
                 if since_rev:
                     # Skip until since_rev
                     rev = pickle.load(txchain)
-                    while rev.id != since_rev:
+                    while rev.revision_id != since_rev:
                         rev = pickle.load(txchain)
 
                 rev = pickle.load(txchain)
 
-                while rev.id != to_rev:
+                while rev.revision_id != to_rev:
                     await queue.put(rev)
                     rev = pickle.load(txchain)
             except EOFError:

@@ -109,3 +109,51 @@ class LocalStorageTestCase(VaultTestCase):
         self.assertEqual(key.fingerprint, other_key.fingerprint)
         self.assertNotEqual(key.fingerprint, self.vault.identity.get_fingerprint())
         self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
+
+    async def test_local_metadata(self):
+        other_vault_path = os.path.join(VaultTestCase.working_dir, 'othervault')
+
+        # remove "other vault" folder first
+        if os.path.exists(other_vault_path):
+            shutil.rmtree(other_vault_path)
+
+        app = self.app
+        await self.app.initialize()
+
+        app.add_vault(self.vault)
+
+        await app.open_or_init(self.vault)
+
+        # now we will clone the initialized vault by copying the vault config
+        shutil.copytree(os.path.join(self.vault.folder, '.vault'),
+                        os.path.join(other_vault_path, '.vault'))
+        self.other_vault = Vault(other_vault_path)
+        with self.other_vault.config.update_context():
+            self.other_vault.config.unset('vault.revision')
+
+        await app.open_or_init(self.other_vault)
+        app.add_vault(self.other_vault)
+
+        await app.pull_vault(self.other_vault)
+        self.assertGreater(self.other_vault.revision_count, 0)
+
+        files_in_new_vault = len(glob(os.path.join(other_vault_path, '*')))
+        self.assertEqual(files_in_new_vault, 0)
+
+        # Now we change the name of the original vault
+        with self.vault.config.update_context():
+            self.other_vault.config.set('vault.name', 'abc')
+
+        # Upload metadata with the new name to the server
+        revision = await self.vault.backend.set_vault_metadata(self.app.identity)
+        await app.revisions.apply(revision, self.vault)
+
+        original_count = self.other_vault.revision_count
+
+        # Pull the new vault again to retrieve the change in metadata
+        await app.pull_vault(self.other_vault)
+
+        self.assertEqual(self.other_vault.revision_count, original_count + 1)
+
+        self.assertEqual(self.vault.config.get('vault.name'),
+                         self.other_vault.config.get('vault.name'))

@@ -220,7 +220,9 @@ class SyncryptApp(object):
         await self.set_vault_state(vault, VaultState.READY)
         with vault.config.update_context():
             vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
-        await vault.backend.set_vault_metadata(self.identity)
+        revision = await vault.backend.set_vault_metadata(self.identity)
+        await self.revisions.apply(revision, vault)
+
         if upload_identity:
             await vault.backend.upload_identity(self.identity)
         if upload_vault_key:
@@ -535,7 +537,8 @@ class SyncryptApp(object):
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
             await vault.backend.open()
-            await vault.backend.set_vault_metadata(self.identity)
+            revision = await vault.backend.set_vault_metadata(self.identity)
+            await self.revisions.apply(revision, vault)
 
             async with AsyncContext(self._bundle_actions) as ctx:
                 for bundle in vault.walk_disk():

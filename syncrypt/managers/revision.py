@@ -85,7 +85,12 @@ class RevisionManager:
             # TODO
 
             # 4. Based on the revision type, perform an action to our state of the vault
-            logger.debug("Applying %s (%s)", revision.operation, revision.id)
+            logger.debug(
+                "Applying %s (%s) to %s",
+                revision.operation,
+                revision.revision_id,
+                vault.id,
+            )
 
             if revision.operation == RevisionOp.CreateVault:
                 session.add(
@@ -102,11 +107,24 @@ class RevisionManager:
                 bundle = await self.create_bundle_from_revision(revision, vault)
                 session.add(bundle)
                 session.commit()
+            elif revision.operation == RevisionOp.SetMetadata:
+                await vault.write_encrypted_metadata(Once(revision.revision_metadata))
             else:
                 raise NotImplementedError()
 
             # 5. Store the revision in config and db
+            revision.local_vault_id = vault.id
+            session.add(revision)
+            session.commit()
+            vault.revision_count = (
+                session.query(Revision)
+                .filter(Revision.local_vault_id == vault.id)
+                .count()
+            )
+            # vault.revision = revision.id
+            session.add(vault)
             vault.update_revision(revision)
+            session.commit()
 
     async def create_bundle_from_revision(self, revision, vault):
         bundle = Bundle(vault=vault, store_hash=revision.file_hash)
