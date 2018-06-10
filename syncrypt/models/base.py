@@ -4,8 +4,13 @@ import datetime
 import umsgpack
 
 from sqlalchemy.ext.declarative import declarative_base
-from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, Once, SnappyCompress,
-                            SnappyDecompress)
+from syncrypt.pipes import (
+    DecryptRSA_PKCS1_OAEP,
+    EncryptRSA_PKCS1_OAEP,
+    Once,
+    SnappyCompress,
+    SnappyDecompress,
+)
 
 Base = declarative_base()
 
@@ -16,7 +21,7 @@ class MetadataHolder:
     def _metadata(self):
         raise NotImplementedError()
 
-    @_metadata.setter # type: ignore
+    @_metadata.setter  # type: ignore
     def _metadata_setter(self):
         raise NotImplementedError()
 
@@ -29,14 +34,18 @@ class MetadataHolder:
         return umsgpack.packb(self._metadata)
 
     def encrypted_metadata_reader(self):
-        return Once(self.serialized_metadata) \
-                >> SnappyCompress() \
-                >> EncryptRSA_PKCS1_OAEP(self.identity.public_key)
+        return (
+            Once(self.serialized_metadata)
+            >> SnappyCompress()
+            >> EncryptRSA_PKCS1_OAEP(self.identity.public_key)
+        )
 
     def encrypted_metadata_decoder(self, stream):
-        return stream \
-                >> DecryptRSA_PKCS1_OAEP(self.identity.private_key) \
-                >> SnappyDecompress()
+        return (
+            stream
+            >> DecryptRSA_PKCS1_OAEP(self.identity.private_key)
+            >> SnappyDecompress()
+        )
 
     async def decrypt_metadata(self, metadata):
         sink = self.encrypted_metadata_decoder(Once(metadata))
@@ -50,4 +59,3 @@ class MetadataHolder:
     async def update_serialized_metadata(self, stream):
         serialized_metadata = await stream.read()
         self._metadata = umsgpack.unpackb(serialized_metadata)
-
