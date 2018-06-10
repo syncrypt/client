@@ -44,7 +44,7 @@ class TestAppConfig(AppConfig):
 
 
 class VaultTestCase(asynctest.TestCase):
-    folder = None
+    folder = None  # type: str
     app_cls = SyncryptApp
 
     # If available, use filesystem mounted shared memory in order to save

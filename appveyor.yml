@@ -105,7 +105,7 @@ install:
   - "pip install -e \".[test]\""
 
 before_build:
-  - "mypy syncrypt --ignore-missing-imports"
+  - "mypy syncrypt tests --ignore-missing-imports"
   - "pylint -E syncrypt scripts"
   - "py.test -m \"not (requires_server or external_resources)\""
 

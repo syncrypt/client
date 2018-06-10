@@ -22,7 +22,7 @@ import syncrypt
 
 @pytest.mark.requires_server
 class APITests(VaultTestCase):
-    app_cls = SyncryptDaemonApp
+    app_cls = SyncryptDaemonApp  # type: ignore
     folder = 'tests/testbinaryvault/'
     login_data = {
         'email': 'test@syncrypt.space',
