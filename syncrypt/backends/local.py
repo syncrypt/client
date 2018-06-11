@@ -162,9 +162,9 @@ class LocalStorageBackend(StorageBackend):
     async def list_files(self):
         logger.info("Listing files")
         queue = asyncio.Queue()  # type: asyncio.Queue[Any]
-        for f in glob(os.path.join(self.path, "*.metadata")):
-            base, ext = os.path.splitext(os.path.basename(f))
-            with open(f, "rb") as f:
+        for filename in glob(os.path.join(self.path, "*.metadata")):
+            base, ext = os.path.splitext(os.path.basename(filename))
+            with open(filename, "rb") as f:
                 metadata = f.read()
             await queue.put((base, metadata, {}))
         await queue.put(None)
