@@ -163,50 +163,6 @@ class LocalStorageTestCase(VaultTestCase):
             self.vault.config.get("vault.name"), self.other_vault.config.get("vault.name")
         )
 
-        async def test_two_local_one_remote(self):
-            other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
-
-        # remove "other vault" folder first
-        if os.path.exists(other_vault_path):
-            shutil.rmtree(other_vault_path)
-
-        app = self.app
-        await self.app.initialize()
-
-        app.add_vault(self.vault)
-
-        await app.open_or_init(self.vault)
-        await app.push()  # init all vaults
-
-        # now we will clone the initialized vault by copying the vault config
-        shutil.copytree(
-            os.path.join(self.vault.folder, ".vault"),
-            os.path.join(other_vault_path, ".vault"),
-        )
-        self.other_vault = Vault(other_vault_path)
-        with self.other_vault.config.update_context():
-            self.other_vault.config.unset("vault.revision")
-
-        await app.open_or_init(self.other_vault)
-        app.add_vault(self.other_vault)
-
-        await app.pull_vault(self.other_vault)
-
-        files_in_new_vault = len(glob(os.path.join(other_vault_path, "*")))
-        self.assertEqual(files_in_new_vault, 8)
-
-        keys = UserVaultKeyManager(self.app)
-        # We have one valid key for both vaults
-        self.assertEqual(len(keys.list_for_vault(self.other_vault)), 1)
-        self.assertEqual(len(keys.list_for_vault(self.vault)), 1)
-
-        key = keys.list_for_vault(self.vault)[0]
-        other_key = keys.list_for_vault(self.other_vault)[0]
-
-        self.assertEqual(key.fingerprint, other_key.fingerprint)
-        self.assertNotEqual(key.fingerprint, self.vault.identity.get_fingerprint())
-        self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
-
     async def test_delete_file(self):
         other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
 
