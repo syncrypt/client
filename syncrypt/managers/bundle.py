@@ -20,3 +20,9 @@ class BundleManager:
             for bundle in lst:
                 bundle.vault = vault
             return lst
+
+    async def get_bundle(self, vault: Vault, file_hash: str) -> Bundle:
+        """return an iterator of all bundles in the vault that possible require download"""
+        with store.session() as session:
+            return session.query(Bundle).filter(Bundle.vault==vault,
+                    Bundle.store_hash==file_hash).one()

@@ -20,7 +20,10 @@ from .base import Base
 class RevisionOp(enum.Enum):
     CreateVault = "OP_CREATE_VAULT"
     Upload = "OP_UPLOAD"
+    # ^ rename to OP_INSERT_FILE or so to be consistent with OP_DELETE_FILE?
     SetMetadata = "OP_SET_METADATA"
+    DeleteFile = "OP_DELETE_FILE"
+    RenameFile = "OP_RENAME_FILE"
 
 
 class Revision(Base):
@@ -73,6 +76,9 @@ class Revision(Base):
             assert self.parent_id is not None
         elif self.operation == RevisionOp.SetMetadata:
             assert self.parent_id is not None
+        elif self.operation == RevisionOp.DeleteFile:
+            assert self.parent_id is not None
+            assert self.file_hash
         else:
             raise NotImplementedError(self.operation)
 
@@ -92,6 +98,10 @@ class Revision(Base):
             message = str(self.operation).encode() + b"|"
             message += str(self.parent_id).encode() + b"|"
             message += self.revision_metadata
+        elif self.operation == RevisionOp.DeleteFile:
+            message = str(self.operation).encode() + b"|"
+            message += str(self.parent_id).encode() + b"|"
+            message += str(self.file_hash).encode()
         else:
             raise NotImplementedError(self.operation)
         return message

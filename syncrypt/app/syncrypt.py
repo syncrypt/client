@@ -692,6 +692,28 @@ class SyncryptApp(object):
             finally:
                 await self.semaphores['download'].release(bundle)
 
+    async def delete_bundle(self, bundle: Bundle):
+        vault = bundle.vault
+        revision = await vault.backend.delete_file(bundle, self.identity)
+        await self.revisions.apply(revision, vault)
+
+    async def delete_file(self, path):
+        full_path = os.path.normpath(os.path.abspath(path))
+        bundle = None # type: Bundle
+        for vault in self.vaults:
+            if os.path.commonpath([vault.folder]) == os.path.commonpath(
+                    [vault.folder, full_path]
+                    ):
+                bundle = Bundle(
+                        vault=vault, relpath=os.path.relpath(full_path, vault.folder)
+                        )
+                bundle.update_store_hash()
+                break
+        if bundle is None:
+            raise ValueError("could not find path '{0}' in any vault".format(full_path))
+        else:
+            await self.delete_bundle(bundle)
+
     async def wait(self):
         await self._bundle_actions.join()
 

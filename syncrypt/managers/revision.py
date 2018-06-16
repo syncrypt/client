@@ -74,7 +74,8 @@ class RevisionManager:
 
         # 1. Check preconditions for this to be a valid revision (current revision must be parent)
         if vault.revision != revision.parent_id:
-            raise InvalidRevision("parent does not match: {0}".format(revision.parent_id))
+            raise InvalidRevision("Invalid parent {0}, should be {1}".format(revision.parent_id,
+                vault.revision))
 
         with store.session() as session:
 
@@ -111,12 +112,15 @@ class RevisionManager:
                 session.add(signer_key)
                 session.commit()
             elif revision.operation == RevisionOp.Upload:
-                # TODO: get relpath from revision.metadata
                 bundle = await self.create_bundle_from_revision(revision, vault)
                 session.add(bundle)
                 session.commit()
             elif revision.operation == RevisionOp.SetMetadata:
                 await vault.write_encrypted_metadata(Once(revision.revision_metadata))
+            elif revision.operation == RevisionOp.DeleteFile:
+                bundle = await self.app.bundles.get_bundle(vault, revision.file_hash)
+                session.delete(bundle)
+                session.commit()
             else:
                 raise NotImplementedError()
 
@@ -135,6 +139,14 @@ class RevisionManager:
             session.commit()
 
     async def create_bundle_from_revision(self, revision, vault):
+        bundle = Bundle(vault=vault, store_hash=revision.file_hash)
+        metadata = await bundle.decrypt_metadata(revision.revision_metadata)
+        bundle.relpath = metadata["filename"]
+        bundle.hash = metadata["hash"]
+        bundle.key = metadata["key"]
+        return bundle
+
+    async def delete_bundle_from_revision(self, revision, vault):
         bundle = Bundle(vault=vault, store_hash=revision.file_hash)
         metadata = await bundle.decrypt_metadata(revision.revision_metadata)
         bundle.relpath = metadata["filename"]

@@ -33,6 +33,10 @@ class StorageBackend(Protocol):
     async def changes(self, since_rev, to_rev) -> RevisionQueue:
         raise NotImplementedError
 
+    @abstractmethod
+    async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+        raise NotImplementedError
+
     async def download(self, bundle):
         raise NotImplementedError()
 

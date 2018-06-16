@@ -202,5 +202,22 @@ class LocalStorageBackend(StorageBackend):
             finally:
                 await queue.put(None)
 
+    async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+
+        assert self.vault.revision is not None
+        assert bundle.store_hash
+
+        logger.info("Deleting %s", bundle)
+
+        transaction = Revision(operation=RevisionOp.DeleteFile)
+        transaction.vault_id = self.vault.id
+        transaction.parent_id = self.vault.revision
+        transaction.user_id = "user@localhost"
+        transaction.user_fingerprint = identity.get_fingerprint()
+        transaction.file_hash = bundle.store_hash
+        transaction.sign(identity=identity)
+
+        return self.add_transaction(transaction)
+
     async def close(self):
         pass
