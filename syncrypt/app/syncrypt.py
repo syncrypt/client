@@ -701,8 +701,9 @@ class SyncryptApp(object):
         full_path = os.path.normpath(os.path.abspath(path))
         bundle = None # type: Bundle
         for vault in self.vaults:
-            if os.path.commonpath([vault.folder]) == os.path.commonpath(
-                    [vault.folder, full_path]
+            vault_folder = os.path.abspath(vault.folder)
+            if os.path.commonpath([vault_folder]) == os.path.commonpath(
+                    [vault_folder, full_path]
                     ):
                 bundle = Bundle(
                         vault=vault, relpath=os.path.relpath(full_path, vault.folder)
