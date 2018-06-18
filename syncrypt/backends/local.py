@@ -21,13 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 class LocalStorageBackend(StorageBackend):
+    global_auth = None # type: str
+    # ^ deprecated
 
-    def __init__(self, vault: Vault, folder, **kwargs) -> None:
+    def __init__(self, vault: Vault = None, folder=None, **kwargs) -> None:
         self.folder = folder
         self.vault = vault
 
     @property
     def path(self):
+        if self.vault is None:
+            return self.folder
+
         if self.vault and not self.vault.config.get("vault.id"):
             raise VaultNotInitialized()
 
@@ -42,6 +47,9 @@ class LocalStorageBackend(StorageBackend):
 
     async def init(self, identity: Identity) -> Revision:
         vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
+
         new_vault_id = str(uuid4())
         if not vault.config.get("vault.id"):
             with vault.config.update_context():
@@ -64,7 +72,11 @@ class LocalStorageBackend(StorageBackend):
         return self.add_transaction(transaction)
 
     async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
-        assert self.vault.revision is not None
+        vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        assert vault.revision is not None
 
         logger.info("Uploading %s", bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)
@@ -82,8 +94,8 @@ class LocalStorageBackend(StorageBackend):
             hashfile.write(bundle.crypt_hash)
 
         transaction = Revision(operation=RevisionOp.Upload)
-        transaction.vault_id = self.vault.id
-        transaction.parent_id = self.vault.revision
+        transaction.vault_id = vault.id
+        transaction.parent_id = vault.revision
         transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
         transaction.file_hash = bundle.store_hash
@@ -137,17 +149,21 @@ class LocalStorageBackend(StorageBackend):
             metadata.close()
 
     async def set_vault_metadata(self, identity: Identity) -> Revision:
+        vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
+
         dest_path = os.path.join(self.path, "metadata")
-        writer = self.vault.encrypted_metadata_reader() >> FileWriter(
+        writer = vault.encrypted_metadata_reader() >> FileWriter(
             dest_path, create_dirs=True
         )
         await writer.consume()
 
-        metadata = await self.vault.encrypted_metadata_reader().readall()
+        metadata = await vault.encrypted_metadata_reader().readall()
 
         transaction = Revision(operation=RevisionOp.SetMetadata)
-        transaction.vault_id = self.vault.id
-        transaction.parent_id = self.vault.revision
+        transaction.vault_id = vault.id
+        transaction.parent_id = vault.revision
         transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
         transaction.revision_metadata = metadata
@@ -203,21 +219,27 @@ class LocalStorageBackend(StorageBackend):
                 await queue.put(None)
 
     async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+        vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
 
-        assert self.vault.revision is not None
+        assert vault.revision is not None
         assert bundle.store_hash
 
         logger.info("Deleting %s", bundle)
 
         transaction = Revision(operation=RevisionOp.DeleteFile)
-        transaction.vault_id = self.vault.id
-        transaction.parent_id = self.vault.revision
+        transaction.vault_id = vault.id
+        transaction.parent_id = vault.revision
         transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
         transaction.file_hash = bundle.store_hash
         transaction.sign(identity=identity)
 
         return self.add_transaction(transaction)
+
+    def set_auth(self, username: str, password: str):
+        pass
 
     async def close(self):
         pass

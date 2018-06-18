@@ -18,6 +18,10 @@ from tests.base import VaultTestCase
 
 class LocalStorageTestCase(VaultTestCase):
     folder = "tests/testlocalvault/"
+    remote = {
+        "type": "local",
+        "folder": "/tmp",
+    }
 
     @asynctest.ignore_loop
     async def test_backend_type(self):

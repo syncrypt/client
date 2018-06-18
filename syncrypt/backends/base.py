@@ -18,6 +18,10 @@ class StorageBackend(Protocol):
         raise NotImplementedError()
 
     @abstractmethod
+    def set_auth(self, username: str, password: str):
+        raise NotImplementedError()
+
+    @abstractmethod
     async def init(self, identity: Identity) -> Revision:
         raise NotImplementedError()
 

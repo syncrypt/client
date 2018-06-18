@@ -26,11 +26,11 @@ class TestAuthenticationProvider(CredentialsAuthenticationProvider):
 
 class TestAppConfig(AppConfig):
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, remote=None):
         super(TestAppConfig, self).__init__(config_file)
         with self.update_context():
-            # Run tests against a local server
-            self.set("remote.host", "localhost")
+            if not remote is None:
+                self.update("remote", remote)
 
             # Change default API port so that tests can be run alongside the daemon
             self.set("api.port", "28081")
@@ -51,6 +51,10 @@ class VaultTestCase(asynctest.TestCase):
     # disk IO operations during testing
     working_dir = "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
     vault = None  # type: Vault
+    remote = {
+            "type": "binary",
+            "host": "localhost",
+            }
 
     def setUp(self):
         if self.folder:
@@ -67,7 +71,7 @@ class VaultTestCase(asynctest.TestCase):
         if os.path.exists(app_config_file):
             os.remove(app_config_file)
 
-        self.app_config = TestAppConfig(app_config_file)
+        self.app_config = TestAppConfig(app_config_file, self.remote)
 
         store.drop(self.app_config)
 
