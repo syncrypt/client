@@ -3,6 +3,7 @@ import logging
 import os.path
 import socket
 import sys
+from typing import Optional
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -697,9 +698,9 @@ class SyncryptApp(object):
         revision = await vault.backend.delete_file(bundle, self.identity)
         await self.revisions.apply(revision, vault)
 
-    async def delete_file(self, path):
+    async def delete_file(self, path: str):
         full_path = os.path.normpath(os.path.abspath(path))
-        bundle = None # type: Bundle
+        bundle = None # type: Optional[Bundle]
         for vault in self.vaults:
             vault_folder = os.path.abspath(vault.folder)
             if os.path.commonpath([vault_folder]) == os.path.commonpath(
