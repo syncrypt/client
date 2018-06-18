@@ -71,10 +71,10 @@ class SyncryptDaemonApp(SyncryptApp):
                 logger.error('%s does not exist, removing vault from list.' % vault)
                 await self.remove_vault(vault)
             except InvalidAuthentification as e:
-                logger.exception(e)
+                logger.exception("Failure during vault initialization")
                 await self.set_vault_state(vault, VaultState.FAILURE)
             except Exception as e:
-                logger.exception(e)
+                logger.exception("General failure during vault initialization")
 
         try:
             if self.vaults:

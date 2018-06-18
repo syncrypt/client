@@ -3,7 +3,7 @@ import logging
 import os.path
 import socket
 import sys
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -35,7 +35,7 @@ class SyncryptApp(object):
 
     def __init__(self, config, auth_provider=None, vault_dirs=None):
         self.auth_provider = auth_provider
-        self.vaults = []
+        self.vaults = [] # type: List[Vault]
         self.config = config
         self.concurrency = int(self.config.app['concurrency'])
 
@@ -54,22 +54,22 @@ class SyncryptApp(object):
         }
 
         # A map from Bundle -> Future that contains all bundles scheduled for a push
-        self._scheduled_pushes = {}
+        self._scheduled_pushes = {} # type: Dict[Bundle, Any]
 
         # A map from Bundle -> Task that contains all running pushes
-        self._running_pushes = {}
+        self._running_pushes = {} # type: Dict[Bundle, Any]
 
         # A map from Bundle -> Exception that contains all failed pushes
-        self._failed_pushes = {}
+        self._failed_pushes = {} # type: Dict[Bundle, Any]
 
         # This semaphore enforces the global concurrency limit for both pushes and pulls.
         self._bundle_actions = JoinableSemaphore(self.concurrency)
 
         # A map from folder -> Watchdog. Used by the daemon and the "watch" command.
-        self._watchdogs = {}
+        self._watchdogs = {} # type: Dict[str, Any]
 
         # A map from folder -> Task. Used by the daemon to autopull vault periodically.
-        self._autopull_tasks = {}
+        self._autopull_tasks = {} # type: Dict[str, Any]
 
         def handler(loop, args, **kwargs):
             if 'exception' in kwargs and isinstance(kwargs['exception'], asyncio.CancelledError):
@@ -113,7 +113,7 @@ class SyncryptApp(object):
                 vault.check_existence()
                 self.identity.assert_initialized()
             except SyncryptBaseException as e:
-                logger.exception(e)
+                logger.exception("Failure during vault initialization")
                 await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def signup(self, username, password, firstname, surname):
