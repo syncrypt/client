@@ -11,17 +11,26 @@ import pytest
 
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
+from syncrypt.exceptions import InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
-from syncrypt.models import Bundle, Vault
+from syncrypt.models import Bundle, Revision, RevisionOp, Vault
 from tests.base import VaultTestCase
+
+
+def generate_fake_revision(vault):
+    transaction = Revision(operation=RevisionOp.SetMetadata)
+    transaction.vault_id = vault.id
+    transaction.parent_id = vault.revision
+    transaction.user_id = "user@localhost"
+    transaction.user_fingerprint = "aabbcc"
+    transaction.revision_metadata = b"123456"
+    transaction.signature = b"12345"
+    return transaction
 
 
 class LocalStorageTestCase(VaultTestCase):
     folder = "tests/testlocalvault/"
-    remote = {
-        "type": "local",
-        "folder": "/tmp",
-    }
+    remote = {"type": "local", "folder": "/tmp"}
 
     @asynctest.ignore_loop
     async def test_backend_type(self):
@@ -185,9 +194,7 @@ class LocalStorageTestCase(VaultTestCase):
         pre_rev = self.vault.revision
         await app.delete_file(os.path.join(self.vault.folder, "hello.txt"))
         self.assertNotEqual(pre_rev, self.vault.revision)
-        await app.delete_file(
-            os.path.join(self.vault.folder, "random250k")
-        )
+        await app.delete_file(os.path.join(self.vault.folder, "random250k"))
         self.assertNotEqual(pre_rev, self.vault.revision)
 
         # now we will clone the initialized vault by copying the vault config
@@ -218,3 +225,20 @@ class LocalStorageTestCase(VaultTestCase):
         self.assertEqual(key.fingerprint, other_key.fingerprint)
         self.assertNotEqual(key.fingerprint, self.vault.identity.get_fingerprint())
         self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
+
+    async def test_local_fake_transaction(self):
+        other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
+        # remove "other vault" folder first
+        if os.path.exists(other_vault_path):
+            shutil.rmtree(other_vault_path)
+        app = self.app
+        await self.app.initialize()
+        app.add_vault(self.vault)
+        await app.open_or_init(self.vault)
+        await app.push()
+
+        # add fake transaction to local storage
+        self.vault.backend.add_transaction(generate_fake_revision(self.vault))
+
+        with self.assertRaises(InvalidRevision):
+            await app.pull_vault(self.vault)
