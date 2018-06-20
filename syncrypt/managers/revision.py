@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import timezone
+from typing import Sequence
 
 import iso8601
 from sqlalchemy import desc
@@ -25,7 +26,7 @@ class RevisionManager:
         except NoResultFound:
             return self.model(id=id)
 
-    def list_for_vault(self, vault):
+    def list_for_vault(self, vault: Vault) -> Sequence[Revision]:
         with store.session() as session:
             return (
                 session.query(Revision).filter(Revision.vault_id == vault.config.id).all()

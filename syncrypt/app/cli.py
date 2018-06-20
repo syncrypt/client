@@ -192,16 +192,14 @@ class SyncryptCLIApp(SyncryptApp):
         await backend.close()
 
     async def print_log(self, verbose=False):
-        raise NotImplementedError()
         # the following behaviour is deprecated, we want to sync the vault and then show the log
         # from the database
         # local_tz = get_localzone()
-        # for vault in self.vaults:
-        #     try:
-        #         await vault.backend.open()
-        #     except VaultNotInitialized:
-        #         logger.error('%s has not been initialized. Use "syncrypt init" to register the folder as vault.' % vault)
-        #         continue
+        for vault in self.vaults:
+            await self.pull_vault(vault)
+            for revision in self.revisions.list_for_vault(vault):
+                print(revision.revision_id, revision.operation, revision.created_at, revision.user_id)
+
         #     queue = await vault.backend.changes(None, None, verbose=verbose)
         #     while True:
         #         item = await queue.get()
