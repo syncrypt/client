@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import os.path
@@ -6,19 +7,16 @@ import time
 import unittest
 from glob import glob
 
-import pytest
 import aiohttp
-import asyncio
 import asynctest
-import hypothesis.strategies as st
-from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
-from syncrypt.config import AppConfig
-from syncrypt.models import Vault, VaultState
+import pytest
+
+import syncrypt
+from syncrypt.api import APIClient
 from syncrypt.app import SyncryptDaemonApp
+from syncrypt.models import Vault, VaultState
 from tests.base import VaultTestCase
 
-from syncrypt.api import APIClient
-import syncrypt
 
 class APITests(VaultTestCase):
     app_cls = SyncryptDaemonApp  # type: ignore
