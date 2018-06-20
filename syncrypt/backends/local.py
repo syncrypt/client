@@ -94,7 +94,7 @@ class LocalStorageBackend(StorageBackend):
             hashfile.write(bundle.crypt_hash)
 
         transaction = Revision(operation=RevisionOp.Upload)
-        transaction.vault_id = vault.id
+        transaction.vault_id = vault.config.id
         transaction.parent_id = vault.revision
         transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
@@ -162,7 +162,7 @@ class LocalStorageBackend(StorageBackend):
         metadata = await vault.encrypted_metadata_reader().readall()
 
         transaction = Revision(operation=RevisionOp.SetMetadata)
-        transaction.vault_id = vault.id
+        transaction.vault_id = vault.config.id
         transaction.parent_id = vault.revision
         transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
@@ -229,7 +229,7 @@ class LocalStorageBackend(StorageBackend):
         logger.info("Deleting %s", bundle)
 
         transaction = Revision(operation=RevisionOp.DeleteFile)
-        transaction.vault_id = vault.id
+        transaction.vault_id = vault.config.id
         transaction.parent_id = vault.revision
         transaction.user_id = "user@localhost"
         transaction.user_fingerprint = identity.get_fingerprint()
