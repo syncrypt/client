@@ -121,7 +121,8 @@ class SyncryptApp(object):
         await backend.signup(username, password, firstname, surname)
 
     def add_vault_by_path(self, path):
-        return self.add_vault(Vault(path))
+        v = Vault(path)
+        return self.add_vault(v)
 
     def add_vault(self, vault):
         for v in self.vaults:
@@ -182,16 +183,16 @@ class SyncryptApp(object):
 
         self._scheduled_pushes[bundle] = loop.call_later(1.0, push_scheduled, bundle)
 
-    async def init_vault(self, vault, host=None, upload_vault_key=True, upload_identity=True):
+    async def init_vault(self, vault, remote=None, upload_vault_key=True, upload_identity=True):
         self.identity.assert_initialized()
 
-        if host:
-            # If host was explicitly given, use it
-            vault.config.set('remote.host', host)
-            vault.backend.host = host
+        if remote:
+            # If remote was explicitly given, use it
+            vault.config.update('remote', remote)
+            vault.backend.host = self.config.get('remote.host')
         else:
-            # otherwise, use host from global config
-            vault.config.set('remote.host', self.config.get('remote.host'))
+            # otherwise, use remote from global config
+            vault.config.update('remote', self.config.remote)
             vault.backend.host = self.config.get('remote.host')
 
         try:
@@ -231,9 +232,13 @@ class SyncryptApp(object):
         if upload_vault_key:
             await self.upload_vault_key(vault)
 
-    async def init(self, **kwargs):
+    async def init(self, host: Optional[str] = None, upload_vault_key: bool = False):
         for vault in self.vaults:
-            await self.init_vault(vault, **kwargs)
+            remote = None # type: Optional[Dict[str, Any]]
+            if host:
+                remote = dict(self.config.remote)
+                remote['host'] = host
+            await self.init_vault(vault, remote=remote)
 
     async def upload_identity(self):
         backend = await self.open_backend()
@@ -245,11 +250,13 @@ class SyncryptApp(object):
 
     async def open_or_init(self, vault):
         try:
+            if not os.path.exists(vault.config_path):
+                vault.config.update('remote', self.config.remote)
             await vault.backend.open()
         except (InvalidAuthentification, VaultNotInitialized):
             # retry after logging in & getting auth token
             # use the host from the app config
-            await self.init_vault(vault, host=self.config.remote.get('host'))
+            await self.init_vault(vault)
             await vault.backend.open()
 
     async def set_vault_state(self, vault, new_state):

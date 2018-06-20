@@ -51,7 +51,7 @@ class APITests(VaultTestCase):
         finally:
             await client.close()
             await app.stop()
-    """
+
     async def test_api_init_vault(self):
         app = self.app
         client = APIClient(self.app_config)
@@ -96,4 +96,3 @@ class APITests(VaultTestCase):
         finally:
             await client.close()
             await app.stop()
-    """
