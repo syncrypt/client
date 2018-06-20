@@ -23,7 +23,7 @@ class APITests(VaultTestCase):
     folder = 'tests/testlocalvault/'
     remote = {
         "type": "local",
-        "folder": "/tmp",
+        "folder": "/dev/shm/remote" if os.access("/dev/shm", os.W_OK) else "tests/"
     }
     login_data = {
         'email': 'test@syncrypt.space',
