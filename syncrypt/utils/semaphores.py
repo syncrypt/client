@@ -40,6 +40,8 @@ class JoinableSetSemaphore(JoinableSemaphore, Generic[T]):
         if self.count == 0: await self.empty
         self.count += 1
         await self.limiter.acquire()
+        if obj in self._objects:
+            raise ValueError('Object already acquired: %s' % obj)
         self._objects.add(obj)
 
     async def release(self, obj: T): # type: ignore
