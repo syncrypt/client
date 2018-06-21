@@ -1,4 +1,5 @@
 import logging.config
+from typing import Dict, Any
 import sys
 import colorlog
 
@@ -58,7 +59,7 @@ def setup_logging(loglevel, logfile=None):
                 'level': loglevel
             },
         },
-    }
+    } # type: Dict[str, Any]
     if logfile:
         config['handlers']['file'] = {
             'class': 'logging.handlers.TimedRotatingFileHandler',

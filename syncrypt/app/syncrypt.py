@@ -45,7 +45,7 @@ class SyncryptApp(object):
             'stat': JoinableSetSemaphore(8),
             'upload': JoinableSetSemaphore(8),
             'download': JoinableSetSemaphore(8)
-        }
+        } # type: Dict[str, JoinableSetSemaphore[Bundle]]
 
         self.stats = {
             'uploads': 0,

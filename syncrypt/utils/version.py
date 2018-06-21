@@ -78,8 +78,8 @@ def call_git_describe(abbrev=10, dirty=True,
                            for line_ in p.decode().splitlines()]
             remote_info = [line_ for line_ in remote_info
                            if line_.startswith('*')][0]
-            remote_info = re.sub(r".*? \[([^ :]*).*?\] .*", r"\1", remote_info)
-            remote, branch = remote_info.split("/")
+            remote_info = re.sub(r".*? \[([^ :]*).*?\] .*", r"\1", remote_info) # type: ignore
+            remote, branch = remote_info.split("/") # type: ignore
             # find out real name of remote
             p = check_output(['git', 'remote', '-v'],
                              cwd=ROOT, stderr=STDOUT)
