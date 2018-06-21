@@ -14,7 +14,7 @@ from syncrypt.backends import LocalStorageBackend
 from syncrypt.exceptions import InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Revision, RevisionOp, Vault
-from tests.base import VaultTestCase
+from tests.base import VaultLocalTestCase
 
 
 def generate_fake_revision(vault):
@@ -28,10 +28,7 @@ def generate_fake_revision(vault):
     return transaction
 
 
-class LocalStorageTestCase(VaultTestCase):
-    folder = "tests/testlocalvault/"
-    remote = {"type": "local", "folder": "/tmp"}
-
+class LocalStorageTestCase(VaultLocalTestCase):
     @asynctest.ignore_loop
     async def test_backend_type(self):
         self.assertEqual(type(self.vault.backend), LocalStorageBackend)
@@ -82,7 +79,7 @@ class LocalStorageTestCase(VaultTestCase):
         self.assertTrue(not post_rev is None)
 
     async def test_two_local_one_remote(self):
-        other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
+        other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
 
         # remove "other vault" folder first
         if os.path.exists(other_vault_path):
@@ -126,7 +123,7 @@ class LocalStorageTestCase(VaultTestCase):
         self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
 
     async def test_local_metadata(self):
-        other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
+        other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
 
         # remove "other vault" folder first
         if os.path.exists(other_vault_path):
@@ -177,7 +174,7 @@ class LocalStorageTestCase(VaultTestCase):
         )
 
     async def test_delete_file(self):
-        other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
+        other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
 
         # remove "other vault" folder first
         if os.path.exists(other_vault_path):
@@ -227,7 +224,7 @@ class LocalStorageTestCase(VaultTestCase):
         self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
 
     async def test_local_fake_transaction(self):
-        other_vault_path = os.path.join(VaultTestCase.working_dir, "othervault")
+        other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
         # remove "other vault" folder first
         if os.path.exists(other_vault_path):
             shutil.rmtree(other_vault_path)

@@ -83,3 +83,18 @@ class VaultTestCase(asynctest.TestCase):
     def tearDown(self):
         asyncio.get_event_loop().run_until_complete(self.app.close())
         asyncio.get_event_loop().run_until_complete(get_manager_instance().close())
+
+
+class VaultLocalTestCase(VaultTestCase):
+    localstoragedir = "/dev/shm/localstorage" if os.access("/dev/shxm", os.W_OK) \
+                else os.path.join(os.path.dirname(__file__), "testlocalstorage")
+    folder = 'tests/testlocalvault/'
+    remote = {
+        "type": "local",
+        "folder": localstoragedir
+    }
+
+    def setUp(self):
+        if os.path.exists(self.localstoragedir):
+            shutil.rmtree(self.localstoragedir)
+        super(VaultLocalTestCase, self).setUp()

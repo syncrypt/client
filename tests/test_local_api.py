@@ -15,16 +15,11 @@ import syncrypt
 from syncrypt.api import APIClient
 from syncrypt.app import SyncryptDaemonApp
 from syncrypt.models import Vault, VaultState
-from tests.base import VaultTestCase
+from tests.base import VaultLocalTestCase
 
 
-class APITests(VaultTestCase):
+class APITests(VaultLocalTestCase):
     app_cls = SyncryptDaemonApp  # type: ignore
-    folder = 'tests/testlocalvault/'
-    remote = {
-        "type": "local",
-        "folder": "/dev/shm/remote" if os.access("/dev/shm", os.W_OK) else "tests/"
-    }
     login_data = {
         'email': 'test@syncrypt.space',
         'password': 'test!password'
