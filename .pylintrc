@@ -2,4 +2,4 @@
 
 disable = all
 
-enable = E,trailing-whitespace,reimported
+enable = E,trailing-whitespace,reimported,notimplemented-raised,no-member,undefined-variable,no-name-in-module
