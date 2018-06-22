@@ -53,7 +53,7 @@ install: |
 
 before_script:
   - mypy syncrypt tests scripts/syncrypt_daemon
-  - pylint -E syncrypt scripts
+  - pylint syncrypt scripts
   - py.test -m 'not (requires_server or external_resources)'
 
 # command to build

@@ -1,9 +1,7 @@
 import json
 import logging
 
-import sqlalchemy.types as types
-from sqlalchemy import Column, Integer, String, orm
-from sqlalchemy import types as types
+from sqlalchemy import Column, Integer, String, orm, types
 
 from .base import Base
 

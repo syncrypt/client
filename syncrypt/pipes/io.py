@@ -81,7 +81,7 @@ class FileWriter(Sink):
 
     async def finalize(self):
         fn = self.filename
-        if self.store_temporary: # we only wrote a temporary filename 
+        if self.store_temporary: # we only wrote a temporary filename
             if os.path.exists(fn):
                 if self.create_backup:
                     shutil.move(fn, self.get_backup_filename(fn))

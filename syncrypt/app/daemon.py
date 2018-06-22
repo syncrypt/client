@@ -40,7 +40,7 @@ class SyncryptDaemonApp(SyncryptApp):
             r = await client.get('/v1/version/', params={'check_for_update': 0})
             c = await r.json()
             await r.release()
-            other_version = LooseVersion(c['installed_version']) 
+            other_version = LooseVersion(c['installed_version'])
             our_version =  LooseVersion(syncrypt.__version__)
             if other_version < our_version:
                 logger.info('Starting takeover because other version (%s) is lower than ours (%s)!',

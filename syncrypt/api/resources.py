@@ -103,10 +103,10 @@ class VaultResource(Resource):
     def add_routes(self, router):
         super(VaultResource, self).add_routes(router)
         opts = {'version': self.version, 'name': self.resource_name}
-        router.add_route('GET', 
+        router.add_route('GET',
                 '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
                 self.dispatch_fingerprints)
-        router.add_route('GET', 
+        router.add_route('GET',
                 '/{version}/{name}/{{id}}/history/'.format(**opts),
                 self.dispatch_history)
         router.add_route('POST',

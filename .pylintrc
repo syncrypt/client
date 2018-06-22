@@ -1,0 +1,5 @@
+[MESSAGES]
+
+disable = all
+
+enable = E,trailing-whitespace,reimported
