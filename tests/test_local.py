@@ -239,3 +239,13 @@ class LocalStorageTestCase(VaultLocalTestCase):
 
         with self.assertRaises(InvalidRevision):
             await app.pull_vault(self.vault)
+
+    async def test_local_full_pull(self):
+        app = self.app
+        await self.app.initialize()
+        app.add_vault(self.vault)
+        await app.open_or_init(self.vault)
+        await app.push()
+        await app.pull(full=True)
+        files_in_vault = len(glob(os.path.join(self.vault.folder, "*")))
+        self.assertEqual(files_in_vault, 8)
