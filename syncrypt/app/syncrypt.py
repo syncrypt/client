@@ -617,6 +617,12 @@ class SyncryptApp(object):
 
     async def sync_vault(self, vault, full=False):
 
+        if full:
+            await self.revisions.delete_for_vault(vault)
+            await self.user_vault_keys.delete_for_vault(vault)
+            await self.bundles.delete_for_vault(vault)
+            vault.reset_revision()
+
         await self.open_or_init(vault)
         queue = await vault.backend.changes(vault.revision if not full else None, None)
 

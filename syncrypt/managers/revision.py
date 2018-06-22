@@ -32,6 +32,10 @@ class RevisionManager:
                 session.query(Revision).filter(Revision.vault_id == vault.config.id).all()
             )
 
+    async def delete_for_vault(self, vault: Vault) -> None:
+        with store.session() as session:
+            session.query(Revision).filter(Revision.vault_id == vault.config.id).delete()
+
     async def update_for_vault(self, vault):
         raise NotImplementedError()
         # with store.session() as session:

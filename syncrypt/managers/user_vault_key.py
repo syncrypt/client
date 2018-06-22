@@ -20,6 +20,10 @@ class UserVaultKeyManager:
                 .all()
             )
 
+    async def delete_for_vault(self, vault: Vault) -> None:
+        with store.session() as session:
+            session.query(self.model).filter(self.model.vault_id == vault.config.id).delete()
+
     def find_key(self, vault: Vault, fingerprint) -> UserVaultKey:
         with store.session() as session:
             return (

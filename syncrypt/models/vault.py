@@ -156,7 +156,8 @@ class Vault(MetadataHolder, Base):
 
     @property
     def revision(self):
-        return self.config.vault["revision"] if "revision" in self.config.vault else None
+        # The "or None" is when "revision" is an empty string
+        return self.config.vault.get("revision") or None
 
     @property
     def config_path(self):
@@ -218,6 +219,11 @@ class Vault(MetadataHolder, Base):
             self._bundle_cache[relpath].update_store_hash()
 
         return self._bundle_cache[relpath]
+
+    def reset_revision(self) -> None:
+        self.logger.debug('Reset vault revision')
+        with self.config.update_context():
+            self.config.update("vault", {"revision": ""})
 
     def update_revision(self, revision: Revision) -> None:
         if not isinstance(revision, Revision):

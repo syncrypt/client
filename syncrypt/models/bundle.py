@@ -8,7 +8,7 @@ from enum import Enum
 
 import aiofiles
 import umsgpack
-from sqlalchemy import Binary, Column, DateTime, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy import Binary, Column, DateTime, ForeignKey, Integer, LargeBinary, String, orm
 from sqlalchemy.orm import relationship
 
 from syncrypt.pipes import (Buffered, Count, DecryptAES, DecryptRSA_PKCS1_OAEP, EncryptAES,
@@ -17,7 +17,6 @@ from syncrypt.pipes import (Buffered, Count, DecryptAES, DecryptRSA_PKCS1_OAEP, 
 from syncrypt.utils.filesystem import splitpath
 
 from .base import Base, MetadataHolder
-
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +43,13 @@ class Bundle(MetadataHolder, Base):
         self.uptodate = False
         self.remote_crypt_hash = None
         self.bytes_written = 0
+
+    @orm.reconstructor
+    def init_on_load(self):
+        self.uptodate = False
+        self.remote_crypt_hash = None
+        self.bytes_written = 0
+        self.relpath = self.relpath.decode() # why is this binary?!
 
     def update_store_hash(self):
         h = hashlib.new(self.vault.config.hash_algo)

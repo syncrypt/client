@@ -21,6 +21,10 @@ class BundleManager:
                 bundle.vault = vault
             return lst
 
+    async def delete_for_vault(self, vault: Vault) -> None:
+        with store.session() as session:
+            session.query(self.model).filter(self.model.vault_id == vault.id).delete()
+
     async def get_bundle(self, vault: Vault, file_hash: str) -> Bundle:
         """return an iterator of all bundles in the vault that possible require download"""
         with store.session() as session:

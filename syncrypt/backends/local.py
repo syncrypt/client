@@ -204,11 +204,13 @@ class LocalStorageBackend(StorageBackend):
             try:
                 if since_rev:
                     # Skip until since_rev
+                    logger.debug("Skipping until %s", since_rev)
                     rev = pickle.load(txchain)
                     while rev.revision_id != since_rev:
                         rev = pickle.load(txchain)
 
                 rev = pickle.load(txchain)
+                logger.debug("Loaded %s", rev)
 
                 while rev.revision_id != to_rev:
                     await queue.put(rev)
@@ -216,6 +218,7 @@ class LocalStorageBackend(StorageBackend):
             except EOFError:
                 pass
             finally:
+                logger.debug("Finished serving changes")
                 await queue.put(None)
 
     async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
