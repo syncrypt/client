@@ -19,6 +19,7 @@ from syncrypt import __project__, __version__
 from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
                                  UnexpectedResponseException, UnsuccessfulResponse,
                                  VaultNotInitialized)
+from syncrypt.models import Bundle, Identity, Revision
 from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter,
                             URLReader, URLWriter)
 from syncrypt.utils.format import format_size
@@ -980,6 +981,12 @@ class BinaryStorageBackend(StorageBackend):
     async def signup(self, username, password, firstname, surname):
         async with (await self._acquire_connection(skip_login=True)) as conn:
             return await conn.signup(username, password, firstname, surname)
+
+    async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+        raise NotImplementedError()
+
+    async def set_vault_metadata(self, identity: Identity) -> Revision:
+        raise NotImplementedError()
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):
