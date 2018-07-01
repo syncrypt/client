@@ -8,6 +8,7 @@ import struct
 import sys
 import time
 from getpass import getpass
+from typing import List, Optional, cast
 
 import certifi
 from erlastic import Atom
@@ -25,7 +26,7 @@ from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once, StreamR
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 
-from .base import StorageBackend
+from .base import RevisionQueue, StorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -164,14 +165,14 @@ class BinaryStorageConnection(object):
     async def connect(self):
 
         if not self.connected:
+            sc = None
+
             if self.manager.ssl:
                 sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
                 if not self.manager.ssl_verify or self.manager.host in ('127.0.0.1', 'localhost'):
                     self.logger.warn('Continuing without verifying SSL cert')
                     sc.check_hostname = False
                     sc.verify_mode = ssl.CERT_NONE
-            else:
-                sc = None
 
             self.logger.debug('Connecting to server %s:%d ssl=%s...', self.manager.host,
                     int(self.manager.port), bool(sc))
@@ -694,17 +695,17 @@ class BinaryStorageManager(object):
     def __init__(self):
         self.host = None
         self.port = None
-        self.ssl = None
-        self.ssl_verify = None
+        self.ssl = None # type: Optional[bool]
+        self.ssl_verify = None # type: Optional[bool]
 
         # Global user auth information
         self.global_auth = None
         self.username = None
         self.password = None
-        self.concurrency = None
+        self.concurrency = None # type: Optional[int]
 
         self._monitor_task = None
-        self.slots = []
+        self.slots = [] # type: List[BinaryStorageConnection]
         self.loop = None
 
     def init(self):
@@ -826,10 +827,10 @@ class BinaryStorageManager(object):
         return await self.acquire_connection(vault)
 
 
-def get_manager_instance():
+def get_manager_instance() -> BinaryStorageManager:
     if not hasattr(get_manager_instance, '_manager'):
-        get_manager_instance._manager = BinaryStorageManager()
-    return get_manager_instance._manager
+        get_manager_instance._manager = BinaryStorageManager() # type: ignore
+    return get_manager_instance._manager # type: ignore
 
 
 class BinaryStorageBackend(StorageBackend):
@@ -919,9 +920,9 @@ class BinaryStorageBackend(StorageBackend):
             if stat_info and 'content_hash' in stat_info:
                 bundle.remote_crypt_hash = stat_info['content_hash'].decode()
 
-    async def changes(self, since_rev, to_rev, verbose=False):
+    async def changes(self, since_rev, to_rev, verbose=False) -> RevisionQueue:
         conn = await self._acquire_connection()
-        queue = asyncio.Queue(8)
+        queue = cast(RevisionQueue, asyncio.Queue(8))
         task = asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
 
         def free_conn(result):
