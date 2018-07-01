@@ -533,32 +533,6 @@ class BinaryStorageConnection(object):
         return [{k: v.decode() for k, v in user.items()}
                 for user in map(rewrite_atoms_dict, response[1])]
 
-    async def list_files(self, queue):
-
-        self.logger.info('Getting a list of files for vault %s', self.vault)
-
-        await self.write_term('list_files')
-
-        response = await self.read_response()
-
-        assert type(response) == tuple
-
-        if response[0] == Atom('stream_response'):
-            (_, file_count, revision_id) = response
-            assert isinstance(file_count, int)
-            for n in range(file_count):
-                server_info = await self.read_term(assert_ok=False)
-                server_info = rewrite_atoms_dict(server_info)
-                store_hash = server_info['file_hash'].decode()
-                metadata = server_info['metadata']
-                if metadata is None:
-                    self.logger.warn('Skipping file %s (no metadata!)', store_hash)
-                    continue
-                self.logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
-                        len(metadata))
-                await queue.put((store_hash, metadata, server_info))
-            await queue.put(None)
-
     async def add_user_vault_key(self, email, fingerprint, content):
         await self.write_term('add_user_vault_key', fingerprint, content)
         await self.read_term()
@@ -944,17 +918,6 @@ class BinaryStorageBackend(StorageBackend):
             stat_info = await conn.stat(bundle)
             if stat_info and 'content_hash' in stat_info:
                 bundle.remote_crypt_hash = stat_info['content_hash'].decode()
-
-    async def list_files(self):
-        conn = await self._acquire_connection()
-        queue = asyncio.Queue(8)
-        task = asyncio.get_event_loop().create_task(conn.list_files(queue))
-
-        def free_conn(result):
-            conn.available.set()
-
-        task.add_done_callback(free_conn)
-        return queue
 
     async def changes(self, since_rev, to_rev, verbose=False):
         conn = await self._acquire_connection()
