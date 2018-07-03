@@ -127,7 +127,7 @@ class SyncryptCLIApp(SyncryptApp):
 
     async def info(self):
         for (index, vault) in enumerate(self.vaults):
-            await self.pull_vault(vault)
+            await self.sync_vault(vault)
             remote_size = await self.get_remote_size_for_vault(vault)
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
@@ -196,7 +196,7 @@ class SyncryptCLIApp(SyncryptApp):
         # from the database
         # local_tz = get_localzone()
         for vault in self.vaults:
-            await self.pull_vault(vault)
+            await self.sync_vault(vault)
             for revision in self.revisions.list_for_vault(vault):
                 print(revision.revision_id, revision.operation, revision.created_at, revision.user_id)
 
