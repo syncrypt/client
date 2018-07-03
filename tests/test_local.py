@@ -61,11 +61,7 @@ class LocalStorageTestCase(VaultLocalTestCase):
         self.vault.config.vault["name"] = "My Library"
 
         await backend.set_vault_metadata(self.app.identity)
-        await backend.vault_metadata()
-
-        # new connection
-        vault2 = Vault(self.vault.folder)
-        await vault2.backend.vault_metadata()
+        await app.pull()
 
     async def test_revision_increase_after_push(self):
         app = SyncryptApp(self.app_config)

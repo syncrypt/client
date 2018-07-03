@@ -127,7 +127,7 @@ class SyncryptCLIApp(SyncryptApp):
 
     async def info(self):
         for (index, vault) in enumerate(self.vaults):
-            await self.retrieve_metadata(vault)
+            await self.pull_vault(vault)
             remote_size = await self.get_remote_size_for_vault(vault)
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
@@ -221,4 +221,3 @@ class SyncryptCLIApp(SyncryptApp):
         #             print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
 
         # await self.wait()
-

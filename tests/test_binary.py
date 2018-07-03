@@ -93,11 +93,6 @@ class BinaryServerTests(VaultTestCase):
         self.vault.config.vault['name'] = 'My Library'
 
         await backend.set_vault_metadata()
-        await backend.vault_metadata()
-
-        # new connection
-        vault2 = Vault(self.vault.folder)
-        await vault2.backend.vault_metadata()
 
     async def test_download(self):
         'for all files -> upload file, delete file, download file'
@@ -199,9 +194,9 @@ class BinaryServerTests(VaultTestCase):
         app = SyncryptApp(self.app_config)
         app.add_vault(vault)
         await app.open_or_init(self.vault)
-        await app.retrieve_metadata(vault)
+        await app.pull_vault(vault)
         await app.get_remote_size_for_vault(vault)
-        await app.retrieve_metadata(vault)
+        await app.pull_vault(vault)
         await app.get_remote_size_for_vault(vault)
         await app.get_remote_size_for_vault(vault)
 

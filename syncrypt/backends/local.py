@@ -171,10 +171,6 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_transaction(transaction)
 
-    async def vault_metadata(self):
-        dest_path = os.path.join(self.path, "metadata")
-        await self.vault.write_encrypted_metadata(FileReader(dest_path))
-
     async def user_info(self):
         return {"email": "user@localhost"}
 

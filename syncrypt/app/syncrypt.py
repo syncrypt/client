@@ -418,7 +418,7 @@ class SyncryptApp(object):
 
         self.add_vault(vault)
 
-        await self.retrieve_metadata(vault)
+        await self.pull_vault(vault, full=True)
 
         return vault
 
@@ -492,10 +492,6 @@ class SyncryptApp(object):
     async def get_remote_size_for_vault(self, vault):
         await vault.backend.open()
         return (await vault.backend.vault_size(vault))
-
-    async def retrieve_metadata(self, vault):
-        await vault.backend.open()
-        return (await vault.backend.vault_metadata())
 
     async def refresh_vault_info(self):
         logger.info('Refreshing vault information')
@@ -640,8 +636,6 @@ class SyncryptApp(object):
         successful = []
 
         await self.set_vault_state(vault, VaultState.SYNCING)
-
-        await self.retrieve_metadata(vault)
 
         # First, we will iterate through the changes, validate the chain and build up the state of
         # the vault (files, keys, ...). This is called "syncing".

@@ -421,23 +421,6 @@ class BinaryStorageConnection(object):
         # if all went well, store revision_id in vault
         self.vault.update_revision(server_info['id'])
 
-    async def vault_metadata(self):
-        self.logger.debug('Getting metadata for %s', self.vault)
-
-        await self.write_term('vault_metadata')
-
-        metadata = await self.read_response()
-
-        if metadata is None:
-            self.logger.debug('Metadata is not yet set')
-        else:
-            self.logger.debug('Metadata size is %d bytes', len(metadata))
-
-        if not metadata is None:
-            await self.vault.write_encrypted_metadata(Once(metadata))
-        else:
-            self.logger.warn('Empty metadata for %s', self.vault)
-
     async def user_info(self):
         self.logger.debug('Retrieving user information from server')
         await self.write_term('user_info')

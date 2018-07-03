@@ -11,7 +11,7 @@ from enum import Enum
 from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from sqlalchemy import Column, Integer, String, orm
 
@@ -24,6 +24,9 @@ from .base import Base, MetadataHolder
 from .bundle import Bundle
 from .identity import Identity
 from .revision import Revision
+
+if TYPE_CHECKING:
+    from syncrypt.backends.base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -122,13 +125,13 @@ class Vault(MetadataHolder, Base):
         return self._identity
 
     @property
-    def backend(self):
+    def backend(self) -> 'StorageBackend':
         try:
             return self._backend
         except AttributeError:
             Backend = self.config.backend_cls
             kwargs = self.config.backend_kwargs
-            self._backend = Backend(self, **kwargs)
+            self._backend = Backend(self, **kwargs) # type: StorageBackend
             return self._backend
 
     # Deprecated
