@@ -945,4 +945,3 @@ class BinaryStorageBackend(StorageBackend):
     async def close(self):
         pass
         #await manager.close()
-

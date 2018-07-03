@@ -1,6 +1,8 @@
-import json
 import asyncio
+import json
+
 import aiohttp
+
 from .auth import AUTH_TOKEN_HEADER
 
 
@@ -40,4 +42,3 @@ class APIClient:
                 ctx.raise_for_status()
             return ctx
         return api_call
-

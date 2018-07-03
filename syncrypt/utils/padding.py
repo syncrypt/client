@@ -13,4 +13,3 @@ class PKCS5Padding(object):
             return s[:-num_pad_chars]
         else:
             return s
-
