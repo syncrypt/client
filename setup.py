@@ -181,7 +181,7 @@ setup(
             'pytest-runner',
             'pytest>=2.8.0',
             'asynctest',
-            'hypothesis',
+            'hypothesis<=3.60.1', # 3.65 seems to break builds
             'mypy',  # used for static type checking
             'pylint'  # used for static code analysis
         ],
