@@ -82,7 +82,7 @@ class SyncryptAPI():
         # prepare certain config values for json
         # These guards/conversions should be done transparently in
         # Config class
-        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1',)
+        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1', 'yes')
 
         return JSONResponse(cfg)
 
@@ -106,13 +106,6 @@ class SyncryptAPI():
                     self.app.config.set(setting, value)
 
         return await self.get_config(request)
-
-        cfg = self.app.config.as_dict()
-
-        # prepare certain config values for json
-        cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1', 'yes')
-
-        return JSONResponse(cfg)
 
     @require_auth_token
     async def post_auth_login(self, request):
