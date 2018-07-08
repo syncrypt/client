@@ -1,0 +1,7 @@
+[vault]
+    name = My Plaintext Vault
+    crypt_engine = plaintext
+
+[remote]
+    type = local
+    folder = ../teststore
