@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 
+
 def test_env():
     """Test if and where GPG is installed."""
     try:

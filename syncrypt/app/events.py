@@ -1,7 +1,6 @@
 import logging
 import os
 
-import asyncio
 from hachiko.hachiko import AIOEventHandler, AIOWatchdog
 
 logger = logging.getLogger(__name__)

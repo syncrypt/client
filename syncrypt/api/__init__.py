@@ -8,9 +8,8 @@ from aiohttp import web
 from aiohttp.abc import AbstractAccessLogger
 
 import syncrypt
-from syncrypt.app.auth import CredentialsAuthenticationProvider
+from syncrypt.auth import CredentialsAuthenticationProvider
 from syncrypt.backends.binary import get_manager_instance
-from syncrypt.models import IdentityState
 
 from ..exceptions import InvalidAuthentification, SyncryptBaseException
 from ..utils.updates import is_update_available
@@ -48,7 +47,7 @@ class SyncryptAPI():
 
     @require_auth_token
     async def get_stats(self, request):
-        vault_resource = VaultResource(self.app)
+        VaultResource(self.app)
         return JSONResponse({
             'stats': self.app.stats,
             'identity_state': self.app.identity.state,
@@ -173,7 +172,7 @@ class SyncryptAPI():
         async def do_shutdown():
             await asyncio.sleep(0.4)
             await self.app.shutdown()
-        task = asyncio.get_event_loop().create_task(do_shutdown())
+        asyncio.get_event_loop().create_task(do_shutdown())
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
@@ -184,7 +183,7 @@ class SyncryptAPI():
         async def do_restart():
             await asyncio.sleep(0.4)
             await self.app.restart()
-        task = asyncio.get_event_loop().create_task(do_restart())
+        asyncio.get_event_loop().create_task(do_restart())
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
@@ -221,7 +220,7 @@ class SyncryptAPI():
         feedback_text = params['feedback_text']
         logger.info('Sending user feedback: %d bytes', len(feedback_text))
         backend = await self.app.open_backend()
-        user_info = await backend.user_feedback(feedback_text.encode('utf-8'))
+        await backend.user_feedback(feedback_text.encode('utf-8'))
         await backend.close()
         return JSONResponse({'status': 'ok'})
 

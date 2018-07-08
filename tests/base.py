@@ -6,8 +6,9 @@ import unittest
 from glob import glob
 
 import asynctest
+
 from syncrypt.app import SyncryptApp
-from syncrypt.app.auth import CredentialsAuthenticationProvider
+from syncrypt.auth import CredentialsAuthenticationProvider
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.backends.binary import get_manager_instance
 from syncrypt.config import AppConfig

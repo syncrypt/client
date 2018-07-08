@@ -1,9 +1,7 @@
-import asyncio
 import hashlib
 import logging
 import os
 
-import aiofiles
 import Cryptodome.Util
 from Cryptodome.Cipher import AES, PKCS1_OAEP, PKCS1_v1_5
 

@@ -1,5 +1,5 @@
 import asyncio
-from typing import Generic, TypeVar, Set
+from typing import Generic, Set, TypeVar
 
 T = TypeVar('T')
 

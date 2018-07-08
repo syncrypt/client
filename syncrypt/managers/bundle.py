@@ -1,7 +1,4 @@
-import asyncio
 import logging
-
-from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.models import Bundle, Vault, store
 

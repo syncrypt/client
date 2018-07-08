@@ -1,6 +1,5 @@
-from enum import Enum
 
-from sqlalchemy import Binary, Column, DateTime, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy import Binary, Column, Integer, String
 
 from .base import Base
 from .identity import Identity

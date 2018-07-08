@@ -1,17 +1,12 @@
-import asyncio
 import logging
-import os.path
-import shutil
 import ssl
-import sys
-from typing import List
+from typing import List  # pylint: disable=unused-import
 
-import aiofiles
 import aiohttp
 import certifi
 from aiohttp.http_exceptions import HttpProcessingError
 
-from .base import BufferedFree, Limit, Pipe, Sink, Source
+from .base import BufferedFree, Limit, Sink, Source
 
 logger = logging.getLogger(__name__)
 

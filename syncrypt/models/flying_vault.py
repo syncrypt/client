@@ -1,7 +1,7 @@
 import json
 import logging
 
-from sqlalchemy import Column, Integer, String, orm, types
+from sqlalchemy import Column, Integer, String, types
 
 from .base import Base
 

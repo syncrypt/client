@@ -6,6 +6,7 @@ from distutils.core import Command, setup
 from os import path
 
 from setuptools import find_packages, setup
+
 from syncrypt.utils.version import get_git_version
 
 __name__ = 'syncrypt'

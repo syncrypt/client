@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import asyncio
-import logging
-import logging.config
 import os.path
-import sys
 import time
 
 import smokesignal
 from syncrypt.app import SyncryptDaemonApp
-from syncrypt.config import AppConfig, Config
-from syncrypt.models import Vault
+from syncrypt.config import AppConfig
 from syncrypt.utils.daemon import Daemon
 from syncrypt.utils.logging import setup_logging
 
@@ -20,7 +16,6 @@ except ImportError:
     pass
 
 # Register builtins
-import syncrypt.builtins.log
 #import syncrypt.builtins.chaos_monkey
 
 LOGLEVELS = ['CRITICAL', 'ERROR', 'WARN', 'INFO', 'DEBUG']

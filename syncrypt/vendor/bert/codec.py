@@ -1,9 +1,8 @@
 
 import datetime
 import re
-import time
 
-from erlastic import ErlangTermDecoder, ErlangTermEncoder, Atom
+from erlastic import Atom, ErlangTermDecoder, ErlangTermEncoder
 
 try:
     basestring # type: ignore

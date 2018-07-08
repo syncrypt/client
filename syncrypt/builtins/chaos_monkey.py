@@ -7,7 +7,7 @@ import asyncio
 import inspect
 import logging
 import random
-from typing import List, Tuple, Union, Any
+from typing import List, Tuple, Union, Any # pylint: disable=unused-import
 import sys
 
 import smokesignal

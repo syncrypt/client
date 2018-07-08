@@ -8,6 +8,7 @@ from glob import glob
 
 import asynctest
 import pytest
+
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.crypt.plaintext import PlaintextEngine

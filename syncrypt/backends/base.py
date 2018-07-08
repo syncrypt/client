@@ -1,10 +1,10 @@
-import asyncio
-from typing import NewType, Union
+import asyncio  # pylint: disable=unused-import
 from abc import abstractmethod
+from typing import NewType, Union  # pylint: disable=unused-import
 
 from typing_extensions import Protocol
 
-from syncrypt.models import Bundle, Identity, Revision, Vault
+from syncrypt.models import Bundle, Identity, Revision
 
 RevisionQueue = NewType("RevisionQueue", "asyncio.Queue[Union[Revision, None]]")
 

@@ -1,28 +1,23 @@
 import asyncio
 import logging
 import math
-import os.path
-import re
 import ssl
 import struct
 import sys
-import time
-from getpass import getpass
-from typing import List, Optional, cast
+from typing import List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
                       stop_after_attempt, wait_exponential)
 
-import syncrypt
 from syncrypt import __project__, __version__
 from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
                                  UnexpectedResponseException, UnsuccessfulResponse,
                                  VaultNotInitialized)
 from syncrypt.models import Bundle, Identity, Revision
-from syncrypt.pipes import (BufferedFree, ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter,
-                            URLReader, URLWriter)
+from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter, URLReader,
+                            URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 
@@ -480,7 +475,7 @@ class BinaryStorageConnection(object):
                 server_info = rewrite_atoms_dict(server_info)
                 store_hash = server_info['file_hash'].decode()
                 metadata = server_info['metadata']
-                user_email = server_info['email'].decode()
+                server_info['email'].decode()
                 if metadata is None:
                     self.logger.warn('Skipping file %s (no metadata!)', store_hash)
                     continue

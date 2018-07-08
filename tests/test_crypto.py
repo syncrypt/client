@@ -1,15 +1,18 @@
+import asyncio
 import os
 import os.path
 import shutil
 import unittest
 
 import aiofiles
-import asyncio
 import asynctest
-from syncrypt.pipes import EncryptRSA, EncryptRSA_PKCS1_OAEP, DecryptRSA, DecryptRSA_PKCS1_OAEP
-from syncrypt.pipes import (Buffered, FileReader, Limit, Once, Repeat, Count,
-                            SnappyCompress, SnappyDecompress, StreamReader)
+
+from syncrypt.pipes import (Buffered, Count, DecryptRSA, DecryptRSA_PKCS1_OAEP, EncryptRSA,
+                            EncryptRSA_PKCS1_OAEP, FileReader, Limit, Once, Repeat, SnappyCompress,
+                            SnappyDecompress, StreamReader)
+
 from .base import VaultTestCase
+
 
 class VaultCryptoPipeTests(VaultTestCase):
     folder = 'tests/testbinaryvault/'

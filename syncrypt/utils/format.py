@@ -1,5 +1,6 @@
 from math import log
 
+
 def format_fingerprint(fingerprint, sep=':'):
     'format a hex fingerprint as 00:11:22:33:44:55...'
     parts = [fingerprint[n*2:n*2+2] for n in range(len(fingerprint) // 2)]
@@ -31,7 +32,6 @@ def size_with_unit(size):
 
     size_formatted, size_unit = format_size(size).split(" ")
     exponent = min(int(log(size, 1024)), len(SIZE_UNITS) - 1)
-    quotient = float(size) / 1024**exponent
     unit, num_decimals = SIZE_UNITS[exponent]
     if num_decimals > 0:
         return (float(size_formatted), unit)

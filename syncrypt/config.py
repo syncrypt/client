@@ -2,7 +2,7 @@ import configparser
 import logging
 import os.path
 from copy import deepcopy
-from typing import Any, Dict
+from typing import Any, Dict  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from syncrypt.models import UserVaultKey, Vault, store

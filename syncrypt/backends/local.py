@@ -1,12 +1,9 @@
 import asyncio
 import logging
-import math
 import os
 import pickle
 import shutil
-import time
-from glob import glob
-from typing import cast, Any
+from typing import Any, cast  # pylint: disable=unused-import
 from uuid import uuid4
 
 from Cryptodome.Random.random import randint
@@ -83,7 +80,7 @@ class LocalStorageBackend(StorageBackend):
         shutil.copyfile(bundle.path, dest_path)
 
         metadata = await bundle.encrypted_metadata_reader().readall()
-        metadata_size = len(metadata)
+        len(metadata)
 
         await bundle.load_key()
         s = vault.crypt_engine.read_encrypted_stream(bundle) >> FileWriter(dest_path)

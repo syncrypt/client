@@ -1,7 +1,8 @@
 import asyncio
-import pytest
 import os
 import os.path
+
+import pytest
 
 from syncrypt.config import AppConfig
 from syncrypt.models import Identity

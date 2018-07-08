@@ -1,6 +1,7 @@
 import logging.config
-from typing import Dict, Any
 import sys
+from typing import Any, Dict  # pylint: disable=unused-import
+
 import colorlog
 
 if sys.platform == 'win32':

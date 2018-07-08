@@ -2,6 +2,7 @@ import snappy
 
 from .base import Pipe
 
+
 class SnappyCompress(Pipe):
     def __init__(self):
         self.compressor = snappy.StreamCompressor()

@@ -1,16 +1,7 @@
 import enum
 
-from sqlalchemy import (
-    Binary,
-    Column,
-    DateTime,
-    Enum,
-    ForeignKey,
-    Integer,
-    LargeBinary,
-    String,
-    UniqueConstraint,
-)
+from sqlalchemy import (Binary, Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, String,
+                        UniqueConstraint)
 
 from syncrypt.exceptions import InvalidRevision
 

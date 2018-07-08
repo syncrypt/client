@@ -1,10 +1,6 @@
-import asyncio
 import logging
-from datetime import timezone
 from typing import Sequence
 
-import iso8601
-from sqlalchemy import desc
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import InvalidRevision

@@ -1,4 +1,5 @@
 
+import asyncio
 import logging
 import os
 import os.path
@@ -6,18 +7,19 @@ import shutil
 import unittest
 from glob import glob
 
-import pytest
-import asyncio
 import asynctest
+import pytest
 from hypothesis import example, given, settings
-from syncrypt.models import Bundle, Vault
+
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.config import AppConfig
+from syncrypt.models import Bundle, Vault
 from tests.base import VaultTestCase
 from tests.strategies import files
 
 from .base import TestAppConfig
+
 
 def count_files(folder):
     return len([name for name in os.listdir(folder) if name != '.vault'])

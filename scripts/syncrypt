@@ -3,14 +3,12 @@ import argparse
 import asyncio
 import logging
 import logging.config
-import os.path
 import sys
 
-from syncrypt import __project__, __version__
+from syncrypt import __version__
 from syncrypt.app import SyncryptCLIApp
 from syncrypt.config import AppConfig
 from syncrypt.exceptions import SyncryptBaseException
-from syncrypt.models import Vault
 from syncrypt.utils.logging import setup_logging
 
 try:
@@ -109,7 +107,6 @@ class MultipleVaultCmd(SyncryptCmd):
 
 class NoVaultCmd(SyncryptCmd):
     '''command that operates without a vault'''
-    pass
 
 
 class Clone(NoVaultCmd):

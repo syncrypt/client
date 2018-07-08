@@ -27,9 +27,9 @@ Changes:        23rd Jan 2009 (David Mytton <david@boxedice.com>)
 # Core modules
 import atexit
 import os
+import signal
 import sys
 import time
-import signal
 
 # Python 3+ does not support unbuffered text I/O,
 # nor does it have the 'file' built-in function

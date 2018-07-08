@@ -1,7 +1,7 @@
 import asyncio
-from typing import Dict
-
 import logging
+from typing import Dict  # pylint: disable=unused-import
+
 from syncrypt.utils.semaphores import JoinableSemaphore
 
 logger = logging.getLogger(__name__)

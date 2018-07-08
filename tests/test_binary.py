@@ -1,17 +1,18 @@
+import asyncio
 import logging
-from glob import glob
 import os
 import os.path
 import shutil
 import unittest
+from glob import glob
 
-import pytest
-import asyncio
 import asynctest
-from syncrypt.models import Bundle, Vault
+import pytest
+
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.backends.binary import get_manager_instance
+from syncrypt.models import Bundle, Vault
 from tests.base import VaultTestCase
 
 

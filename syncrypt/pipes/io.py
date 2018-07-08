@@ -1,12 +1,11 @@
 import logging
-import sys
 import os.path
 import shutil
+import sys
 
 import aiofiles
-import asyncio
 
-from .base import Pipe, Sink, Source
+from .base import Sink, Source
 
 logger = logging.getLogger(__name__)
 

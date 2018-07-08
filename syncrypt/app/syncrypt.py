@@ -2,24 +2,21 @@ import asyncio
 import logging
 import os.path
 import socket
-import sys
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
 
-import syncrypt
 from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentification,
                                  InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
-                                 VaultFolderDoesNotExist, VaultIsAlreadySyncing, VaultNotFound,
-                                 VaultNotInitialized)
+                                 VaultIsAlreadySyncing, VaultNotFound, VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
                                UserVaultKeyManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
-                            SnappyCompress, StdoutWriter)
+                            StdoutWriter)
 from syncrypt.utils.filesystem import is_empty
-from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
+from syncrypt.utils.format import format_fingerprint
 from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
 
 from .asynccontext import AsyncContext
@@ -631,8 +628,6 @@ class SyncryptApp(object):
 
     async def pull_vault(self, vault, full=False):
         vault.logger.info('Pulling %s', vault)
-        latest_revision = None
-        total = 0
         successful = []
 
         await self.set_vault_state(vault, VaultState.SYNCING)

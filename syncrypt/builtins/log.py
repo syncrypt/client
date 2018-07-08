@@ -12,7 +12,6 @@ from logging.handlers import BufferingHandler
 import smokesignal
 from aiohttp import web
 
-from syncrypt.api.resources import VaultResource
 from syncrypt.api.responses import JSONResponse
 
 logger = logging.getLogger(__name__)

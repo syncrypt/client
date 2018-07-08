@@ -1,20 +1,14 @@
-import asyncio
 import logging
 import os
 from getpass import getpass
 
-import iso8601
-from tzlocal import get_localzone
-
 import syncrypt
-from syncrypt.app.auth import AuthenticationProvider
+from syncrypt.auth import AuthenticationProvider
 from syncrypt.models import Identity
-from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
-                            SnappyCompress, StdoutWriter)
 from syncrypt.utils.format import format_fingerprint, format_size, size_with_unit
 from syncrypt.vendor.keyart import draw_art
 
-from ..exceptions import IdentityNotInitialized, InvalidAuthentification, VaultNotInitialized
+from ..exceptions import IdentityNotInitialized, InvalidAuthentification
 from ..utils.updates import is_update_available
 from .syncrypt import SyncryptApp
 

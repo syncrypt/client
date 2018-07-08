@@ -1,22 +1,20 @@
-import asyncio
 import configparser
 import hashlib
 import logging
 import os
 import os.path
 import shutil
-import sys
 import zipfile
 from enum import Enum
 from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict  # pylint: disable=unused-import
 
 from sqlalchemy import Column, Integer, String, orm
 
 from syncrypt.config import VaultConfig
-from syncrypt.exceptions import VaultFolderDoesNotExist, VaultNotInitialized
+from syncrypt.exceptions import VaultFolderDoesNotExist
 from syncrypt.pipes import Once
 from syncrypt.utils.filesystem import folder_size
 
@@ -26,8 +24,8 @@ from .identity import Identity
 from .revision import Revision
 
 if TYPE_CHECKING:
-    from syncrypt.backends.base import StorageBackend
-    from syncrypt.crypt.base import CryptEngine
+    from syncrypt.backends.base import StorageBackend  # pylint: disable=unused-import
+    from syncrypt.crypt.base import CryptEngine  # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 

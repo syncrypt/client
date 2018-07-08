@@ -1,19 +1,16 @@
 # tastypie-like asyncio-aware resources
 import asyncio
-import enum
 import itertools
 import json
 import logging
 import os.path
+from datetime import timezone
 
-import iso8601
 from aiohttp import web
 from tzlocal import get_localzone
-from datetime import timezone
 
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity
-from syncrypt.utils.format import format_size
 
 from .auth import require_auth_token
 from .responses import JSONResponse

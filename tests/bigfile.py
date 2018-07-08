@@ -1,9 +1,9 @@
-import sys
-import os
 import asyncio
-from syncrypt.pipes import (Buffered, Count, EncryptAES, FileReader, Limit,
-                            Once, PadAES, Repeat, SnappyCompress,
-                            SnappyDecompress, StreamReader, Hash)
+import os
+import sys
+
+from syncrypt.pipes import (Buffered, Count, EncryptAES, FileReader, Hash, Limit, Once, PadAES,
+                            Repeat, SnappyCompress, SnappyDecompress, StreamReader)
 
 if __name__ == '__main__':
     path = sys.argv[1]
@@ -36,4 +36,3 @@ if __name__ == '__main__':
     print(diff)
     assert diff == 0
     print("OK")
-

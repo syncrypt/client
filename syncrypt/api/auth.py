@@ -1,16 +1,19 @@
-import string
 import random
+import string
 
 import aiohttp.web
 
 AUTH_TOKEN_HEADER = 'X-AuthToken'
 
+
 def random_string(length=6, chars=string.ascii_lowercase + \
                                 string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for x in range(length))
 
+
 def generate_api_auth_token():
     return random_string(32)
+
 
 def require_auth_token(f):
     def inner(resource, request, *args, **kwargs):
@@ -22,6 +25,7 @@ def require_auth_token(f):
         else:
             raise aiohttp.web.HTTPForbidden()
     return inner
+
 
 def require_identity(f):
     '''
