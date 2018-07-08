@@ -140,7 +140,8 @@ class VaultConfig(Config, BackendConfigMixin):
             # File patterns to ignore (comma separated list)
             'ignore': '.*',
             'name': '',
-            'pull_interval': 300
+            'pull_interval': 300,
+            'crypt_engine': 'aes_cbc'
         },
         'remote': BackendConfigMixin.DEFAULT_BACKEND_CFG
     }
@@ -153,6 +154,21 @@ class VaultConfig(Config, BackendConfigMixin):
     @property
     def ignore_patterns(self):
         return self._config['vault']['ignore'].split(',') + self.hard_ignore
+
+    @property
+    def crypt_engine_cls(self):
+        if self._config['vault']['crypt_engine'] == 'aes_cbc':
+            from .crypt.aes_cbc import AESCBCEngine
+            return AESCBCEngine
+        elif self._config['vault']['crypt_engine'] == 'plaintext':
+            from .crypt.plaintext import PlaintextEngine
+            return PlaintextEngine
+        else:
+            raise Exception(self._config['vault']['crypt_engine'])
+
+    @property
+    def crypt_engine_kwargs(self):
+        return {}
 
 
 class AppConfig(Config, BackendConfigMixin):

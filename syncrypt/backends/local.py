@@ -86,7 +86,7 @@ class LocalStorageBackend(StorageBackend):
         metadata_size = len(metadata)
 
         await bundle.load_key()
-        s = bundle.read_encrypted_stream() >> FileWriter(dest_path)
+        s = vault.crypt_engine.read_encrypted_stream(bundle) >> FileWriter(dest_path)
         await s.consume()
         # s = bundle.encrypted_metadata_reader() >> FileWriter(dest_path + ".metadata")
         # await s.consume()
@@ -128,16 +128,20 @@ class LocalStorageBackend(StorageBackend):
         return revision
 
     async def download(self, bundle):
+        vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
+
         logger.info("Downloading %s", bundle)
 
         dest_path = os.path.join(self.path, bundle.store_hash)
 
         await bundle.load_key()
-        s = FileReader(dest_path)
+        stream = FileReader(dest_path)
         try:
-            await bundle.write_encrypted_stream(s)
+            await vault.crypt_engine.write_encrypted_stream(bundle, stream)
         finally:
-            await s.close()
+            await stream.close()
 
     async def stat(self, bundle):
         logger.debug("Stat %s", bundle)

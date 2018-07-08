@@ -27,6 +27,7 @@ from .revision import Revision
 
 if TYPE_CHECKING:
     from syncrypt.backends.base import StorageBackend
+    from syncrypt.crypt.base import CryptEngine
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,16 @@ class Vault(MetadataHolder, Base):
             kwargs = self.config.backend_kwargs
             self._backend = Backend(self, **kwargs) # type: StorageBackend
             return self._backend
+
+    @property
+    def crypt_engine(self) -> 'CryptEngine':
+        try:
+            return self._crypt_engine
+        except AttributeError:
+            CryptEngineCls = self.config.crypt_engine_cls
+            kwargs = self.config.crypt_engine_kwargs
+            self._crypt_engine = CryptEngineCls(self, **kwargs) # type: CryptEngine
+            return self._crypt_engine
 
     # Deprecated
     @property

@@ -115,50 +115,6 @@ class Bundle(MetadataHolder, Base):
         sink = Once(self.serialized_metadata) >> FileWriter(self.path_metadata)
         await sink.consume()
 
-    def read_encrypted_stream(self):
-        assert not self.key is None
-        return FileReader(self.path) \
-                >> SnappyCompress() \
-                >> Buffered(self.vault.config.enc_buf_size) \
-                >> PadAES() \
-                >> EncryptAES(self.key)
-
-    async def write_encrypted_stream(self, stream, assert_hash=None):
-        hash_pipe = Hash(self.vault.config.hash_algo)
-
-        if self.key is None:
-            await self.load_key()
-
-        # Security check against malicious path not inside
-        vault_path = os.path.abspath(self.vault.folder)
-        bundle_path = os.path.abspath(self.path)
-
-        if os.path.commonpath([vault_path]) != os.path.commonpath([vault_path, bundle_path]):
-            raise AssertionError("Refusing to write to given bundle path: " + bundle_path)
-
-        sink = stream \
-                >> Buffered(self.vault.config.enc_buf_size, self.vault.config.block_size) \
-                >> DecryptAES(self.key) \
-                >> UnpadAES() \
-                >> SnappyDecompress() \
-                >> hash_pipe \
-                >> FileWriter(self.path, create_dirs=True, create_backup=True, store_temporary=True)
-
-        await sink.consume()
-
-        hash_obj = hash_pipe.hash_obj
-        hash_obj.update(self.key)
-        received_hash = hash_obj.hexdigest()
-
-        passed = not assert_hash or received_hash == assert_hash
-
-        if not passed:
-            logger.error('hash mismatch: {} != {}'.format(assert_hash, received_hash))
-
-        await sink.finalize()
-
-        return passed
-
     async def update_serialized_metadata(self, stream):
         logger.debug("Updating metadata on disk")
         sink = stream >> FileWriter(self.path_metadata, create_dirs=True)
@@ -178,38 +134,8 @@ class Bundle(MetadataHolder, Base):
         assert self.path is not None
 
         if os.path.exists(self.path):
-
-            # This will calculate the hash of the file contents
-            # As such it will never be sent to the server (see below)
-            # TODO: check impact of SnappyCompress and PadAES pipes on
-            #       performance. Both are only needed for knowing the
-            #       file size in upload. If they have a huge impact on
-            #       performance, try to change the protocol so that the
-            #       stream size does not need to be known inb4 by the
-            #       client source.
-            hashing_reader = FileReader(self.path) \
-                        >> Hash(self.vault.config.hash_algo)
-
-            counting_reader = hashing_reader \
-                        >> SnappyCompress() \
-                        >> Buffered(self.vault.config.enc_buf_size) \
-                        >> PadAES() \
-                        >> Count()
-            await counting_reader.consume()
-
-            # We add the AES key to the hash so that the hash stays
-            # constant when the files is not changed, but the original
-            # hash is also not revealed to the server
-            assert len(self.key) == self.key_size
-            hash_obj = hashing_reader.hash_obj
-            hash_obj.update(self.key)
-
-            self.crypt_hash = hash_obj.hexdigest()
-
-            # Add one time the symmetric block_size to the encrypted file size.
-            # This is the length of the IV.
-            self.file_size_crypt = counting_reader.count + \
-                    self.vault.config.block_size
+            self.crypt_hash, self.file_size_crypt = \
+                await self.vault.crypt_engine.get_crypt_hash_and_size(self)
             self.uptodate = True
         else:
             self.crypt_hash = None
@@ -223,6 +149,7 @@ class Bundle(MetadataHolder, Base):
     def path_metadata(self):
         return os.path.join(self.vault.bundle_metadata_path, \
                 self.store_hash[:2], self.store_hash[2:])
+
 
 
 #class VirtualBundle(object):

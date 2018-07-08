@@ -8,30 +8,22 @@ from glob import glob
 
 import asynctest
 import pytest
-
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
+from syncrypt.crypt.plaintext import PlaintextEngine
 from syncrypt.exceptions import InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Revision, RevisionOp, Vault
 from tests.base import VaultLocalTestCase
 
 
-def generate_fake_revision(vault):
-    transaction = Revision(operation=RevisionOp.SetMetadata)
-    transaction.vault_id = vault.id
-    transaction.parent_id = vault.revision
-    transaction.user_id = "user@localhost"
-    transaction.user_fingerprint = "aabbcc"
-    transaction.revision_metadata = b"123456"
-    transaction.signature = b"12345"
-    return transaction
+class PlaintextTestCase(VaultLocalTestCase):
+    folder = 'tests/testplainvault/'
 
-
-class LocalStorageTestCase(VaultLocalTestCase):
     @asynctest.ignore_loop
     async def test_backend_type(self):
         self.assertEqual(type(self.vault.backend), LocalStorageBackend)
+        self.assertEqual(type(self.vault.crypt_engine), PlaintextEngine)
 
     async def test_upload(self):
         app = self.app
@@ -220,23 +212,6 @@ class LocalStorageTestCase(VaultLocalTestCase):
         self.assertEqual(key.fingerprint, other_key.fingerprint)
         self.assertNotEqual(key.fingerprint, self.vault.identity.get_fingerprint())
         self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
-
-    async def test_local_fake_transaction(self):
-        other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
-        # remove "other vault" folder first
-        if os.path.exists(other_vault_path):
-            shutil.rmtree(other_vault_path)
-        app = self.app
-        await self.app.initialize()
-        app.add_vault(self.vault)
-        await app.open_or_init(self.vault)
-        await app.push()
-
-        # add fake transaction to local storage
-        self.vault.backend.add_transaction(generate_fake_revision(self.vault))
-
-        with self.assertRaises(InvalidRevision):
-            await app.pull_vault(self.vault)
 
     async def test_local_full_pull(self):
         app = self.app

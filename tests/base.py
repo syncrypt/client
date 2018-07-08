@@ -3,6 +3,7 @@ import os
 import os.path
 import shutil
 import unittest
+from glob import glob
 
 import asynctest
 from syncrypt.app import SyncryptApp
@@ -10,10 +11,8 @@ from syncrypt.app.auth import CredentialsAuthenticationProvider
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.backends.binary import get_manager_instance
 from syncrypt.config import AppConfig
-from syncrypt.models import Vault
+from syncrypt.models import Vault, store
 from syncrypt.utils.logging import setup_logging
-
-from syncrypt.models import store
 
 
 class TestAuthenticationProvider(CredentialsAuthenticationProvider):
@@ -83,6 +82,14 @@ class VaultTestCase(asynctest.TestCase):
     def tearDown(self):
         asyncio.get_event_loop().run_until_complete(self.app.close())
         asyncio.get_event_loop().run_until_complete(get_manager_instance().close())
+
+    def assertSameFilesInFolder(self, *folders):
+        files_per_folder = [sorted(os.listdir(folder)) for folder in folders]
+        self.assertEqual(*[len(files) for files in files_per_folder])
+        for fn in zip(*files_per_folder):
+            self.assertEqual(*fn)
+            self.assertEqual(*[os.stat(os.path.join(folder, filename)).st_size for folder, filename in
+                zip(folders, fn)])
 
 
 class VaultLocalTestCase(VaultTestCase):
