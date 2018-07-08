@@ -225,11 +225,6 @@ class VaultResource(Resource):
             # TODO No wait here!
             #await self.app.watch(vault)
 
-        async def push_and_watch(vault):
-            await self.app.push_vault(vault)
-            # TODO No wait here!
-            #await self.app.watch(vault)
-
         async def init_and_push(vault):
             await self.app.open_or_init(vault)
             await self.app.push_vault(vault)

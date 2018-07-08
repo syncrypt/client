@@ -83,7 +83,6 @@ def call_git_describe(abbrev=10, dirty=True,
             # find out real name of remote
             p = check_output(['git', 'remote', '-v'],
                              cwd=ROOT, stderr=STDOUT)
-            stdout = [line_.strip() for line_ in p.decode().splitlines()]
             remote = None
             if remote is not None:
                 remote_tracking_branch = re.sub(r'[^A-Za-z0-9._-]', r'_',

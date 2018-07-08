@@ -142,7 +142,7 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
             try:
                 # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
                 # queue before draining the connection
-                for i in range(MAX_ITEMS_BEFORE_DRAIN):
+                for _ in range(MAX_ITEMS_BEFORE_DRAIN):
                     ws.send_str(str(item))
                     item = queue.get_nowait()
             except asyncio.QueueEmpty:

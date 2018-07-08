@@ -458,7 +458,7 @@ class BinaryStorageConnection(object):
         if len(response) > 0 and response[0] == Atom('stream_response'):
             (_, file_count) = response
             assert isinstance(file_count, int)
-            for n in range(file_count):
+            for _ in range(file_count):
                 server_info = await self.read_term(assert_ok=False)
                 server_info = rewrite_atoms_dict(server_info)
                 store_hash = server_info['file_hash'].decode()

@@ -45,7 +45,7 @@ class SyncryptCLIApp(SyncryptApp):
             backend = await self.open_backend(num_tries=1)
             await backend.close()
             print("Already logged in.")
-        except InvalidAuthentification as e:
+        except InvalidAuthentification:
             backend = await self.open_backend(always_ask_for_creds=True)
             await backend.close()
             await self.upload_identity()

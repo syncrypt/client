@@ -109,7 +109,7 @@ class SyncryptApp(object):
             try:
                 vault.check_existence()
                 self.identity.assert_initialized()
-            except SyncryptBaseException as e:
+            except SyncryptBaseException:
                 logger.exception("Failure during vault initialization")
                 await self.set_vault_state(vault, VaultState.FAILURE)
 
@@ -337,7 +337,7 @@ class SyncryptApp(object):
                 >> DecryptRSA_PKCS1_OAEP(vault_identity.private_key) \
                 >> SnappyDecompress()
 
-        serialized_metadata = metadata = await sink.readall()
+        serialized_metadata = await sink.readall()
         return umsgpack.unpackb(serialized_metadata)
 
     async def set(self, setting, value):
@@ -525,10 +525,10 @@ class SyncryptApp(object):
                     continue
 
                 await ctx.create_task(vault, self.push_vault(vault))
-                for result in ctx.completed_tasks():
+                for _ in ctx.completed_tasks():
                     pass
             await ctx.wait()
-            for result in ctx.completed_tasks():
+            for _ in ctx.completed_tasks():
                 pass
 
     async def push_vault(self, vault):
@@ -550,8 +550,8 @@ class SyncryptApp(object):
                 await ctx.wait()
                 ctx.raise_for_failures()
             await self.set_vault_state(vault, VaultState.READY)
-        except Exception as e:
-            vault.logger.exception(e)
+        except Exception:
+            vault.logger.exception("Failure during vault initialization")
             await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def push_bundle(self, bundle: Bundle):
@@ -597,10 +597,10 @@ class SyncryptApp(object):
                     continue
 
                 await ctx.create_task(vault, self.pull_vault(vault, full=full))
-                for result in ctx.completed_tasks():
+                for _ in ctx.completed_tasks():
                     pass
             await ctx.wait()
-            for result in ctx.completed_tasks():
+            for _ in ctx.completed_tasks():
                 pass
 
     async def pull_vault_periodically(self, vault):

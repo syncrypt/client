@@ -55,7 +55,7 @@ class LocalStorageBackend(StorageBackend):
         await self.open()  # create directory
 
         # create txchain store
-        with open(os.path.join(self.path, "txchain"), "wb") as txchain:
+        with open(os.path.join(self.path, "txchain"), "wb"):
             pass
 
         transaction = Revision(operation=RevisionOp.CreateVault)
@@ -179,9 +179,7 @@ class LocalStorageBackend(StorageBackend):
         assert since_rev is None or isinstance(since_rev, str)
 
         queue = cast(RevisionQueue, asyncio.Queue(8))
-        task = asyncio.get_event_loop().create_task(
-            self._changes(since_rev, to_rev, queue)
-        )
+        asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
         return queue
 
     async def _changes(self, since_rev, to_rev, queue: RevisionQueue):
