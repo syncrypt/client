@@ -7,6 +7,7 @@ import sys
 from typing import List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
+from Cryptodome.Random.random import randint
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
                       stop_after_attempt, wait_exponential)
@@ -15,7 +16,7 @@ from syncrypt import __project__, __version__
 from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
                                  UnexpectedResponseException, UnsuccessfulResponse,
                                  VaultNotInitialized)
-from syncrypt.models import Bundle, Identity, Revision
+from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter, URLReader,
                             URLWriter)
 from syncrypt.utils.format import format_size
@@ -82,7 +83,7 @@ class BinaryStorageConnection(object):
         self.logger = BinaryStorageConnectionLoggerAdapter(self, logger)
 
         # State
-        self.vault = None
+        self.vault = None # type: Optional[Vault]
         self.available = asyncio.Event()
         self.available.clear()
         self.connected = False
@@ -224,42 +225,6 @@ class BinaryStorageConnection(object):
                 if len(response) == 2:
                     self.manager.global_auth = response[1].decode()
 
-            elif vault.config.id is None:
-                if self.manager.global_auth:
-                    await self.write_term('auth', self.manager.global_auth)
-                else:
-                    await self.write_term('login', self.manager.username,
-                            self.manager.password)
-
-                response = await self.read_term(assert_ok=False)
-
-                if response[0] != Atom('ok'):
-                    await self.disconnect()
-                    raise InvalidAuthentification(response)
-
-                if len(response) == 2:
-                    self.manager.global_auth = response[1].decode()
-
-                key = vault.identity.export_public_key()
-
-                await self.write_term('create_vault', str(len(key)))
-
-                response = await self.read_term(assert_ok=False)
-
-                if response[0] == Atom('ok'):
-                    auth = response[2].decode(self.vault.config.encoding)
-                    self.logger.info('Created vault %s', response[1])
-                    with vault.config.update_context():
-                        vault.config.update('remote', {
-                            'auth': auth
-                        })
-                        vault.config.update('vault', {
-                            'id': response[1].decode(self.vault.config.encoding)
-                        })
-                else:
-                    await self.disconnect()
-                    raise InvalidAuthentification(response)
-
             else:
                 if self.manager.global_auth:
                     await self.write_term('vault_login', self.manager.global_auth, vault.config.id)
@@ -282,6 +247,43 @@ class BinaryStorageConnection(object):
         self.connected = True
         self.connecting = False
         self.available.set()
+
+    async def create_vault(self, identity: Identity) -> Revision:
+        vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        user_info = await self.user_info()
+
+        key = vault.identity.export_public_key()
+
+        transaction = Revision(operation=RevisionOp.CreateVault)
+        transaction.nonce = randint(0, 0xffffffff)
+        transaction.user_id = user_info['email']
+        transaction.user_fingerprint = identity.get_fingerprint()
+        transaction.public_key = identity.public_key.exportKey("DER")
+        transaction.sign(identity=identity)
+
+        await self.write_term('create_vault', str(len(key)))
+
+        response = await self.read_term()
+
+        auth = response[2].decode(vault.config.encoding)
+        vault_id = response[1].decode(vault.config.encoding)
+
+        transaction.vault_id = vault_id
+
+        self.logger.info('Created vault %s', vault_id)
+
+        with vault.config.update_context():
+            vault.config.update('remote', {
+                'auth': auth
+            })
+            vault.config.update('vault', {
+                'id': response[1].decode(vault.config.encoding)
+            })
+
+        return transaction
 
     async def disconnect(self):
         logger.debug('Disconnecting %s', self)
@@ -817,7 +819,7 @@ class BinaryStorageBackend(StorageBackend):
     object associated with it, but all will use the same manager.
     '''
 
-    def __init__(self, vault=None, auth=None, host=None, port=None,
+    def __init__(self, vault: Vault = None, auth=None, host=None, port=None,
             concurrency=None, username=None, password=None, ssl=True,
             ssl_verify=True):
 
@@ -861,16 +863,21 @@ class BinaryStorageBackend(StorageBackend):
         manager.username = username
         manager.password = password
 
-    async def _acquire_connection(self, **kwargs):
-        return await get_manager_instance().acquire_connection(self.vault, **kwargs)
+    async def _acquire_connection(self, ignore_vault=False, skip_login=False):
+        return await get_manager_instance().acquire_connection(
+            None if ignore_vault else self.vault,
+            skip_login=skip_login
+        )
 
-    async def init(self):
+    async def init(self, identity: Identity) -> Revision:
         self.auth = None
         try:
-            async with (await self._acquire_connection()) as conn:
+            async with (await self._acquire_connection(ignore_vault=True)) as conn:
                 # after successful login, write back config
+                revision = conn.create_vault(identity)
                 self.invalid_auth = False
                 conn.logger.info('Successfully logged in and stored auth token')
+                return revision
         except InvalidAuthentification:
             self.invalid_auth = True
             raise
