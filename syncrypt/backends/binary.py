@@ -56,7 +56,7 @@ def rewrite_atoms_dict(bert_dict):
 
 
 class BinaryStorageConnectionLoggerAdapter(logging.LoggerAdapter):
-    def __init__(self, connection, logger):
+    def __init__(self, connection: BinaryStorageConnection, logger) -> None:
         self.connection = connection
         super(BinaryStorageConnectionLoggerAdapter, self).__init__(logger, {})
 
@@ -76,7 +76,7 @@ class BinaryStorageConnection(object):
     execute commands related to it).
     '''
 
-    def __init__(self, manager):
+    def __init__(self, manager: BinaryStorageManager) -> None:
         self.manager = manager
         self.writer = None
         self.reader = None
@@ -821,7 +821,7 @@ class BinaryStorageBackend(StorageBackend):
 
     def __init__(self, vault: Vault = None, auth=None, host=None, port=None,
             concurrency=None, username=None, password=None, ssl=True,
-            ssl_verify=True):
+            ssl_verify=True) -> None:
 
         assert isinstance(ssl, bool)
         assert isinstance(ssl_verify, bool)
