@@ -98,11 +98,12 @@ class Revision(Base):
             raise NotImplementedError(self.operation)
         return message
 
-    def sign(self, identity: Identity):
+    def sign(self, identity: Identity) -> None:
+        self.user_fingerprint = identity.get_fingerprint()
         self.assert_valid()
         self.signature = identity.sign(self._message())
 
-    def verify(self, identity: Identity):
+    def verify(self, identity: Identity) -> None:
         """Verify the signature of this revision"""
         self.assert_valid()
         if self.signature is None:

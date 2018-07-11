@@ -62,7 +62,6 @@ class LocalStorageBackend(StorageBackend):
         revision.nonce = randint(0, 0xffffffff)
         revision.vault_id = new_vault_id
         revision.user_id = "user@localhost"
-        revision.user_fingerprint = identity.get_fingerprint()
         revision.public_key = identity.public_key.exportKey("DER")
         revision.sign(identity=identity)
 
@@ -94,7 +93,6 @@ class LocalStorageBackend(StorageBackend):
         revision.vault_id = vault.config.id
         revision.parent_id = vault.revision
         revision.user_id = "user@localhost"
-        revision.user_fingerprint = identity.get_fingerprint()
         revision.file_hash = bundle.store_hash
         revision.revision_metadata = metadata
         revision.crypt_hash = bundle.crypt_hash
@@ -166,7 +164,6 @@ class LocalStorageBackend(StorageBackend):
         revision.vault_id = vault.config.id
         revision.parent_id = vault.revision
         revision.user_id = "user@localhost"
-        revision.user_fingerprint = identity.get_fingerprint()
         revision.revision_metadata = metadata
         revision.sign(identity)
 
@@ -219,7 +216,6 @@ class LocalStorageBackend(StorageBackend):
         revision.vault_id = vault.config.id
         revision.parent_id = vault.revision
         revision.user_id = "user@localhost"
-        revision.user_fingerprint = identity.get_fingerprint()
         revision.file_hash = bundle.store_hash
         revision.sign(identity=identity)
 

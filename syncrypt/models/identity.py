@@ -135,7 +135,7 @@ class Identity(object):
         if not self.is_initialized():
             raise IdentityNotInitialized()
 
-    def get_fingerprint(self):
+    def get_fingerprint(self) -> str:
         self.assert_initialized()
 
         assert self.public_key
@@ -143,12 +143,12 @@ class Identity(object):
         pk_hash.update(self.public_key.exportKey("DER"))
         return pk_hash.hexdigest()[: self.config.fingerprint_length]
 
-    def sign(self, message):
+    def sign(self, message: bytes) -> bytes:
         self.assert_initialized()
         h = SHA256.new(message)
         return pkcs1_15.new(self.private_key).sign(h)
 
-    def verify(self, message, signature):
+    def verify(self, message: bytes, signature: bytes) -> bool:
         h = SHA256.new(message)
         try:
             pkcs1_15.new(self.public_key).verify(h, signature)

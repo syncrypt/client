@@ -260,7 +260,6 @@ class BinaryStorageConnection(object):
         revision = Revision(operation=RevisionOp.CreateVault)
         revision.nonce = randint(0, 0xffffffff)
         revision.user_id = user_info['email']
-        revision.user_fingerprint = identity.get_fingerprint()
         revision.public_key = identity.public_key.exportKey("DER")
         revision.sign(identity=identity)
 
