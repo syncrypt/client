@@ -25,6 +25,7 @@ Changes:        23rd Jan 2009 (David Mytton <david@boxedice.com>)
 '''
 
 # Core modules
+from typing import Optional
 import atexit
 import os
 import signal
@@ -70,8 +71,7 @@ class Daemon(object):
             if pid > 0:
                 # Exit first parent
                 sys.exit(0)
-        except OSError:
-            e = sys.exc_info()[1]
+        except OSError as e:
             sys.stderr.write(
                 "fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
@@ -87,8 +87,7 @@ class Daemon(object):
             if pid > 0:
                 # Exit from second parent
                 sys.exit(0)
-        except OSError:
-            e = sys.exc_info()[1]
+        except OSError as e:
             sys.stderr.write(
                 "fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
             sys.exit(1)
@@ -120,7 +119,7 @@ class Daemon(object):
         # Write pidfile
         atexit.register(
             self.delpid)  # Make sure pid file is removed if we quit
-        pid = str(os.getpid())
+        pid = os.getpid()
         file(self.pidfile, 'w+').write("%s\n" % pid)
 
     def delpid(self):
@@ -137,7 +136,7 @@ class Daemon(object):
         # Check for a pidfile to see if the daemon already runs
         try:
             pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
+            pid = int(pf.read().strip()) # type: Optional[int]
             pf.close()
         except IOError:
             pid = None
@@ -203,10 +202,10 @@ class Daemon(object):
         self.stop()
         self.start()
 
-    def get_pid(self):
+    def get_pid(self) -> Optional[int]:
         try:
             pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
+            pid = int(pf.read().strip()) # type: Optional[int]
             pf.close()
         except IOError:
             pid = None

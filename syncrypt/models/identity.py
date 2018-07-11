@@ -86,7 +86,7 @@ class Identity(object):
         self._keypair = (public_key, private_key)
         self.state = IdentityState.INITIALIZED
 
-    def key_size(self):
+    def key_size(self) -> int:
         return Cryptodome.Util.number.size(self.private_key.n)
 
     async def init(self):
@@ -104,7 +104,7 @@ class Identity(object):
     #    raise SecurityError(
     #            'Vault key is not of required length of %d bit.' \
     #                    % self.config.rsa_key_len)
-    def export_public_key(self):
+    def export_public_key(self) -> bytes:
         "return the public key serialized as bytes"
         return self.public_key.exportKey("DER")
 
