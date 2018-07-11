@@ -264,14 +264,16 @@ class BinaryStorageConnection(object):
         revision.public_key = identity.public_key.exportKey("DER")
         revision.sign(identity=identity)
 
-        await self.write_term('create_vault', str(len(key)))
+        await self.write_term('create_vault', str(len(key)), revision.signature)
 
         response = await self.read_term()
 
         vault_id = response[1].decode(vault.config.encoding)
+        revision_id = response[3].decode(vault.config.encoding)
         auth = response[2].decode(vault.config.encoding)
 
         revision.vault_id = vault_id
+        revision.revision_id = revision_id
 
         self.logger.info('Created vault %s', vault_id)
 

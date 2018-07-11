@@ -6,6 +6,7 @@ from sqlalchemy import (Binary, Column, DateTime, Enum, ForeignKey, Integer, Lar
 from syncrypt.exceptions import InvalidRevision
 
 from .base import Base
+from .identity import Identity
 
 
 class RevisionOp(enum.Enum):
@@ -97,11 +98,11 @@ class Revision(Base):
             raise NotImplementedError(self.operation)
         return message
 
-    def sign(self, identity):
+    def sign(self, identity: Identity):
         self.assert_valid()
         self.signature = identity.sign(self._message())
 
-    def verify(self, identity):
+    def verify(self, identity: Identity):
         """Verify the signature of this revision"""
         self.assert_valid()
         if self.signature is None:
