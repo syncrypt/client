@@ -98,7 +98,7 @@ class RevisionManager:
                     public_key=revision.public_key,
                 )
 
-            # 3. Verify transaction signature
+            # 3. Verify revision signature
             revision.verify(signer_key.get_identity(self.app.config))
 
             # 4. Based on the revision type, perform an action to our state of the vault

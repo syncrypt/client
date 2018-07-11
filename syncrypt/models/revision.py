@@ -31,7 +31,7 @@ class Revision(Base):
     parent_id = Column(String(128), ForeignKey("revision.revision_id"), nullable=True)
     vault_id = Column(String(128))
 
-    # These are the core fields that every transaction has to have.
+    # These are the core fields that every revision has to have.
     operation = Column(Enum(RevisionOp, values_callable=lambda x: [e.value for e in x]))
     created_at = Column(DateTime())
     user_id = Column(String(250))

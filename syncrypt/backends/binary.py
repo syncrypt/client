@@ -257,21 +257,21 @@ class BinaryStorageConnection(object):
 
         key = vault.identity.export_public_key()
 
-        transaction = Revision(operation=RevisionOp.CreateVault)
-        transaction.nonce = randint(0, 0xffffffff)
-        transaction.user_id = user_info['email']
-        transaction.user_fingerprint = identity.get_fingerprint()
-        transaction.public_key = identity.public_key.exportKey("DER")
-        transaction.sign(identity=identity)
+        revision = Revision(operation=RevisionOp.CreateVault)
+        revision.nonce = randint(0, 0xffffffff)
+        revision.user_id = user_info['email']
+        revision.user_fingerprint = identity.get_fingerprint()
+        revision.public_key = identity.public_key.exportKey("DER")
+        revision.sign(identity=identity)
 
         await self.write_term('create_vault', str(len(key)))
 
         response = await self.read_term()
 
-        auth = response[2].decode(vault.config.encoding)
         vault_id = response[1].decode(vault.config.encoding)
+        auth = response[2].decode(vault.config.encoding)
 
-        transaction.vault_id = vault_id
+        revision.vault_id = vault_id
 
         self.logger.info('Created vault %s', vault_id)
 
@@ -283,7 +283,7 @@ class BinaryStorageConnection(object):
                 'id': response[1].decode(vault.config.encoding)
             })
 
-        return transaction
+        return revision
 
     async def disconnect(self):
         logger.debug('Disconnecting %s', self)

@@ -58,15 +58,15 @@ class LocalStorageBackend(StorageBackend):
         with open(os.path.join(self.path, "txchain"), "wb"):
             pass
 
-        transaction = Revision(operation=RevisionOp.CreateVault)
-        transaction.nonce = randint(0, 0xffffffff)
-        transaction.vault_id = new_vault_id
-        transaction.user_id = "user@localhost"
-        transaction.user_fingerprint = identity.get_fingerprint()
-        transaction.public_key = identity.public_key.exportKey("DER")
-        transaction.sign(identity=identity)
+        revision = Revision(operation=RevisionOp.CreateVault)
+        revision.nonce = randint(0, 0xffffffff)
+        revision.vault_id = new_vault_id
+        revision.user_id = "user@localhost"
+        revision.user_fingerprint = identity.get_fingerprint()
+        revision.public_key = identity.public_key.exportKey("DER")
+        revision.sign(identity=identity)
 
-        return self.add_transaction(transaction)
+        return self.add_revision(revision)
 
     async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
         vault = self.vault
@@ -90,26 +90,26 @@ class LocalStorageBackend(StorageBackend):
         with open(dest_path + ".hash", "w") as hashfile:
             hashfile.write(bundle.crypt_hash)
 
-        transaction = Revision(operation=RevisionOp.Upload)
-        transaction.vault_id = vault.config.id
-        transaction.parent_id = vault.revision
-        transaction.user_id = "user@localhost"
-        transaction.user_fingerprint = identity.get_fingerprint()
-        transaction.file_hash = bundle.store_hash
-        transaction.revision_metadata = metadata
-        transaction.crypt_hash = bundle.crypt_hash
-        transaction.file_size_crypt = bundle.file_size_crypt
-        transaction.sign(identity=identity)
+        revision = Revision(operation=RevisionOp.Upload)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_id = "user@localhost"
+        revision.user_fingerprint = identity.get_fingerprint()
+        revision.file_hash = bundle.store_hash
+        revision.revision_metadata = metadata
+        revision.crypt_hash = bundle.crypt_hash
+        revision.file_size_crypt = bundle.file_size_crypt
+        revision.sign(identity=identity)
 
-        return self.add_transaction(transaction)
+        return self.add_revision(revision)
 
-    def add_transaction(self, revision: Revision) -> Revision:
-        "Persist the transaction in the local storage. This will also generate a transaction id."
+    def add_revision(self, revision: Revision) -> Revision:
+        "Persist the revision in the local storage. This will also generate a revision id."
         if revision.revision_id is not None:
-            raise ValueError("Transaction already has an id.")
+            raise ValueError("Revision already has an id.")
 
         if revision.signature is None:
-            raise ValueError("Transaction is not signed.")
+            raise ValueError("Revision is not signed.")
 
         revision.revision_id = str(uuid4())
 
@@ -162,15 +162,15 @@ class LocalStorageBackend(StorageBackend):
 
         metadata = await vault.encrypted_metadata_reader().readall()
 
-        transaction = Revision(operation=RevisionOp.SetMetadata)
-        transaction.vault_id = vault.config.id
-        transaction.parent_id = vault.revision
-        transaction.user_id = "user@localhost"
-        transaction.user_fingerprint = identity.get_fingerprint()
-        transaction.revision_metadata = metadata
-        transaction.sign(identity)
+        revision = Revision(operation=RevisionOp.SetMetadata)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_id = "user@localhost"
+        revision.user_fingerprint = identity.get_fingerprint()
+        revision.revision_metadata = metadata
+        revision.sign(identity)
 
-        return self.add_transaction(transaction)
+        return self.add_revision(revision)
 
     async def user_info(self):
         return {"email": "user@localhost"}
@@ -215,15 +215,15 @@ class LocalStorageBackend(StorageBackend):
 
         logger.info("Deleting %s", bundle)
 
-        transaction = Revision(operation=RevisionOp.DeleteFile)
-        transaction.vault_id = vault.config.id
-        transaction.parent_id = vault.revision
-        transaction.user_id = "user@localhost"
-        transaction.user_fingerprint = identity.get_fingerprint()
-        transaction.file_hash = bundle.store_hash
-        transaction.sign(identity=identity)
+        revision = Revision(operation=RevisionOp.DeleteFile)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_id = "user@localhost"
+        revision.user_fingerprint = identity.get_fingerprint()
+        revision.file_hash = bundle.store_hash
+        revision.sign(identity=identity)
 
-        return self.add_transaction(transaction)
+        return self.add_revision(revision)
 
     def set_auth(self, username: str, password: str):
         pass

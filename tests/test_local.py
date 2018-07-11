@@ -18,14 +18,14 @@ from tests.base import VaultLocalTestCase
 
 
 def generate_fake_revision(vault):
-    transaction = Revision(operation=RevisionOp.SetMetadata)
-    transaction.vault_id = vault.id
-    transaction.parent_id = vault.revision
-    transaction.user_id = "user@localhost"
-    transaction.user_fingerprint = "aabbcc"
-    transaction.revision_metadata = b"123456"
-    transaction.signature = b"12345"
-    return transaction
+    revision = Revision(operation=RevisionOp.SetMetadata)
+    revision.vault_id = vault.id
+    revision.parent_id = vault.revision
+    revision.user_id = "user@localhost"
+    revision.user_fingerprint = "aabbcc"
+    revision.revision_metadata = b"123456"
+    revision.signature = b"12345"
+    return revision
 
 
 class LocalStorageTestCase(VaultLocalTestCase):
@@ -221,7 +221,7 @@ class LocalStorageTestCase(VaultLocalTestCase):
         self.assertNotEqual(key.fingerprint, self.vault.identity.get_fingerprint())
         self.assertEqual(key.fingerprint, self.app.identity.get_fingerprint())
 
-    async def test_local_fake_transaction(self):
+    async def test_local_fake_revision(self):
         other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
         # remove "other vault" folder first
         if os.path.exists(other_vault_path):
@@ -232,8 +232,8 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await app.open_or_init(self.vault)
         await app.push()
 
-        # add fake transaction to local storage
-        self.vault.backend.add_transaction(generate_fake_revision(self.vault))
+        # add fake revision to local storage
+        self.vault.backend.add_revision(generate_fake_revision(self.vault))
 
         with self.assertRaises(InvalidRevision):
             await app.pull_vault(self.vault)
