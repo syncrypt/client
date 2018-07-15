@@ -40,8 +40,8 @@ class Revision(Base):
     signature = Column(Binary(512))
 
     # Additional fields for OP_CREATE_VAULT
-    nonce = Column(Integer(), nullable=True)
-    public_key = Column(Binary(4096), nullable=True)
+    vault_public_key = Column(Binary(4096), nullable=True)
+    user_public_key = Column(Binary(4096), nullable=True)
 
     # Additional fields for OP_UPLOAD
     file_hash = Column(String(250), nullable=True)
@@ -62,8 +62,10 @@ class Revision(Base):
 
         if self.operation == RevisionOp.CreateVault:
             assert self.parent_id is None
-            if not isinstance(self.public_key, bytes):
-                raise InvalidRevision("Wrong type for public_key")
+            if not isinstance(self.user_public_key, bytes):
+                raise InvalidRevision("Wrong type for user_public_key")
+            if not isinstance(self.vault_public_key, bytes):
+                raise InvalidRevision("Wrong type for vault_public_key")
         elif self.operation == RevisionOp.Upload:
             assert self.parent_id is not None
         elif self.operation == RevisionOp.SetMetadata:
@@ -77,8 +79,8 @@ class Revision(Base):
     def _message(self):
         if self.operation == RevisionOp.CreateVault:
             message = str(self.operation).encode() + b"|"
-            message += str(self.nonce).encode() + b"|"
-            message += self.public_key
+            message += self.vault_public_key + b"|"
+            message += self.user_public_key
         elif self.operation == RevisionOp.Upload:
             message = str(self.operation).encode() + b"|"
             message += str(self.parent_id).encode() + b"|"

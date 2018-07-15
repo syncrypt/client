@@ -95,7 +95,7 @@ class RevisionManager:
                     vault_id=vault.id,
                     user_id=revision.user_id,
                     fingerprint=revision.user_fingerprint,
-                    public_key=revision.public_key,
+                    public_key=revision.user_public_key,
                 )
 
             # 3. Verify revision signature

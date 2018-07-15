@@ -59,10 +59,10 @@ class LocalStorageBackend(StorageBackend):
             pass
 
         revision = Revision(operation=RevisionOp.CreateVault)
-        revision.nonce = randint(0, 0xffffffff)
         revision.vault_id = new_vault_id
         revision.user_id = "user@localhost"
-        revision.public_key = identity.public_key.exportKey("DER")
+        revision.vault_public_key = vault.identity.public_key.exportKey("DER")
+        revision.user_public_key = identity.public_key.exportKey("DER")
         revision.sign(identity=identity)
 
         return self.add_revision(revision)

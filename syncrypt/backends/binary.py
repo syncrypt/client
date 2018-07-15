@@ -258,9 +258,9 @@ class BinaryStorageConnection(object):
         key = vault.identity.export_public_key()
 
         revision = Revision(operation=RevisionOp.CreateVault)
-        revision.nonce = randint(0, 0xffffffff)
+        revision.vault_public_key = vault.identity.public_key.exportKey("DER")
+        revision.user_public_key = identity.public_key.exportKey("DER")
         revision.user_id = user_info['email']
-        revision.public_key = identity.public_key.exportKey("DER")
         revision.sign(identity=identity)
 
         await self.write_term('create_vault', str(len(key)), revision.signature)
