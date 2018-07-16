@@ -22,7 +22,7 @@ is the user's email.
 The genesis transaction for each vault. It is signed by the vault creator. The user's public key is
 added to the trusted key list for this vault.
 
-Signed contents: ``"OP_CREATE_VAULT"``, Vault public key, User public key
+Signed contents: ``"OP_CREATE_VAULT"``, Vault public key, User ID, User public key
 
 ### Set Metadata
 

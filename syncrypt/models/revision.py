@@ -85,24 +85,26 @@ class Revision(Base):
             raise NotImplementedError(self.operation)
 
     def _message(self) -> bytes:
+        sep = b"|"
         if self.operation == RevisionOp.CreateVault:
-            message = str(self.operation).encode() + b"|"
-            message += self.vault_public_key + b"|"
+            message = str(self.operation).encode() + sep
+            message += self.vault_public_key + sep
+            message += self.user_id.encode() + sep
             message += self.user_public_key
         elif self.operation == RevisionOp.Upload:
-            message = str(self.operation).encode() + b"|"
-            message += str(self.parent_id).encode() + b"|"
-            message += str(self.file_hash).encode() + b"|"
-            message += str(self.crypt_hash).encode() + b"|"
-            message += str(self.file_size_crypt).encode() + b"|"
+            message = str(self.operation).encode() + sep
+            message += str(self.parent_id).encode() + sep
+            message += str(self.file_hash).encode() + sep
+            message += str(self.crypt_hash).encode() + sep
+            message += str(self.file_size_crypt).encode() + sep
             message += self.revision_metadata
         elif self.operation == RevisionOp.SetMetadata:
-            message = str(self.operation).encode() + b"|"
-            message += str(self.parent_id).encode() + b"|"
+            message = str(self.operation).encode() + sep
+            message += str(self.parent_id).encode() + sep
             message += self.revision_metadata
         elif self.operation == RevisionOp.DeleteFile:
-            message = str(self.operation).encode() + b"|"
-            message += str(self.parent_id).encode() + b"|"
+            message = str(self.operation).encode() + sep
+            message += str(self.parent_id).encode() + sep
             message += str(self.file_hash).encode()
         else:
             raise NotImplementedError(self.operation)
