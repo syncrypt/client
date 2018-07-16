@@ -16,6 +16,8 @@ class RevisionOp(enum.Enum):
     SetMetadata = "OP_SET_METADATA"
     DeleteFile = "OP_DELETE_FILE"
     RenameFile = "OP_RENAME_FILE"
+    AddUser = "OP_ADD_USER"
+    AddUserKey = "OP_ADD_USER_KEY"
 
 
 class Revision(Base):
@@ -41,7 +43,6 @@ class Revision(Base):
 
     # Additional fields for OP_CREATE_VAULT
     vault_public_key = Column(Binary(4096), nullable=True)
-    user_public_key = Column(Binary(4096), nullable=True)
 
     # Additional fields for OP_UPLOAD
     file_hash = Column(String(250), nullable=True)
@@ -50,7 +51,14 @@ class Revision(Base):
     crypt_hash = Column(String(250), nullable=True)
     file_size_crypt = Column(Integer(), nullable=True)
 
-    def assert_valid(self):
+    # Additional fields for OP_CREATE_VAULT & OP_ADD_USER_KEY
+    user_device_name = Column(String(250), nullable=True)
+    user_public_key = Column(Binary(4096), nullable=True)
+
+    # Additional fields for OP_ADD_USER & OP_ADD_USER_KEY
+    added_user_id = Column(String(250), nullable=True)
+
+    def assert_valid(self) -> None:
         if self.vault_id is None:
             raise InvalidRevision("Invalid vault_id: {0}".format(self.vault_id))
         if self.user_id is None:
@@ -76,7 +84,7 @@ class Revision(Base):
         else:
             raise NotImplementedError(self.operation)
 
-    def _message(self):
+    def _message(self) -> bytes:
         if self.operation == RevisionOp.CreateVault:
             message = str(self.operation).encode() + b"|"
             message += self.vault_public_key + b"|"
