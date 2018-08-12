@@ -263,18 +263,30 @@ class BinaryStorageConnection(object):
         revision.user_id = user_info['email']
         revision.sign(identity=identity)
 
-        await self.write_term('create_vault', str(len(key)), revision.signature)
+        await self.write_term('create_vault',
+                              revision.vault_public_key,
+                              revision.user_public_key,
+                              revision.signature)
 
         response = await self.read_term()
 
         vault_id = response[1].decode(vault.config.encoding)
-        revision_id = response[3].decode(vault.config.encoding)
         auth = response[2].decode(vault.config.encoding)
+        revision_id = response[3].decode(vault.config.encoding)
+
+        if not vault_id:
+            raise ServerError("Invalid vault ID: {0}".format(vault_id))
+
+        if not auth:
+            raise ServerError("Invalid auth token: {0}".format(auth))
+
+        if not revision_id:
+            raise ServerError("Invalid revision ID: {0}".format(revision_id))
 
         revision.vault_id = vault_id
         revision.revision_id = revision_id
 
-        self.logger.info('Created vault %s', vault_id)
+        self.logger.info('Successfully created vault %s', vault_id)
 
         with vault.config.update_context():
             vault.config.update('remote', {
@@ -874,8 +886,9 @@ class BinaryStorageBackend(StorageBackend):
         self.auth = None
         try:
             async with (await self._acquire_connection(ignore_vault=True)) as conn:
+                conn.vault = self.vault
                 # after successful login, write back config
-                revision = conn.create_vault(identity)
+                revision = await conn.create_vault(identity)
                 self.invalid_auth = False
                 conn.logger.info('Successfully logged in and stored auth token')
                 return revision

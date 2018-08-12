@@ -14,15 +14,14 @@ is from then on trusted by all other participants and can thus be used to sign t
 
 ## Transaction types
 
-A technical description of all transaction types follows. In the current implementation the User ID
-is the user's email.
+A technical description of all transaction types follows.
 
 ### Create Vault
 
 The genesis transaction for each vault. It is signed by the vault creator. The user's public key is
 added to the trusted key list for this vault.
 
-Signed contents: ``"OP_CREATE_VAULT"``, Vault public key, User ID, User public key
+Signed contents: ``"OP_CREATE_VAULT"``, Vault public key, User public key
 
 ### Set Metadata
 
@@ -41,19 +40,14 @@ encrypted blob
 
 Signed contents: ``"OP_DELETE_FILE"``, Hash of encrypted filename
 
-### Add User
-
-Signed contents: ``"OP_ADD_USER"``, User ID
-
 ### Add User Vault Key
 
-Signed contents: ``"OP_ADD_USER_KEY"``, User ID, User Public Key
+Signed contents: ``"OP_ADD_USER_KEY"``, User Public Key
 
 ## Example
 
 * Alice creates a new vault thus creates a new *Create Vault* message including her public key.
 * Alice adds a *Set Metadata* transaction to the chain.
-* Alice adds an *Add User* message with Bobs user ID.
 * Alice adds an *Add User vault Key* message with Bobs key for Machine #1.
 * Alice adds an *Add User vault Key* message with Bobs key for Machine #2.
 * Bob uploads a file from machine #2 and thus adds a *Upload revision* message.

@@ -59,7 +59,7 @@ class Revision(Base):
     added_user_id = Column(String(250), nullable=True)
 
     def assert_valid(self) -> None:
-        if self.vault_id is None:
+        if self.vault_id is None and self.operation != RevisionOp.CreateVault:
             raise InvalidRevision("Invalid vault_id: {0}".format(self.vault_id))
         if self.user_id is None:
             raise InvalidRevision("Invalid user_id: {0}".format(self.user_id))
@@ -89,7 +89,6 @@ class Revision(Base):
         if self.operation == RevisionOp.CreateVault:
             message = str(self.operation).encode() + sep
             message += self.vault_public_key + sep
-            message += self.user_id.encode() + sep
             message += self.user_public_key
         elif self.operation == RevisionOp.Upload:
             message = str(self.operation).encode() + sep
