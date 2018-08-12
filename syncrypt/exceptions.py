@@ -40,7 +40,7 @@ class VaultIsAlreadySyncing(VaultException):
 
     def __str__(self):
         return "The given folder is already in the list of syncing vaults: {0}".format(
-            self.args[0]
+            self.args
         )
 
 

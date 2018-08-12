@@ -7,7 +7,6 @@ import sys
 from typing import List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
-from Cryptodome.Random.random import randint
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
                       stop_after_attempt, wait_exponential)
@@ -254,8 +253,6 @@ class BinaryStorageConnection(object):
             raise ValueError("Invalid argument")
 
         user_info = await self.user_info()
-
-        key = vault.identity.export_public_key()
 
         revision = Revision(operation=RevisionOp.CreateVault)
         revision.vault_public_key = vault.identity.public_key.exportKey("DER")

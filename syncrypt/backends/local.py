@@ -6,8 +6,6 @@ import shutil
 from typing import Any, cast  # pylint: disable=unused-import
 from uuid import uuid4
 
-from Cryptodome.Random.random import randint
-
 from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from syncrypt.pipes import FileReader, FileWriter
