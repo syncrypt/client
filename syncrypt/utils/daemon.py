@@ -67,7 +67,7 @@ class Daemon(object):
         http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
         """
         try:
-            pid = os.fork()
+            pid = os.fork()  # type: ignore
             if pid > 0:
                 # Exit first parent
                 sys.exit(0)
@@ -78,12 +78,12 @@ class Daemon(object):
 
         # Decouple from parent environment
         os.chdir(self.home_dir)
-        os.setsid()
+        os.setsid()  # type: ignore
         os.umask(self.umask)
 
         # Do second fork
         try:
-            pid = os.fork()
+            pid = os.fork()  # type: ignore
             if pid > 0:
                 # Exit from second parent
                 sys.exit(0)
