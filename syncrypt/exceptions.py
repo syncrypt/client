@@ -7,7 +7,7 @@ class FolderExistsAndIsNotEmpty(SyncryptBaseException):
 
     def __str__(self):
         return "The given folder does already exists and is not empty: {0}".format(
-            self.args[0]
+            self.args
         )
 
 
