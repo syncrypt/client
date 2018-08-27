@@ -37,7 +37,7 @@ class Revision(Base):
     # These are the core fields that every revision has to have.
     operation = Column(Enum(RevisionOp, values_callable=lambda x: [e.value for e in x]))
     created_at = Column(DateTime())
-    user_id = Column(String(250))
+    #user_id = Column(String(250))
     user_fingerprint = Column(String(64))
     signature = Column(Binary(512))
 
@@ -52,17 +52,11 @@ class Revision(Base):
     file_size_crypt = Column(Integer(), nullable=True)
 
     # Additional fields for OP_CREATE_VAULT & OP_ADD_USER_KEY
-    user_device_name = Column(String(250), nullable=True)
     user_public_key = Column(Binary(4096), nullable=True)
-
-    # Additional fields for OP_ADD_USER & OP_ADD_USER_KEY
-    added_user_id = Column(String(250), nullable=True)
 
     def assert_valid(self) -> None:
         if self.vault_id is None and self.operation != RevisionOp.CreateVault:
             raise InvalidRevision("Invalid vault_id: {0}".format(self.vault_id))
-        if self.user_id is None:
-            raise InvalidRevision("Invalid user_id: {0}".format(self.user_id))
         if self.user_fingerprint is None:
             raise InvalidRevision(
                 "Invalid user_fingerprint: {0}".format(self.user_fingerprint)

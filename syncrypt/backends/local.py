@@ -90,7 +90,7 @@ class LocalStorageBackend(StorageBackend):
         revision = Revision(operation=RevisionOp.Upload)
         revision.vault_id = vault.config.id
         revision.parent_id = vault.revision
-        revision.user_id = "user@localhost"
+        #revision.user_id = "user@localhost"
         revision.file_hash = bundle.store_hash
         revision.revision_metadata = metadata
         revision.crypt_hash = bundle.crypt_hash

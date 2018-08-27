@@ -252,12 +252,9 @@ class BinaryStorageConnection(object):
         if vault is None:
             raise ValueError("Invalid argument")
 
-        user_info = await self.user_info()
-
         revision = Revision(operation=RevisionOp.CreateVault)
         revision.vault_public_key = vault.identity.public_key.exportKey("DER")
         revision.user_public_key = identity.public_key.exportKey("DER")
-        ##revision.user_id = user_info['email']
         revision.sign(identity=identity)
 
         await self.write_term('create_vault',
@@ -751,7 +748,7 @@ class BinaryStorageManager(object):
         return states
 
     async def close(self):
-        logger.info('Closing backend manager')
+        logger.debug('Closing backend manager')
         logged = False
         for conn in self.slots:
             if conn.connected or conn.connecting:

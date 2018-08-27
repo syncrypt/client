@@ -93,7 +93,7 @@ class RevisionManager:
                 # CreateVault is the only operation that is allowed to provide its own key
                 signer_key = UserVaultKey(
                     vault_id=vault.id,
-                    user_id=revision.user_id,
+                    #user_id=revision.user_id,
                     fingerprint=revision.user_fingerprint,
                     public_key=revision.user_public_key,
                 )
