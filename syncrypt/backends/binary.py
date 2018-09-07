@@ -257,12 +257,13 @@ class BinaryStorageConnection(object):
         revision = Revision(operation=RevisionOp.CreateVault)
         revision.vault_public_key = vault.identity.public_key.exportKey("DER")
         revision.user_public_key = identity.public_key.exportKey("DER")
-        revision.user_id = user_info['email']
+        ##revision.user_id = user_info['email']
         revision.sign(identity=identity)
 
         await self.write_term('create_vault',
                               revision.vault_public_key,
                               revision.user_public_key,
+                              revision.user_fingerprint,
                               revision.signature)
 
         response = await self.read_term()
@@ -360,7 +361,7 @@ class BinaryStorageConnection(object):
         dct.update(**rewrite_atoms_dict(response[2]))
         return dct
 
-    async def upload(self, bundle):
+    async def upload(self, bundle, identity):
 
         self.logger.info('Uploading %s', bundle)
 
@@ -369,11 +370,39 @@ class BinaryStorageConnection(object):
         metadata = await bundle.encrypted_metadata_reader().readall()
         metadata_size = len(metadata)
 
-        # upload key and file
-        await self.write_term('upload', bundle.store_hash,
-                bundle.crypt_hash, metadata, bundle.file_size_crypt)
+        while True:
+            revision = Revision(operation=RevisionOp.Upload)
+            revision.vault_id = self.vault.config.id
+            revision.parent_id = self.vault.revision
+            revision.crypt_hash = bundle.crypt_hash
+            revision.file_hash = bundle.store_hash
+            revision.file_size_crypt = bundle.file_size_crypt
+            revision.revision_metadata = metadata
+            revision.sign(identity=identity)
 
-        response = await self.read_response() # make sure server returns 'ok'
+            # upload key and file
+            await self.write_term('upload',
+                    revision.file_hash,
+                    revision.crypt_hash,
+                    revision.revision_metadata,
+                    revision.file_size_crypt,
+                    revision.user_fingerprint,
+                    revision.signature,
+                    revision.parent_id
+                )
+
+            response = await self.read_term(assert_ok=False)
+
+            if response[0] == Atom('ok'):
+                break
+            elif response[0] == Atom('error') and \
+                    isinstance(response[1], (list, tuple)) and \
+                    response[1][0] == Atom('parent_revision_outdated'):
+                logger.info('Revision outdated')
+                await asyncio.sleep(10.0)
+                continue
+            else:
+                raise ServerError(response)
 
         self.logger.debug('Uploading bundle (metadata: {0} bytes, content: {1} bytes)'\
                 .format(metadata_size, bundle.file_size_crypt))
@@ -381,7 +410,7 @@ class BinaryStorageConnection(object):
         bundle.bytes_written = 0
         upload_id = None
         urls = None
-        reader = bundle.read_encrypted_stream()
+        reader = self.vault.crypt_engine.read_encrypted_stream(bundle)
 
         if isinstance(response, tuple) and len(response) > 0 and response[0] == Atom('url'):
             if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
@@ -426,7 +455,8 @@ class BinaryStorageConnection(object):
         server_info = rewrite_atoms_dict(response)
 
         # if all went well, store revision_id in vault
-        self.vault.update_revision(server_info['id'])
+        revision.revision_id = server_info['id'].decode()
+        return revision
 
     async def user_info(self):
         self.logger.debug('Retrieving user information from server')
@@ -927,9 +957,9 @@ class BinaryStorageBackend(StorageBackend):
         task.add_done_callback(free_conn)
         return queue
 
-    async def upload(self, bundle):
+    async def upload(self, bundle, identity):
         async with (await self._acquire_connection()) as conn:
-            await conn.upload(bundle)
+            return (await conn.upload(bundle, identity))
 
     async def download(self, bundle):
         async with (await self._acquire_connection()) as conn:
