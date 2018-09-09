@@ -1,7 +1,7 @@
 import logging
 import os
 
-from hachiko.hachiko import AIOEventHandler, AIOWatchdog
+from syncrypt.vendor.hachiko import AIOEventHandler, AIOWatchdog
 
 logger = logging.getLogger(__name__)
 
