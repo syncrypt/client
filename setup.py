@@ -162,6 +162,7 @@ setup(
         'tenacity',
         'tzlocal',
         'umsgpack',
+        'watchdog'
     ],
 
     # List additional groups of dependencies here (e.g. development
