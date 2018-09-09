@@ -12,20 +12,15 @@ class AIOEventHandler(object):
     def __init__(self, loop=None):
         self._loop = loop or asyncio.get_event_loop()
 
-    @asyncio.coroutine
-    def on_any_event(self, event): pass
+    async def on_any_event(self, event): pass
 
-    @asyncio.coroutine
-    def on_moved(self, event): pass
+    async def on_moved(self, event): pass
 
-    @asyncio.coroutine
-    def on_created(self, event): pass
+    async def on_created(self, event): pass
 
-    @asyncio.coroutine
-    def on_deleted(self, event): pass
+    async def on_deleted(self, event): pass
 
-    @asyncio.coroutine
-    def on_modified(self, event): pass
+    async def on_modified(self, event): pass
 
     def dispatch(self, event):
         _method_map = {
@@ -37,7 +32,7 @@ class AIOEventHandler(object):
         handlers = [self.on_any_event, _method_map[event.event_type]]
         for handler in handlers:
             self._loop.call_soon_threadsafe(
-                asyncio.async,
+                getattr(asyncio, 'async'),
                 handler(event))
 
 
