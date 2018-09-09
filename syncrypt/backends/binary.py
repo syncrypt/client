@@ -986,5 +986,4 @@ class BinaryStorageBackend(StorageBackend):
         return myco
 
     async def close(self):
-        pass
-        #await manager.close()
+        await get_manager_instance().close()
