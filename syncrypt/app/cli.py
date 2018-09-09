@@ -185,33 +185,26 @@ class SyncryptCLIApp(SyncryptApp):
             print(fmt_str)
         await backend.close()
 
-    async def print_log(self, verbose=False):
+    async def print_log(self, sync=False, verbose=False):
         # the following behaviour is deprecated, we want to sync the vault and then show the log
         # from the database
         # local_tz = get_localzone()
         for vault in self.vaults:
-            await self.sync_vault(vault)
+            if sync:
+                await self.sync_vault(vault)
             for revision in self.revisions.list_for_vault(vault):
-                print(revision.revision_id, revision.operation, revision.created_at, revision.user_id)
-
-        #     queue = await vault.backend.changes(None, None, verbose=verbose)
-        #     while True:
-        #         item = await queue.get()
-        #         if item is None:
-        #             break
-        #         store_hash, metadata, server_info = item
-        #         bundle = VirtualBundle(None, vault, store_hash=store_hash)
-        #         await bundle.write_encrypted_metadata(Once(metadata))
-        #         rev_id = server_info['id'].decode(vault.config.encoding)
-        #         created_at = iso8601.parse_date(server_info['created_at'].decode())\
-        #                 .astimezone(local_tz)\
-        #                 .strftime('%x %X')
-        #         operation = server_info['operation'].decode(vault.config.encoding)
-        #         if verbose:
-        #             user_email = server_info['email'].decode(vault.config.encoding)
-        #             print("%s | %s | %s | %-9s %s" % (created_at, rev_id, user_email,
-        #                 operation, bundle.relpath))
-        #         else:
-        #             print("%s | %-9s %s" % (created_at, operation, bundle.relpath))
-
-        # await self.wait()
+                if verbose:
+                    print("[{created_at}] ({revision_id}) {op} | {user}"\
+                        .format(
+                            created_at=revision.created_at,
+                            revision_id=revision.revision_id,
+                            user=revision.user_fingerprint,
+                            op=revision.operation
+                        ))
+                else:
+                    print("[{created_at}] {op} | {user}"\
+                        .format(
+                            created_at=revision.created_at,
+                            user=revision.user_fingerprint,
+                            op=revision.operation
+                        ))
