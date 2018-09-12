@@ -482,16 +482,55 @@ class BinaryStorageConnection(object):
         # assert :ok
         await self.read_response()
 
-    async def changes(self, since_rev, to_rev, queue, verbose=False):
+    async def changes(self, since_rev, to_rev, queue: RevisionQueue, verbose=False):
+
+        if self.vault is None:
+            raise ValueError("Invalid argument")
+
+        vault = self.vault
+
         self.logger.info('Getting a list of changes for %s (%s to %s)',
-                self.vault, since_rev or 'earliest', to_rev or 'latest')
+                vault, since_rev or 'earliest', to_rev or 'latest')
 
         if verbose:
             await self.write_term('changes_with_email', since_rev, to_rev)
         else:
             await self.write_term('changes', since_rev, to_rev)
 
+        previous_id = since_rev
         response = await self.read_response()
+
+        def server_info_to_revision(server_info, parent_id: Optional[str]):
+            operation = server_info['operation'].decode()
+            vault_public_key = None
+
+            if operation == 'store':
+                operation = RevisionOp.Upload
+            elif operation == 'create_vault':
+                operation = RevisionOp.CreateVault
+                vault_public_key = vault.identity.export_public_key()
+            else:
+                raise ServerError("Unknown operation: " + operation)
+
+            user_fingerprint = server_info['user_key_fingerprint'].decode()
+            signature = server_info['signature']
+            file_hash = server_info['file_hash'].decode() if server_info['file_hash'] is not None else None
+            metadata = server_info['metadata']
+            user_public_key = server_info['user_public_key']
+            revision_id = server_info['id'].decode()
+
+            return Revision(
+                operation=operation,
+                revision_id=revision_id,
+                parent_id=parent_id,
+                vault_id=vault.config.id,
+                revision_metadata=metadata,
+                file_hash=file_hash,
+                signature=signature,
+                user_public_key=user_public_key,
+                vault_public_key=vault_public_key,
+                user_fingerprint=user_fingerprint
+            )
 
         # response is either list or stream
         if len(response) > 0 and response[0] == Atom('stream_response'):
@@ -500,27 +539,16 @@ class BinaryStorageConnection(object):
             for _ in range(file_count):
                 server_info = await self.read_term(assert_ok=False)
                 server_info = rewrite_atoms_dict(server_info)
-                store_hash = server_info['file_hash'].decode()
-                metadata = server_info['metadata']
-                if metadata is None:
-                    self.logger.warn('Skipping file %s (no metadata!)', store_hash)
-                    continue
-                self.logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
-                        len(metadata))
-                await queue.put((store_hash, metadata, server_info))
+                revision = server_info_to_revision(server_info, previous_id)
+                await queue.put(revision)
+                previous_id = revision.revision_id
             await queue.put(None)
         else:
             for server_info in response:
                 server_info = rewrite_atoms_dict(server_info)
-                store_hash = server_info['file_hash'].decode()
-                metadata = server_info['metadata']
-                server_info['email'].decode()
-                if metadata is None:
-                    self.logger.warn('Skipping file %s (no metadata!)', store_hash)
-                    continue
-                self.logger.debug('Server sent us: %s (%d bytes metadata)', store_hash,
-                        len(metadata))
-                await queue.put((store_hash, metadata, server_info))
+                revision = server_info_to_revision(server_info, previous_id)
+                await queue.put(None)
+                previous_id = revision.revision_id
             await queue.put(None)
 
     async def list_vaults(self):

@@ -63,18 +63,28 @@ class Revision(Base):
             )
 
         if self.operation == RevisionOp.CreateVault:
-            assert self.parent_id is None
+            if self.parent_id is not None:
+                raise InvalidRevision("Revision is not allowed to have a parent_id")
+        else:
+            if self.parent_id is None:
+                raise InvalidRevision("Revision requires to have a parent_id")
+
+        if self.operation == RevisionOp.CreateVault:
             if not isinstance(self.user_public_key, bytes):
-                raise InvalidRevision("Wrong type for user_public_key")
+                raise InvalidRevision(
+                    "Wrong type for user_public_key: {0}".format(type(self.user_public_key))
+                )
             if not isinstance(self.vault_public_key, bytes):
-                raise InvalidRevision("Wrong type for vault_public_key")
+                raise InvalidRevision(
+                    "Wrong type for vault_public_key: {0}".format(type(self.vault_public_key))
+                )
         elif self.operation == RevisionOp.Upload:
-            assert self.parent_id is not None
+            pass
+            assert self.file_hash, "file_hash"
         elif self.operation == RevisionOp.SetMetadata:
-            assert self.parent_id is not None
+            pass
         elif self.operation == RevisionOp.DeleteFile:
-            assert self.parent_id is not None
-            assert self.file_hash
+            assert self.file_hash, "file_hash"
         else:
             raise NotImplementedError(self.operation)
 
