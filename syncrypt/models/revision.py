@@ -125,7 +125,7 @@ class Revision(Base):
             raise InvalidRevision("Revision is not signed")
         if not identity.verify(self._message(), self.signature):
             raise InvalidRevision(
-                "Signature verifaction failed with key {0}".format(
+                "Signature verification failed with key {0}".format(
                     identity.get_fingerprint()
                 )
             )
