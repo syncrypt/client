@@ -515,6 +515,8 @@ class BinaryStorageConnection(object):
             user_fingerprint = server_info['user_key_fingerprint'].decode()
             signature = server_info['signature']
             file_hash = server_info['file_hash'].decode() if server_info['file_hash'] is not None else None
+            crypt_hash = server_info['content_hash'].decode() if server_info['content_hash'] is not None else None
+            file_size_crypt = server_info['size']
             metadata = server_info['metadata']
             user_public_key = server_info['user_public_key']
             revision_id = server_info['id'].decode()
@@ -525,7 +527,9 @@ class BinaryStorageConnection(object):
                 parent_id=parent_id,
                 vault_id=vault.config.id,
                 revision_metadata=metadata,
+                file_size_crypt=file_size_crypt,
                 file_hash=file_hash,
+                crypt_hash=crypt_hash,
                 signature=signature,
                 user_public_key=user_public_key,
                 vault_public_key=vault_public_key,

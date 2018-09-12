@@ -1,12 +1,14 @@
 import enum
+import logging
 
 from sqlalchemy import (Binary, Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, String,
                         UniqueConstraint)
-
 from syncrypt.exceptions import InvalidRevision
 
 from .base import Base
 from .identity import Identity
+
+logger = logging.getLogger(__name__)
 
 
 class RevisionOp(enum.Enum):
@@ -90,23 +92,20 @@ class Revision(Base):
 
     def _message(self) -> bytes:
         sep = b"|"
+        message = str(self.operation.value).encode() + sep
         if self.operation == RevisionOp.CreateVault:
-            message = str(self.operation).encode() + sep
             message += self.vault_public_key + sep
             message += self.user_public_key
         elif self.operation == RevisionOp.Upload:
-            message = str(self.operation).encode() + sep
             message += str(self.parent_id).encode() + sep
             message += str(self.file_hash).encode() + sep
             message += str(self.crypt_hash).encode() + sep
             message += str(self.file_size_crypt).encode() + sep
             message += self.revision_metadata
         elif self.operation == RevisionOp.SetMetadata:
-            message = str(self.operation).encode() + sep
             message += str(self.parent_id).encode() + sep
             message += self.revision_metadata
         elif self.operation == RevisionOp.DeleteFile:
-            message = str(self.operation).encode() + sep
             message += str(self.parent_id).encode() + sep
             message += str(self.file_hash).encode()
         else:
@@ -116,14 +115,18 @@ class Revision(Base):
     def sign(self, identity: Identity) -> None:
         self.user_fingerprint = identity.get_fingerprint()
         self.assert_valid()
-        self.signature = identity.sign(self._message())
+        message = self._message()
+        logger.debug('Signing messages with identity %s: %s', self.user_fingerprint, message)
+        self.signature = identity.sign(message)
 
     def verify(self, identity: Identity) -> None:
         """Verify the signature of this revision"""
         self.assert_valid()
         if self.signature is None:
             raise InvalidRevision("Revision is not signed")
-        if not identity.verify(self._message(), self.signature):
+        message = self._message()
+        logger.debug('Verifying message with identity %s: %s', identity.get_fingerprint(), message)
+        if not identity.verify(message, self.signature):
             raise InvalidRevision(
                 "Signature verification failed with key {0}".format(
                     identity.get_fingerprint()
