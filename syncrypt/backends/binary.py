@@ -468,19 +468,31 @@ class BinaryStorageConnection(object):
             user_info['email'] = user_info['email'].decode()
         return user_info
 
-    async def set_vault_metadata(self):
+    async def set_vault_metadata(self, identity: Identity) -> Revision:
 
         vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
+
         metadata = await vault.encrypted_metadata_reader().readall()
 
         self.logger.debug('Setting metadata for %s (%d bytes)', self.vault,
                 len(metadata))
 
+        revision = Revision(operation=RevisionOp.SetMetadata)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.revision_metadata = metadata
+        revision.sign(identity=identity)
+
         # upload metadata
-        await self.write_term('set_vault_metadata', metadata)
+        await self.write_term('set_vault_metadata', metadata, revision.signature)
 
         # assert :ok
-        await self.read_response()
+        revision_id = await self.read_response()
+        revision.revision_id = revision_id
+        return revision
 
     async def changes(self, since_rev, to_rev, queue: RevisionQueue, verbose=False):
 
@@ -1005,7 +1017,8 @@ class BinaryStorageBackend(StorageBackend):
         raise NotImplementedError()
 
     async def set_vault_metadata(self, identity: Identity) -> Revision:
-        raise NotImplementedError()
+        async with (await self._acquire_connection()) as conn:
+            return await conn.set_vault_metadata(identity)
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):

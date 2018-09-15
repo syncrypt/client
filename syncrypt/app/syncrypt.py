@@ -221,8 +221,7 @@ class SyncryptApp(object):
         await self.set_vault_state(vault, VaultState.READY)
         with vault.config.update_context():
             vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
-        revision = await vault.backend.set_vault_metadata(self.identity)
-        await self.revisions.apply(revision, vault)
+        await self.update_vault_metadata(vault)
 
         if upload_identity:
             await vault.backend.upload_identity(self.identity)
@@ -236,6 +235,18 @@ class SyncryptApp(object):
                 remote = dict(self.config.remote)
                 remote['host'] = host
             await self.init_vault(vault, remote=remote)
+
+    async def update_vault_metadata(self, vault):
+        """
+        Here we will check if we need to update the metadata on the server. If so, create a
+        revision and apply it.
+        """
+        if vault.require_metadata_update():
+            logger.debug("Vault Metadata changed, we will write a new revision")
+            revision = await vault.backend.set_vault_metadata(self.identity)
+            await self.revisions.apply(revision, vault)
+        else:
+            logger.debug("Vault metadata unchanged, skipping update")
 
     async def upload_identity(self):
         backend = await self.open_backend()
@@ -344,11 +355,13 @@ class SyncryptApp(object):
         for vault in self.vaults:
             with vault.config.update_context():
                 vault.config.set(setting, value)
+            await self.update_vault_metadata(vault)
 
     async def unset(self, setting):
         for vault in self.vaults:
             with vault.config.update_context():
                 vault.config.unset(setting)
+            await self.update_vault_metadata(vault)
 
     async def check_vault(self, vault: Vault):
         await vault.backend.open()
@@ -540,8 +553,7 @@ class SyncryptApp(object):
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
             await vault.backend.open()
-            revision = await vault.backend.set_vault_metadata(self.identity)
-            await self.revisions.apply(revision, vault)
+            await self.update_vault_metadata(vault)
 
             async with AsyncContext(self._bundle_actions) as ctx:
                 for bundle in vault.walk_disk():
