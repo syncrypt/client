@@ -487,11 +487,14 @@ class BinaryStorageConnection(object):
         revision.sign(identity=identity)
 
         # upload metadata
-        await self.write_term('set_vault_metadata', metadata, revision.signature)
+        await self.write_term('set_vault_metadata', metadata,
+                              revision.user_fingerprint,
+                              revision.parent_id, revision.signature)
 
         # assert :ok
-        revision_id = await self.read_response()
-        revision.revision_id = revision_id
+        response = await self.read_response()
+        server_info = rewrite_atoms_dict(response)
+        revision.revision_id = server_info['id'].decode()
         return revision
 
     async def changes(self, since_rev, to_rev, queue: RevisionQueue, verbose=False):
@@ -520,6 +523,9 @@ class BinaryStorageConnection(object):
                 operation = RevisionOp.Upload
             elif operation == 'create_vault':
                 operation = RevisionOp.CreateVault
+                vault_public_key = vault.identity.export_public_key()
+            elif operation == 'set_metadata':
+                operation = RevisionOp.SetMetadata
                 vault_public_key = vault.identity.export_public_key()
             else:
                 raise ServerError("Unknown operation: " + operation)
