@@ -116,8 +116,13 @@ class Vault(MetadataHolder, Base):
 
     _metadata = property(__get_metadata, __set_metadata)
 
+    async def update_serialized_metadata(self, stream):
+        serialized_metadata = await stream.read()
+        self.remote_metadata = serialized_metadata
+        self._metadata = self.unserialize_metadata(serialized_metadata)
+
     def require_metadata_update(self):
-        return True
+        return self.remote_metadata != self.serialized_metadata
 
     @property
     def identity(self) -> Identity:

@@ -26,6 +26,9 @@ class MetadataHolder:
     def serialized_metadata(self):
         return umsgpack.packb(self._metadata)
 
+    def unserialize_metadata(self, serialized_metadata):
+        return umsgpack.unpackb(serialized_metadata)
+
     def encrypted_metadata_reader(self):
         return (
             Once(self.serialized_metadata)
@@ -51,4 +54,4 @@ class MetadataHolder:
 
     async def update_serialized_metadata(self, stream):
         serialized_metadata = await stream.read()
-        self._metadata = umsgpack.unpackb(serialized_metadata)
+        self._metadata = self.unserialize_metadata(serialized_metadata)

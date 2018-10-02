@@ -353,12 +353,14 @@ class SyncryptApp(object):
 
     async def set(self, setting, value):
         for vault in self.vaults:
+            await self.sync_vault(vault) # we need to be synced in order to update the metadata
             with vault.config.update_context():
                 vault.config.set(setting, value)
             await self.update_vault_metadata(vault)
 
     async def unset(self, setting):
         for vault in self.vaults:
+            await self.sync_vault(vault) # we need to be synced in order to update the metadata
             with vault.config.update_context():
                 vault.config.unset(setting)
             await self.update_vault_metadata(vault)
