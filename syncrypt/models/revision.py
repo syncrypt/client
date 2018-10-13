@@ -20,6 +20,7 @@ class RevisionOp(enum.Enum):
     RenameFile = "OP_RENAME_FILE"
     AddUser = "OP_ADD_USER"
     AddUserKey = "OP_ADD_USER_KEY"
+    RemoveUser = "OP_REMOVE_USER"
 
 
 class Revision(Base):
@@ -87,6 +88,8 @@ class Revision(Base):
             pass
         elif self.operation == RevisionOp.DeleteFile:
             assert self.file_hash, "file_hash"
+        elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
+            assert self.user_id, "user_id"
         else:
             raise NotImplementedError(self.operation)
 
@@ -108,6 +111,9 @@ class Revision(Base):
         elif self.operation == RevisionOp.DeleteFile:
             message += str(self.parent_id).encode() + sep
             message += str(self.file_hash).encode()
+        elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
+            message += str(self.parent_id).encode() + sep
+            message += self.user_id.encode()
         else:
             raise NotImplementedError(self.operation)
         return message

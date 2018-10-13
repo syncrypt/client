@@ -358,7 +358,12 @@ class BinaryStorageConnection(object):
         dct.update(**rewrite_atoms_dict(response[2]))
         return dct
 
-    async def upload(self, bundle, identity):
+    async def upload(self, bundle, identity: Identity) -> Revision:
+
+        vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
 
         self.logger.info('Uploading %s', bundle)
 
@@ -369,8 +374,8 @@ class BinaryStorageConnection(object):
 
         while True:
             revision = Revision(operation=RevisionOp.Upload)
-            revision.vault_id = self.vault.config.id
-            revision.parent_id = self.vault.revision
+            revision.vault_id = vault.config.id
+            revision.parent_id = vault.revision
             revision.crypt_hash = bundle.crypt_hash
             revision.file_hash = bundle.store_hash
             revision.file_size_crypt = bundle.file_size_crypt
@@ -407,7 +412,7 @@ class BinaryStorageConnection(object):
         bundle.bytes_written = 0
         upload_id = None
         urls = None
-        reader = self.vault.crypt_engine.read_encrypted_stream(bundle)
+        reader = vault.crypt_engine.read_encrypted_stream(bundle)
 
         if isinstance(response, tuple) and len(response) > 0 and response[0] == Atom('url'):
             if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
@@ -715,13 +720,54 @@ class BinaryStorageConnection(object):
         if response[0] == Atom('user_key_added'):
             raise UnexpectedResponseException()
 
-    async def add_vault_user(self, email):
-        await self.write_term('add_vault_user', email)
-        await self.read_term()
+    async def add_vault_user(self, user_id: str, identity: Identity) -> Revision:
 
-    async def remove_vault_user(self, email):
-        await self.write_term('remove_vault_user', email)
-        await self.read_term()
+        vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        revision = Revision(operation=RevisionOp.AddUser)
+        revision.vault_id = vault.config.id
+        revision.user_id = user_id
+        revision.parent_id = vault.revision
+        revision.sign(identity=identity)
+
+        await self.write_term('add_vault_user',
+                              revision.user_id,
+                              revision.user_fingerprint,
+                              revision.parent_id,
+                              revision.signature)
+
+        # assert :ok
+        response = await self.read_response()
+        server_info = rewrite_atoms_dict(response)
+        revision.revision_id = server_info['id'].decode()
+        return revision
+
+    async def remove_vault_user(self, user_id: str, identity: Identity) -> Revision:
+        vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        revision = Revision(operation=RevisionOp.RemoveUser)
+        revision.vault_id = vault.config.id
+        revision.user_id = user_id
+        revision.parent_id = vault.revision
+        revision.sign(identity=identity)
+
+        await self.write_term('remove_vault_user',
+                              revision.user_id,
+                              revision.user_fingerprint,
+                              revision.parent_id,
+                              revision.signature)
+
+        # assert :ok
+        response = await self.read_response()
+        server_info = rewrite_atoms_dict(response)
+        revision.revision_id = server_info['id'].decode()
+        return revision
 
     async def delete_vault(self, vault_id=None):
         '''
