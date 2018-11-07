@@ -532,6 +532,10 @@ class BinaryStorageConnection(object):
             elif operation == 'set_metadata':
                 operation = RevisionOp.SetMetadata
                 vault_public_key = vault.identity.export_public_key()
+            elif operation == 'add_user':
+                operation = RevisionOp.AddUser
+            elif operation == 'remove_user':
+                operation = RevisionOp.RemoveUser
             else:
                 raise ServerError("Unknown operation: " + operation)
 
@@ -741,8 +745,7 @@ class BinaryStorageConnection(object):
 
         # assert :ok
         response = await self.read_response()
-        server_info = rewrite_atoms_dict(response)
-        revision.revision_id = server_info['id'].decode()
+        revision.revision_id = response[1]
         return revision
 
     async def remove_vault_user(self, user_id: str, identity: Identity) -> Revision:
@@ -765,8 +768,7 @@ class BinaryStorageConnection(object):
 
         # assert :ok
         response = await self.read_response()
-        server_info = rewrite_atoms_dict(response)
-        revision.revision_id = server_info['id'].decode()
+        revision.revision_id = response[1]
         return revision
 
     async def delete_vault(self, vault_id=None):
