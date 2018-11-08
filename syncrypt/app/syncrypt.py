@@ -6,12 +6,11 @@ from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
-
 from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentification,
                                  InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
                                  VaultIsAlreadySyncing, VaultNotFound, VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
-                               UserVaultKeyManager)
+                               UserVaultKeyManager, VaultUserManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             StdoutWriter)
@@ -80,6 +79,7 @@ class SyncryptApp(object):
         self.revisions = RevisionManager(self)
         self.bundles = BundleManager(self)
         self.user_vault_keys = UserVaultKeyManager(self)
+        self.vault_users = VaultUserManager(self)
 
         self.identity = Identity(os.path.join(self.config.config_dir,
                                               self.config.get('identity.private_key')),
@@ -627,6 +627,7 @@ class SyncryptApp(object):
         if full:
             await self.revisions.delete_for_vault(vault)
             await self.user_vault_keys.delete_for_vault(vault)
+            await self.vault_users.delete_for_vault(vault)
             await self.bundles.delete_for_vault(vault)
             vault.reset_revision()
 

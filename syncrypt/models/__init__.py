@@ -11,6 +11,7 @@ from .flying_vault import FlyingVault
 from .identity import Identity, IdentityState
 from .revision import Revision, RevisionOp
 from .user_vault_key import UserVaultKey
+from .vault_user import VaultUser
 from .vault import Vault, VaultState
 
 

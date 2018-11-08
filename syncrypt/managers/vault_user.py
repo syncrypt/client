@@ -1,12 +1,12 @@
 import logging
 
-from syncrypt.models import UserVaultKey, Vault, store
+from syncrypt.models import VaultUser, Vault, store
 
 logger = logging.getLogger(__name__)
 
 
-class UserVaultKeyManager:
-    model = UserVaultKey
+class VaultUserManager:
+    model = VaultUser
 
     def __init__(self, app):
         self.app = app
@@ -14,7 +14,7 @@ class UserVaultKeyManager:
     def list_for_vault(self, vault):
         with store.session() as session:
             return (
-                session.query(UserVaultKey)
+                session.query(VaultUser)
                 .filter(self.model.vault_id == vault.id)
                 .all()
             )
@@ -23,10 +23,10 @@ class UserVaultKeyManager:
         with store.session() as session:
             session.query(self.model).filter(self.model.vault_id == vault.id).delete()
 
-    def find_key(self, vault: Vault, fingerprint) -> UserVaultKey:
+    def find_key(self, vault: Vault, fingerprint) -> VaultUser:
         with store.session() as session:
             return (
-                session.query(UserVaultKey)
+                session.query(VaultUser)
                 .filter(self.model.vault_id == vault.id)
                 .filter(self.model.fingerprint == fingerprint)
                 .first()
