@@ -1,5 +1,5 @@
 
-from sqlalchemy import Binary, Column, Integer, String
+from sqlalchemy import Column, Integer, String
 
 from .base import Base
 
