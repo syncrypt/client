@@ -147,7 +147,8 @@ class SyncryptCLIApp(SyncryptApp):
         vault = self.vaults[0]
         await vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
-        await vault.backend.add_vault_user(email, self.identity)
+        revision = await vault.backend.add_vault_user(email, self.identity)
+        await self.revisions.apply(revision, vault)
 
         key_list = await vault.backend.list_keys(email)
         key_list = list(key_list)

@@ -11,6 +11,13 @@ class VaultUserManager:
     def __init__(self, app):
         self.app = app
 
+    def add(self, vault, user_id):
+        with store.session() as session:
+            session.add(VaultUser(vault_id=vault.id, user_id=user_id))
+
+    def remove(self, vault, user_id):
+        raise NotImplementedError()
+
     def list_for_vault(self, vault):
         with store.session() as session:
             return (

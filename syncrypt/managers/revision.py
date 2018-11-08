@@ -122,6 +122,11 @@ class RevisionManager:
                 bundle = await self.app.bundles.get_bundle(vault, revision.file_hash)
                 session.delete(bundle)
                 session.commit()
+            elif revision.operation == RevisionOp.AddUser:
+                import ipdb; ipdb.set_trace()
+                self.app.vault_users.add(vault, revision.user_id)
+            elif revision.operation == RevisionOp.RemoveUser:
+                self.app.vault_users.remove(vault, revision.user_id)
             else:
                 raise NotImplementedError()
 

@@ -745,7 +745,7 @@ class BinaryStorageConnection(object):
 
         # assert :ok
         response = await self.read_response()
-        revision.revision_id = response[1]
+        revision.revision_id = response.decode()
         return revision
 
     async def remove_vault_user(self, user_id: str, identity: Identity) -> Revision:
@@ -768,7 +768,7 @@ class BinaryStorageConnection(object):
 
         # assert :ok
         response = await self.read_response()
-        revision.revision_id = response[1]
+        revision.revision_id = response.decode()
         return revision
 
     async def delete_vault(self, vault_id=None):
