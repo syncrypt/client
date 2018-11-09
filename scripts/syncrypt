@@ -298,6 +298,14 @@ class Login(NoVaultCmd):
         self.loop.run_until_complete(self.app.login())
 
 
+class UploadKey(NoVaultCmd):
+    command = 'upload-key'
+    description = 'uploads your current public user key'
+
+    def run(self):
+        self.loop.run_until_complete(self.app.upload_identity())
+
+
 class Register(NoVaultCmd):
     command = 'register'
     description = 'register a new user'
@@ -406,6 +414,7 @@ COMMANDS = [
     ConfigUnset(),
 
     # Key Management
+    UploadKey(),
     ListKeys(),
     GenerateKey(),
     ExportKey(),
