@@ -712,7 +712,7 @@ class BinaryStorageConnection(object):
         fingerprints = [fp.decode() for fp in (await self.read_response())]
         return fingerprints
 
-    async def upload_identity(self, identity, description=""):
+    async def upload_identity(self, identity: Identity, description: str):
         self.logger.debug('Uploading my public key to server')
 
         # upload public key and fingerprint
@@ -1073,6 +1073,10 @@ class BinaryStorageBackend(StorageBackend):
     async def set_vault_metadata(self, identity: Identity) -> Revision:
         async with (await self._acquire_connection()) as conn:
             return await conn.set_vault_metadata(identity)
+
+    async def upload_identity(self, identity: Identity, description: str="") -> Revision:
+        async with (await self._acquire_connection()) as conn:
+            return await conn.upload_identity(identity, description)
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):

@@ -48,10 +48,10 @@ class StorageBackend(Protocol):
         raise NotImplementedError()
 
     async def upload_identity(self, identity, description=""):
-        pass
+        raise NotImplementedError
 
     async def user_info(self):
         raise NotImplementedError
 
     async def add_user_vault_key(self, vault, email, identity):
-        pass
+        raise NotImplementedError
