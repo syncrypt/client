@@ -1097,7 +1097,7 @@ class BinaryStorageBackend(StorageBackend):
         async with (await self._acquire_connection()) as conn:
             return await conn.upload_identity(identity, description)
 
-    async def add_user_vault_key(self, identity: Identity, user_id: str, 
+    async def add_user_vault_key(self, identity: Identity, user_id: str,
                                 fingerprint, content) -> Revision:
         async with (await self._acquire_connection()) as conn:
             return await conn.add_user_vault_key(identity, user_id, fingerprint, content)
