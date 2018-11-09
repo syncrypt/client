@@ -610,9 +610,28 @@ class BinaryStorageConnection(object):
         return [{k: v.decode() for k, v in user.items()}
                 for user in map(rewrite_atoms_dict, response[1])]
 
-    async def add_user_vault_key(self, email, fingerprint, content):
-        await self.write_term('add_user_vault_key', fingerprint, content)
-        await self.read_term()
+    async def add_user_vault_key(self, identity: Identity, user_id: str, fingerprint, content):
+
+        vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        self.logger.debug('Uploading user vault key')
+
+        revision = Revision(operation=RevisionOp.AddUserKey)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        # revision.revision_metadata = metadata
+        revision.sign(identity=identity)
+
+        # upload metadata
+        await self.write_term('add_user_vault_key', user_id, fingerprint, content, revision.signature)
+
+        # assert :ok
+        response = await self.read_response()
+        revision.revision_id = response.decode()
+        return revision
 
     async def get_user_vault_key(self, fingerprint, vault_id):
         if self.manager.global_auth:
@@ -1077,6 +1096,11 @@ class BinaryStorageBackend(StorageBackend):
     async def upload_identity(self, identity: Identity, description: str="") -> Revision:
         async with (await self._acquire_connection()) as conn:
             return await conn.upload_identity(identity, description)
+
+    async def add_user_vault_key(self, identity: Identity, user_id: str, 
+                                fingerprint, content) -> Revision:
+        async with (await self._acquire_connection()) as conn:
+            return await conn.add_user_vault_key(identity, user_id, fingerprint, content)
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):
