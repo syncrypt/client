@@ -40,7 +40,6 @@ class Revision(Base):
     # These are the core fields that every revision has to have.
     operation = Column(Enum(RevisionOp, values_callable=lambda x: [e.value for e in x]))
     created_at = Column(DateTime())
-    #user_id = Column(String(250))
     user_fingerprint = Column(String(64))
     signature = Column(Binary(512))
 
@@ -53,6 +52,9 @@ class Revision(Base):
     revision_metadata = Column(LargeBinary(), nullable=True)
     crypt_hash = Column(String(250), nullable=True)
     file_size_crypt = Column(Integer(), nullable=True)
+
+    # Additional fields for OP_ADD_USER & OP_REMOVE_USER
+    user_id = Column(String(250), nullable=True)
 
     # Additional fields for OP_CREATE_VAULT & OP_ADD_USER_KEY
     user_public_key = Column(Binary(4096), nullable=True)
@@ -91,7 +93,11 @@ class Revision(Base):
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
             assert self.user_id, "user_id"
         else:
-            raise NotImplementedError(self.operation)
+            assert self.user_id, "user_id"
+            if not isinstance(self.user_public_key, bytes):
+                raise InvalidRevision(
+                    "Wrong type for user_public_key: {0}".format(type(self.user_public_key))
+                )
 
     def _message(self) -> bytes:
         sep = b"|"
@@ -114,6 +120,10 @@ class Revision(Base):
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
             message += str(self.parent_id).encode() + sep
             message += self.user_id.encode()
+        elif self.operation in (RevisionOp.AddUserKey):
+            message += str(self.parent_id).encode() + sep
+            message += self.user_id.encode() + sep
+            message += self.user_public_key
         else:
             raise NotImplementedError(self.operation)
         return message

@@ -523,6 +523,7 @@ class BinaryStorageConnection(object):
         def server_info_to_revision(server_info, parent_id: Optional[str]):
             operation = server_info['operation'].decode()
             vault_public_key = None
+            user_id = None
 
             if operation == 'store':
                 operation = RevisionOp.Upload
@@ -534,8 +535,10 @@ class BinaryStorageConnection(object):
                 vault_public_key = vault.identity.export_public_key()
             elif operation == 'add_user':
                 operation = RevisionOp.AddUser
+                user_id = server_info['metadata'].decode()
             elif operation == 'remove_user':
                 operation = RevisionOp.RemoveUser
+                user_id = server_info['metadata'].decode()
             else:
                 raise ServerError("Unknown operation: " + operation)
 
@@ -557,6 +560,7 @@ class BinaryStorageConnection(object):
                 file_size_crypt=file_size_crypt,
                 file_hash=file_hash,
                 crypt_hash=crypt_hash,
+                user_id=user_id,
                 signature=signature,
                 user_public_key=user_public_key,
                 vault_public_key=vault_public_key,
@@ -610,7 +614,8 @@ class BinaryStorageConnection(object):
         return [{k: v.decode() for k, v in user.items()}
                 for user in map(rewrite_atoms_dict, response[1])]
 
-    async def add_user_vault_key(self, identity: Identity, user_id: str, fingerprint, content):
+    async def add_user_vault_key(self, identity: Identity, user_id: str, user_identity: Identity,
+                                 content: bytes):
 
         vault = self.vault
 
@@ -622,11 +627,13 @@ class BinaryStorageConnection(object):
         revision = Revision(operation=RevisionOp.AddUserKey)
         revision.vault_id = vault.config.id
         revision.parent_id = vault.revision
-        # revision.revision_metadata = metadata
+        revision.user_id = user_id
+        revision.user_public_key = user_identity.public_key.exportKey("DER")
         revision.sign(identity=identity)
 
         # upload metadata
-        await self.write_term('add_user_vault_key', user_id, fingerprint, content, revision.signature)
+        await self.write_term('add_user_vault_key', user_id, revision.user_public_key,
+                              content, revision.signature)
 
         # assert :ok
         response = await self.read_response()
@@ -1098,9 +1105,9 @@ class BinaryStorageBackend(StorageBackend):
             return await conn.upload_identity(identity, description)
 
     async def add_user_vault_key(self, identity: Identity, user_id: str,
-                                fingerprint, content) -> Revision:
+                                 user_identity: Identity, content: bytes) -> Revision:
         async with (await self._acquire_connection()) as conn:
-            return await conn.add_user_vault_key(identity, user_id, fingerprint, content)
+            return await conn.add_user_vault_key(identity, user_id, user_identity, content)
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):

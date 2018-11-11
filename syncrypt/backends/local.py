@@ -228,5 +228,5 @@ class LocalStorageBackend(StorageBackend):
     async def upload_identity(self, identity: Identity, description: str=""):
         pass
 
-    async def add_user_vault_key(self, identity, user_id: str, fingerprint, content):
+    async def add_user_vault_key(self, identity, user_id: str, user_identity: Identity, content):
         pass

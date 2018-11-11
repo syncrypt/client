@@ -490,8 +490,7 @@ class SyncryptApp(object):
                 format_fingerprint(identity.get_fingerprint()))
         logger.debug('Package length is: %d', len(content))
 
-        await vault.backend.add_user_vault_key(self.identity, email,
-                                               identity.get_fingerprint(), content)
+        await vault.backend.add_user_vault_key(self.identity, email, identity, content)
 
     async def upload_vault_key(self, vault=None):
         self.identity.assert_initialized()

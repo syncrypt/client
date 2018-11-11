@@ -53,5 +53,5 @@ class StorageBackend(Protocol):
     async def user_info(self):
         raise NotImplementedError
 
-    async def add_user_vault_key(self, identity, user_id: str, fingerprint, content):
+    async def add_user_vault_key(self, identity, user_id: str, user_identity: Identity, content):
         raise NotImplementedError
