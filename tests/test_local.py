@@ -247,3 +247,18 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await app.pull(full=True)
         files_in_vault = len(glob(os.path.join(self.vault.folder, "*")))
         self.assertEqual(files_in_vault, 8)
+
+    async def test_add_user(self):
+        app = SyncryptApp(self.app_config)
+        app.add_vault(self.vault)
+        await app.initialize()
+        await app.open_or_init(self.vault)
+
+        revision = await self.vault.backend.add_vault_user('ericb@localhost', self.app.identity)
+        await app.revisions.apply(revision, self.vault)
+
+        revision = await self.vault.backend.add_vault_user('rakim@localhost', self.app.identity)
+        await app.revisions.apply(revision, self.vault)
+
+        users = app.vault_users.list_for_vault(self.vault)
+        self.assertEqual(len(users), 2)

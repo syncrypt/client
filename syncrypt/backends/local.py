@@ -228,5 +228,23 @@ class LocalStorageBackend(StorageBackend):
     async def upload_identity(self, identity: Identity, description: str=""):
         pass
 
+    async def add_vault_user(self, user_id: str, identity: Identity):
+
+        vault = self.vault
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        assert vault.revision is not None
+
+        logger.info("Add user %s", user_id)
+
+        revision = Revision(operation=RevisionOp.AddUser)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_id = user_id
+        revision.sign(identity=identity)
+
+        return self.add_revision(revision)
+
     async def add_user_vault_key(self, identity, user_id: str, user_identity: Identity, content):
         pass
