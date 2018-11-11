@@ -120,7 +120,7 @@ class Revision(Base):
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
             message += str(self.parent_id).encode() + sep
             message += self.user_id.encode()
-        elif self.operation in (RevisionOp.AddUserKey):
+        elif self.operation == RevisionOp.AddUserKey:
             message += str(self.parent_id).encode() + sep
             message += self.user_id.encode() + sep
             message += self.user_public_key
