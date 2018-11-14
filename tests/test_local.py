@@ -262,3 +262,14 @@ class LocalStorageTestCase(VaultLocalTestCase):
 
         users = app.vault_users.list_for_vault(self.vault)
         self.assertEqual(len(users), 2)
+
+        revision = await self.vault.backend.remove_vault_user('ericb@localhost', self.app.identity)
+        await app.revisions.apply(revision, self.vault)
+
+        users = app.vault_users.list_for_vault(self.vault)
+        self.assertEqual(len(users), 1)
+
+        await app.pull(full=True) # after a full pull, we should arrive at the same state
+
+        users = app.vault_users.list_for_vault(self.vault)
+        self.assertEqual(len(users), 1)

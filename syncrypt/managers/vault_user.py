@@ -16,7 +16,13 @@ class VaultUserManager:
             session.add(VaultUser(vault_id=vault.id, user_id=user_id))
 
     def remove(self, vault, user_id):
-        raise NotImplementedError()
+        with store.session() as session:
+            return (
+                session
+                    .query(self.model)
+                    .filter(self.model.vault_id == vault.id, self.model.user_id == user_id)
+                    .delete()
+            )
 
     def list_for_vault(self, vault):
         with store.session() as session:
