@@ -13,8 +13,8 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.exceptions import InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
-from syncrypt.models import Bundle, Revision, RevisionOp, Vault
-from tests.base import VaultLocalTestCase
+from syncrypt.models import Bundle, Revision, RevisionOp, Vault, Identity
+from .base import VaultLocalTestCase
 
 
 def generate_fake_revision(vault):
@@ -248,7 +248,7 @@ class LocalStorageTestCase(VaultLocalTestCase):
         files_in_vault = len(glob(os.path.join(self.vault.folder, "*")))
         self.assertEqual(files_in_vault, 8)
 
-    async def test_add_user(self):
+    async def test_add_and_remove_user(self):
         app = SyncryptApp(self.app_config)
         app.add_vault(self.vault)
         await app.initialize()
@@ -273,3 +273,29 @@ class LocalStorageTestCase(VaultLocalTestCase):
 
         users = app.vault_users.list_for_vault(self.vault)
         self.assertEqual(len(users), 1)
+
+    async def test_add_user_with_a_key(self):
+        app = SyncryptApp(self.app_config)
+        app.add_vault(self.vault)
+        await app.initialize()
+        await app.open_or_init(self.vault)
+
+        # 1. Create ericb identity
+        key = os.path.join(self.working_dir, "ericb_id_rsa")
+        key_pub = os.path.join(self.working_dir, "ericb_id_rsa.pub")
+
+        if os.path.exists(key):
+            os.unlink(key)
+        if os.path.exists(key_pub):
+            os.unlink(key_pub)
+
+        ericb = Identity(key, key_pub, self.app_config)
+        await ericb.init()
+        await ericb.generate_keys()
+
+        # 2. Add user
+        revision = await self.vault.backend.add_vault_user('ericb@localhost', self.app.identity)
+        await app.revisions.apply(revision, self.vault)
+
+        # 3. Add user key
+        await app.add_user_vault_key(self.vault, 'ericb@localhost', ericb)

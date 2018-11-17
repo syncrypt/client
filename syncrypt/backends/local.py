@@ -273,5 +273,20 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_revision(revision)
 
-    async def add_user_vault_key(self, identity, user_id: str, user_identity: Identity, content):
-        pass
+    @require_vault
+    @require_revision
+    async def add_user_vault_key(self, identity: Identity, user_id: str,
+                                user_identity: Identity, content):
+
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
+
+        logger.info("Add user vault key %s", user_id)
+
+        revision = Revision(operation=RevisionOp.AddUserKey)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_public_key = user_identity.public_key.exportKey('DER')
+        revision.user_id = user_id
+        revision.sign(identity=identity)
+
+        return self.add_revision(revision)
