@@ -289,13 +289,33 @@ class LocalStorageTestCase(VaultLocalTestCase):
         if os.path.exists(key_pub):
             os.unlink(key_pub)
 
-        ericb = Identity(key, key_pub, self.app_config)
-        await ericb.init()
-        await ericb.generate_keys()
+        ericb_identity = Identity(key, key_pub, self.app_config)
+        await ericb_identity.init()
+        await ericb_identity.generate_keys()
 
         # 2. Add user
         revision = await self.vault.backend.add_vault_user('ericb@localhost', self.app.identity)
         await app.revisions.apply(revision, self.vault)
 
         # 3. Add user key
-        await app.add_user_vault_key(self.vault, 'ericb@localhost', ericb)
+        await app.add_user_vault_key(self.vault, 'ericb@localhost', ericb_identity)
+
+        # 4. Modify metadata with original user
+        self.vault.config.vault["name"] = "My Library"
+
+        revision = await self.vault.backend.set_vault_metadata(self.app.identity)
+        await app.revisions.apply(revision, self.vault)
+
+        # 5. Modify metadata with ericb
+        self.vault.config.vault["name"] = "Eric's Library"
+
+        revision = await self.vault.backend.set_vault_metadata(ericb_identity)
+        await app.revisions.apply(revision, self.vault)
+
+        await app.pull(full=True)
+
+        revisions = app.revisions.list_for_vault(self.vault)
+        self.assertEqual(len(revisions), 6)
+
+        user_keys = app.user_vault_keys.list_for_vault(self.vault)
+        self.assertEqual(len(user_keys), 2)

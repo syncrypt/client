@@ -490,16 +490,22 @@ class SyncryptApp(object):
                 format_fingerprint(identity.get_fingerprint()))
         logger.debug('Package length is: %d', len(content))
 
-        await vault.backend.add_user_vault_key(self.identity, email, identity, content)
+        revision = await vault.backend.add_user_vault_key(
+            self.identity, email, identity, content
+        )
+        await self.revisions.apply(revision, vault)
 
     async def upload_vault_key(self, vault=None):
+        # TODO TBH I'm not so sure about the semantics of this function, needs another name.
+        # Converted into a NOOP for now
         self.identity.assert_initialized()
         if vault is None:
             vault = self.vaults[0]
         await vault.backend.open()
         user_info = await vault.backend.user_info()
         email = user_info['email']
-        await self.add_user_vault_key(vault, email, self.identity)
+        #await self.add_user_vault_key(vault, email, self.identity)
+        #see above
 
     async def get_remote_size_for_vault(self, vault):
         await vault.backend.open()

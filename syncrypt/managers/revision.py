@@ -4,7 +4,7 @@ from typing import Sequence
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import InvalidRevision
-from syncrypt.models import Bundle, Revision, RevisionOp, UserVaultKey, Vault, store
+from syncrypt.models import Bundle, Identity, Revision, RevisionOp, UserVaultKey, Vault, store
 from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,8 @@ class RevisionManager:
                 )
                 if not signer_key:
                     raise InvalidRevision(
-                        "Key is not in Vault {0}".format(revision.user_fingerprint)
+                        "Key {0} is not allowed to generate revisions for vault {1}"
+                            .format(revision.user_fingerprint, vault)
                     )
             else:
                 # CreateVault is the only operation that is allowed to provide its own key
@@ -126,8 +127,11 @@ class RevisionManager:
                 self.app.vault_users.add(vault, revision.user_id)
             elif revision.operation == RevisionOp.RemoveUser:
                 self.app.vault_users.remove(vault, revision.user_id)
+            elif revision.operation == RevisionOp.AddUserKey:
+                new_identity = Identity.from_key(revision.user_public_key, self.app.config)
+                self.app.user_vault_keys.add(vault, revision.user_id, new_identity)
             else:
-                raise NotImplementedError()
+                raise NotImplementedError(revision.operation)
 
             # 5. Store the revision in config and db
             revision.local_vault_id = vault.id

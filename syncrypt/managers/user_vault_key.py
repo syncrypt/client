@@ -1,6 +1,6 @@
 import logging
 
-from syncrypt.models import UserVaultKey, Vault, store
+from syncrypt.models import Identity, UserVaultKey, Vault, store
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +10,11 @@ class UserVaultKeyManager:
 
     def __init__(self, app):
         self.app = app
+
+    def add(self, vault: Vault, user_id: str, identity: Identity):
+        with store.session() as session:
+            session.add(self.model(vault_id=vault.id, fingerprint=identity.get_fingerprint(),
+                user_id=user_id, public_key=identity.public_key.export_key('DER')))
 
     def list_for_vault(self, vault):
         with store.session() as session:

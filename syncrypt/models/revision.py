@@ -92,12 +92,14 @@ class Revision(Base):
             assert self.file_hash, "file_hash"
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
             assert self.user_id, "user_id"
-        else:
+        elif self.operation == RevisionOp.AddUserKey:
             assert self.user_id, "user_id"
             if not isinstance(self.user_public_key, bytes):
                 raise InvalidRevision(
                     "Wrong type for user_public_key: {0}".format(type(self.user_public_key))
                 )
+        else:
+            raise NotImplementedError(self.operation)
 
     def _message(self) -> bytes:
         sep = b"|"
