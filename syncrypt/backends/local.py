@@ -15,6 +15,23 @@ from .base import RevisionQueue, StorageBackend
 logger = logging.getLogger(__name__)
 
 
+def require_vault(f):
+    def inner(backend, *args, **kwargs):
+        vault = backend.vault
+        if vault is None:
+            raise ValueError("Invalid argument: No vault")
+        return f(backend, *args, **kwargs)
+    return inner
+
+
+def require_revision(f):
+    def inner(backend, *args, **kwargs):
+        if backend.vault.revision is None:
+            raise ValueError("Invalid argument: No revision")
+        return f(backend, *args, **kwargs)
+    return inner
+
+
 class LocalStorageBackend(StorageBackend):
     global_auth = None # type: str
     # ^ deprecated
@@ -40,10 +57,30 @@ class LocalStorageBackend(StorageBackend):
         if not os.path.isdir(self.path):
             os.makedirs(self.path, exist_ok=True)
 
+    def add_revision(self, revision: Revision) -> Revision:
+        "Persist the revision in the local storage. This will also generate a revision id."
+        if revision.revision_id is not None:
+            raise ValueError("Revision already has an id.")
+
+        if revision.signature is None:
+            raise ValueError("Revision is not signed.")
+
+        revision.revision_id = str(uuid4())
+
+        with open(os.path.join(self.path, "txchain"), "ab") as txchain:
+            logger.debug(
+                "Adding revision %s to signchain (%s)",
+                revision.revision_id,
+                os.path.join(self.path, "txchain"),
+            )
+            binary_tx = pickle.dumps(revision)
+            txchain.write(binary_tx)
+
+        return revision
+
+    @require_vault
     async def init(self, identity: Identity) -> Revision:
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
         new_vault_id = str(uuid4())
         if not vault.config.get("vault.id"):
@@ -65,12 +102,10 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_revision(revision)
 
+    @require_vault
+    @require_revision
     async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
-
-        assert vault.revision is not None
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
         logger.info("Uploading %s", bundle)
         dest_path = os.path.join(self.path, bundle.store_hash)
@@ -99,31 +134,9 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_revision(revision)
 
-    def add_revision(self, revision: Revision) -> Revision:
-        "Persist the revision in the local storage. This will also generate a revision id."
-        if revision.revision_id is not None:
-            raise ValueError("Revision already has an id.")
-
-        if revision.signature is None:
-            raise ValueError("Revision is not signed.")
-
-        revision.revision_id = str(uuid4())
-
-        with open(os.path.join(self.path, "txchain"), "ab") as txchain:
-            logger.debug(
-                "Adding revision %s to signchain (%s)",
-                revision.revision_id,
-                os.path.join(self.path, "txchain"),
-            )
-            binary_tx = pickle.dumps(revision)
-            txchain.write(binary_tx)
-
-        return revision
-
+    @require_vault
     async def download(self, bundle):
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
         logger.info("Downloading %s", bundle)
 
@@ -145,10 +158,10 @@ class LocalStorageBackend(StorageBackend):
             bundle.remote_crypt_hash = content_hash
             metadata.close()
 
+    @require_vault
+    @require_revision
     async def set_vault_metadata(self, identity: Identity) -> Revision:
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
         dest_path = os.path.join(self.path, "metadata")
         writer = vault.encrypted_metadata_reader() >> FileWriter(
@@ -200,12 +213,12 @@ class LocalStorageBackend(StorageBackend):
                 logger.debug("Finished serving changes")
                 await queue.put(None)
 
+    @require_vault
+    @require_revision
     async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
 
-        assert vault.revision is not None
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
+
         assert bundle.store_hash
 
         logger.info("Deleting %s", bundle)
@@ -228,13 +241,11 @@ class LocalStorageBackend(StorageBackend):
     async def upload_identity(self, identity: Identity, description: str=""):
         pass
 
-    async def add_vault_user(self, user_id: str, identity: Identity):
+    @require_vault
+    @require_revision
+    async def add_vault_user(self, user_id: str, identity: Identity) -> Revision:
 
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
-
-        assert vault.revision is not None
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
         logger.info("Add user %s", user_id)
 
@@ -246,13 +257,11 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_revision(revision)
 
-    async def remove_vault_user(self, user_id: str, identity: Identity):
+    @require_vault
+    @require_revision
+    async def remove_vault_user(self, user_id: str, identity: Identity) -> Revision:
 
-        vault = self.vault
-        if vault is None:
-            raise ValueError("Invalid argument")
-
-        assert vault.revision is not None
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
         logger.info("Remove user %s", user_id)
 
