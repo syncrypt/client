@@ -25,7 +25,8 @@ class JoinableSemaphore():
         if self.empty.locked(): self.empty.release()
 
 
-class JoinableSetSemaphore(JoinableSemaphore, Generic[T]):
+class JoinableSetSemaphore(JoinableSemaphore, Generic[T]): # pylint: disable=unsubscriptable-object
+                                                           # https://github.com/PyCQA/pylint/issues/2416
     def __init__(self, maxsize=0):
         self.count = 0
         self.limiter = asyncio.Semaphore(maxsize)

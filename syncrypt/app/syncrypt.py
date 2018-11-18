@@ -514,8 +514,8 @@ class SyncryptApp(object):
         if vault is None:
             vault = self.vaults[0]
         await vault.backend.open()
-        user_info = await vault.backend.user_info()
-        email = user_info['email']
+        #user_info = await vault.backend.user_info()
+        #email = user_info['email']
         #await self.add_user_vault_key(vault, email, self.identity)
         #see above
 
