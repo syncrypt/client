@@ -91,8 +91,8 @@ class Bundle(MetadataHolder, Base):
         try:
             metadata_contents = await metadata_file.read()
             metadata = umsgpack.loads(metadata_contents)
-            self.key = metadata[b'key']
-            self.relpath = self.decode_path(metadata[b'filename'])
+            self.key = metadata['key']
+            self.relpath = self.decode_path(metadata['filename'])
             assert len(self.key) == self.key_size
         finally:
             await metadata_file.close()
