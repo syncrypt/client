@@ -42,10 +42,10 @@ class Revision(Base):
     operation = Column(Enum(RevisionOp, values_callable=lambda x: [e.value for e in x]))
     created_at = Column(DateTime())
     user_fingerprint = Column(String(64))
-    signature = Column(Binary(512))
+    signature = Column(LargeBinary(512))
 
     # Additional fields for OP_CREATE_VAULT
-    vault_public_key = Column(Binary(4096), nullable=True)
+    vault_public_key = Column(LargeBinary(4096), nullable=True)
 
     # Additional fields for OP_UPLOAD
     file_hash = Column(String(250), nullable=True)
@@ -58,7 +58,7 @@ class Revision(Base):
     user_id = Column(String(250), nullable=True)
 
     # Additional fields for OP_CREATE_VAULT & OP_ADD_USER_KEY
-    user_public_key = Column(Binary(4096), nullable=True)
+    user_public_key = Column(LargeBinary(4096), nullable=True)
 
     def assert_valid(self) -> None:
         if self.vault_id is None and self.operation != RevisionOp.CreateVault:

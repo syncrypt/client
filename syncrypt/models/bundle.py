@@ -5,12 +5,11 @@ import posixpath
 
 import aiofiles
 import umsgpack
-from sqlalchemy import Binary, Column, ForeignKey, Integer, String, orm
+from sqlalchemy import Column, ForeignKey, Integer, LargeBinary, String, orm
 from sqlalchemy.orm import relationship
 
 from syncrypt.pipes import FileWriter, Once
 from syncrypt.utils.filesystem import splitpath
-
 from .base import Base, MetadataHolder
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ class Bundle(MetadataHolder, Base):
     file_size = Column(Integer())
     store_hash = Column(String(128), nullable=False)
     hash = Column(String(128), nullable=False)
-    key = Column(Binary(512)) # AES key used
+    key = Column(LargeBinary(512)) # AES key used
 
     #__slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
     #        'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
