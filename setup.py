@@ -154,7 +154,6 @@ setup(
         'erlastic',
         'typing_extensions',
         'iso8601',
-        'msgpack-python>=0.4.0',
         'pycryptodomex>=3.7.0',
         'python-snappy',
         'smokesignal',
