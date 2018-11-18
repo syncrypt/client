@@ -11,7 +11,7 @@ import pytest
 
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
-from syncrypt.exceptions import InvalidRevision
+from syncrypt.exceptions import InvalidRevision, AlreadyPresent
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from .base import VaultLocalTestCase
@@ -327,3 +327,17 @@ class LocalStorageTestCase(VaultLocalTestCase):
         with self.assertRaises(InvalidRevision):
             revision = await self.vault.backend.set_vault_metadata(ericb_identity)
             await app.revisions.apply(revision, self.vault)
+
+    async def test_add_user_twice(self):
+        app = SyncryptApp(self.app_config)
+        app.add_vault(self.vault)
+        await app.initialize()
+        await app.open_or_init(self.vault)
+
+        await app.add_vault_user(self.vault, 'ericb@localhost')
+
+        with self.assertRaises(AlreadyPresent):
+            await app.add_vault_user(self.vault, 'ericb@localhost')
+
+        users = app.vault_users.list_for_vault(self.vault)
+        self.assertEqual(len(users), 1)

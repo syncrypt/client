@@ -7,8 +7,9 @@ from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
 from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentification,
-                                 InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
-                                 VaultIsAlreadySyncing, VaultNotFound, VaultNotInitialized)
+                                 InvalidVaultPackage, SyncryptBaseException, AlreadyPresent,
+                                 VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
+                                 VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
                                UserVaultKeyManager, VaultUserManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
@@ -481,6 +482,8 @@ class SyncryptApp(object):
         logger.info("Imported user key with fingerprint: %s", self.identity.get_fingerprint())
 
     async def add_vault_user(self, vault, user_id):
+        if self.vault_users.exists(vault, user_id):
+            raise AlreadyPresent(user_id)
         revision = await vault.backend.add_vault_user(user_id, self.identity)
         await self.revisions.apply(revision, vault)
 

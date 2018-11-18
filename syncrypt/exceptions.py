@@ -19,6 +19,10 @@ class VaultException(SyncryptBaseException):
     pass
 
 
+class AlreadyPresent(SyncryptBaseException):
+    pass
+
+
 class VaultNotInitialized(VaultException):
     pass
 
