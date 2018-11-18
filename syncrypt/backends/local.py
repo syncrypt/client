@@ -290,3 +290,21 @@ class LocalStorageBackend(StorageBackend):
         revision.sign(identity=identity)
 
         return self.add_revision(revision)
+
+    @require_vault
+    @require_revision
+    async def remove_user_vault_key(self, identity: Identity, user_id: str,
+                                    user_identity: Identity):
+
+        vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
+
+        logger.info("Removing user vault key %s", user_id)
+
+        revision = Revision(operation=RevisionOp.RemoveUserKey)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_public_key = user_identity.public_key.exportKey('DER')
+        revision.user_id = user_id
+        revision.sign(identity=identity)
+
+        return self.add_revision(revision)

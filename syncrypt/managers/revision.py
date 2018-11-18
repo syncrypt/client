@@ -130,6 +130,9 @@ class RevisionManager:
             elif revision.operation == RevisionOp.AddUserKey:
                 new_identity = Identity.from_key(revision.user_public_key, self.app.config)
                 self.app.user_vault_keys.add(vault, revision.user_id, new_identity)
+            elif revision.operation == RevisionOp.RemoveUserKey:
+                new_identity = Identity.from_key(revision.user_public_key, self.app.config)
+                self.app.user_vault_keys.remove(vault, revision.user_id, new_identity)
             else:
                 raise NotImplementedError(revision.operation)
 

@@ -1,7 +1,7 @@
 import enum
 import logging
 
-from sqlalchemy import (Binary, Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, String,
+from sqlalchemy import (Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, String,
                         UniqueConstraint)
 from syncrypt.exceptions import InvalidRevision
 
@@ -21,6 +21,7 @@ class RevisionOp(enum.Enum):
     AddUser = "OP_ADD_USER"
     AddUserKey = "OP_ADD_USER_KEY"
     RemoveUser = "OP_REMOVE_USER"
+    RemoveUserKey = "OP_REMOVE_USER_KEY"
 
 
 class Revision(Base):
@@ -92,7 +93,7 @@ class Revision(Base):
             assert self.file_hash, "file_hash"
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
             assert self.user_id, "user_id"
-        elif self.operation == RevisionOp.AddUserKey:
+        elif self.operation in (RevisionOp.AddUserKey, RevisionOp.RemoveUserKey):
             assert self.user_id, "user_id"
             if not isinstance(self.user_public_key, bytes):
                 raise InvalidRevision(
@@ -122,7 +123,7 @@ class Revision(Base):
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
             message += str(self.parent_id).encode() + sep
             message += self.user_id.encode()
-        elif self.operation == RevisionOp.AddUserKey:
+        elif self.operation in (RevisionOp.AddUserKey, RevisionOp.RemoveUserKey):
             message += str(self.parent_id).encode() + sep
             message += self.user_id.encode() + sep
             message += self.user_public_key

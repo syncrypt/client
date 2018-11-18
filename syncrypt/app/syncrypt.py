@@ -480,6 +480,14 @@ class SyncryptApp(object):
         self.identity.import_from_package(filename)
         logger.info("Imported user key with fingerprint: %s", self.identity.get_fingerprint())
 
+    async def add_vault_user(self, vault, user_id):
+        revision = await vault.backend.add_vault_user(user_id, self.identity)
+        await self.revisions.apply(revision, vault)
+
+    async def remove_vault_user(self, vault, user_id):
+        revision = await vault.backend.remove_vault_user(user_id, self.identity)
+        await self.revisions.apply(revision, vault)
+
     async def add_user_vault_key(self, vault, email, identity):
         # construct and encrypt package
         export_pipe = vault.package_info() \
@@ -493,6 +501,10 @@ class SyncryptApp(object):
         revision = await vault.backend.add_user_vault_key(
             self.identity, email, identity, content
         )
+        await self.revisions.apply(revision, vault)
+
+    async def remove_user_vault_key(self, vault, email, identity):
+        revision = await vault.backend.remove_user_vault_key(self.identity, email, identity)
         await self.revisions.apply(revision, vault)
 
     async def upload_vault_key(self, vault=None):

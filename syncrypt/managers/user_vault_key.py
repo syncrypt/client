@@ -28,6 +28,13 @@ class UserVaultKeyManager:
         with store.session() as session:
             session.query(self.model).filter(self.model.vault_id == vault.id).delete()
 
+    def remove(self, vault: Vault, user_id: str, identity: Identity) -> None:
+        with store.session() as session:
+            session.query(self.model).filter(
+                    self.model.vault_id == vault.id,
+                    self.model.fingerprint==identity.get_fingerprint(),
+                    self.model.user_id==user_id).delete()
+
     def find_key(self, vault: Vault, fingerprint) -> UserVaultKey:
         with store.session() as session:
             return (

@@ -13,7 +13,7 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.exceptions import InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
-from syncrypt.models import Bundle, Revision, RevisionOp, Vault, Identity
+from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from .base import VaultLocalTestCase
 
 
@@ -254,17 +254,13 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await app.initialize()
         await app.open_or_init(self.vault)
 
-        revision = await self.vault.backend.add_vault_user('ericb@localhost', self.app.identity)
-        await app.revisions.apply(revision, self.vault)
-
-        revision = await self.vault.backend.add_vault_user('rakim@localhost', self.app.identity)
-        await app.revisions.apply(revision, self.vault)
+        await app.add_vault_user(self.vault, 'ericb@localhost')
+        await app.add_vault_user(self.vault, 'rakim@localhost')
 
         users = app.vault_users.list_for_vault(self.vault)
         self.assertEqual(len(users), 2)
 
-        revision = await self.vault.backend.remove_vault_user('ericb@localhost', self.app.identity)
-        await app.revisions.apply(revision, self.vault)
+        await app.remove_vault_user(self.vault, 'ericb@localhost')
 
         users = app.vault_users.list_for_vault(self.vault)
         self.assertEqual(len(users), 1)
@@ -294,8 +290,7 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await ericb_identity.generate_keys()
 
         # 2. Add user
-        revision = await self.vault.backend.add_vault_user('ericb@localhost', self.app.identity)
-        await app.revisions.apply(revision, self.vault)
+        await app.add_vault_user(self.vault, 'ericb@localhost')
 
         # 3. Add user key
         await app.add_user_vault_key(self.vault, 'ericb@localhost', ericb_identity)
@@ -319,3 +314,16 @@ class LocalStorageTestCase(VaultLocalTestCase):
 
         user_keys = app.user_vault_keys.list_for_vault(self.vault)
         self.assertEqual(len(user_keys), 2)
+
+        # 6. Remove ericbs key
+        await app.remove_user_vault_key(self.vault, 'ericb@localhost', ericb_identity)
+
+        user_keys = app.user_vault_keys.list_for_vault(self.vault)
+        self.assertEqual(len(user_keys), 1)
+
+        # 7. Fail while trying to modify metadata with ericb
+        self.vault.config.vault["name"] = "Really Eric's Library"
+
+        with self.assertRaises(InvalidRevision):
+            revision = await self.vault.backend.set_vault_metadata(ericb_identity)
+            await app.revisions.apply(revision, self.vault)
