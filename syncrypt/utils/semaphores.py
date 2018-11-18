@@ -11,7 +11,7 @@ class JoinableSemaphore():
         self.empty = asyncio.Lock()
 
     async def acquire(self):
-        if self.count == 0: await self.empty
+        if self.count == 0: await self.empty.acquire()
         self.count += 1
         await self.limiter.acquire()
 
@@ -21,8 +21,8 @@ class JoinableSemaphore():
         self.limiter.release()
 
     async def join(self):
-        await self.empty
-        if self.empty.locked(): self.empty.release()
+        async with self.empty:
+            pass
 
 
 class JoinableSetSemaphore(JoinableSemaphore, Generic[T]): # pylint: disable=unsubscriptable-object
@@ -38,7 +38,7 @@ class JoinableSetSemaphore(JoinableSemaphore, Generic[T]): # pylint: disable=uns
         return self._objects
 
     async def acquire(self, obj: T): # type: ignore
-        if self.count == 0: await self.empty
+        if self.count == 0: await self.empty.acquire()
         self.count += 1
         await self.limiter.acquire()
         if obj in self._objects:
