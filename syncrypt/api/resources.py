@@ -254,14 +254,8 @@ class VaultResource(Resource):
         if vault is None:
             raise ValueError() # this should return 404
         if 'metadata' in request_dict:
-            vault.metadata = request_dict['metadata']
-            try:
-                await vault.backend.open()
-                await vault.backend.set_vault_metadata()
-            except VaultNotInitialized:
-                logger.warn('Could not sync metadata to server right now, as the vault is not ' +
-                            'initialized yet. However, metadata has been stored locally and ' +
-                            'will be synced when the vault is initialized.')
+            vault._metadata = request_dict['metadata']
+            await self.app.update_vault_metadata(vault)
         return vault
 
 

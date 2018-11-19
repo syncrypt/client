@@ -89,3 +89,63 @@ class APITests(VaultLocalTestCase):
         finally:
             await client.close()
             await app.stop()
+
+    async def test_api_metadata(self):
+        app = self.app
+        client = APIClient(self.app_config)
+
+        app.add_vault(self.vault)
+
+        await app.init_vault(self.vault)
+        await app.start()
+
+        try:
+
+            r = await client.get('/v1/vault/')
+            self.assertEqual(r.status, 200)
+            c = await r.json()
+            await r.release()
+
+            self.assertEqual(len(c), 1) # only one vault
+
+            vault_uri = c[0]['resource_uri']
+
+            r = await client.get(vault_uri)
+            self.assertEqual(r.status, 200)
+            c = await r.json()
+            await r.release()
+
+            self.assertEqual(c['metadata'].get('name'), 'testvault')
+
+            patch_data = json.dumps({
+                'metadata': dict(c['metadata'], name='newname')
+            })
+            r = await client.put(vault_uri, data=patch_data)
+            self.assertEqual(r.status, 200)
+            await r.release()
+
+            r = await client.get(vault_uri)
+            self.assertEqual(r.status, 200)
+            c = await r.json()
+            await r.release()
+
+            revision_count = c['revision_count']
+
+            self.assertEqual(c['metadata'].get('name'), 'newname')
+
+            r = await client.put(vault_uri, data=patch_data)
+            self.assertEqual(r.status, 200)
+            await r.release()
+
+            r = await client.get(vault_uri)
+            self.assertEqual(r.status, 200)
+            c = await r.json()
+            await r.release()
+
+            self.assertEqual(c['metadata'].get('name'), 'newname')
+            # revision count should not change with the repeated patch with same name
+            self.assertEqual(c['revision_count'], revision_count)
+
+        finally:
+            await client.close()
+            await app.stop()
