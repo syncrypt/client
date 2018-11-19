@@ -9,7 +9,6 @@ from datetime import timezone
 from aiohttp import web
 from tzlocal import get_localzone
 
-from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Identity
 
 from .auth import require_auth_token
