@@ -38,7 +38,7 @@ class RevisionManager:
 
         # 1. Check preconditions for this to be a valid revision (current revision must be parent)
         if vault.revision != revision.parent_id:
-            raise InvalidRevision("Invalid parent {0}, should be {1}".format(revision.parent_id,
+            raise InvalidRevision("Expected parent to be {0}, but is {1}".format(revision.parent_id,
                 vault.revision))
 
         with store.session() as session:

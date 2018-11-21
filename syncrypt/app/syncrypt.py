@@ -650,9 +650,10 @@ class SyncryptApp(object):
             await self.vault_users.delete_for_vault(vault)
             await self.bundles.delete_for_vault(vault)
             vault.reset_revision()
+            assert vault.revision is None
 
         await self.open_or_init(vault)
-        queue = await vault.backend.changes(vault.revision if not full else None, None)
+        queue = await vault.backend.changes(vault.revision, None)
 
         while True:
             revision = await queue.get()

@@ -183,16 +183,11 @@ class VaultResource(Resource):
             log_items.append({
                 'operation': rev.operation,
                 'user_email': rev.user_id,
-                'created_at': rev.created_at.replace(tzinfo=timezone.utc)\
+                'created_at': rev.created_at and rev.created_at.replace(tzinfo=timezone.utc)\
                                             .astimezone(local_tz)\
                                             .strftime('%x %X'),
                 'path': rev.path
             })
-
-        # Not sure if this is the best place to trigger update
-        asyncio.get_event_loop().create_task(
-            self.app.revisions.update_for_vault(vault)
-        )
 
         return JSONResponse({'items': log_items})
 
