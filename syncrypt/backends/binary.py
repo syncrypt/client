@@ -633,7 +633,34 @@ class BinaryStorageConnection(object):
 
         # upload metadata
         await self.write_term('add_user_vault_key', user_id, revision.user_public_key,
-                              content, revision.signature)
+                              revision.user_fingerprint, revision.parent_id, revision.signature,
+                              content)
+
+        # assert :ok
+        response = await self.read_response()
+        revision.revision_id = response.decode()
+        return revision
+
+    async def remove_user_vault_key(self, identity: Identity, user_id: str,
+                                    user_identity: Identity) -> Revision:
+
+        vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        self.logger.debug('Removing user vault key')
+
+        revision = Revision(operation=RevisionOp.RemoveUserKey)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.user_id = user_id
+        revision.user_public_key = user_identity.public_key.exportKey("DER")
+        revision.sign(identity=identity)
+
+        # upload metadata
+        await self.write_term('remove_user_vault_key', user_id, revision.user_public_key,
+                              revision.user_fingerprint, revision.parent_id, revision.signature)
 
         # assert :ok
         response = await self.read_response()
@@ -1108,6 +1135,11 @@ class BinaryStorageBackend(StorageBackend):
                                  user_identity: Identity, content: bytes) -> Revision:
         async with (await self._acquire_connection()) as conn:
             return await conn.add_user_vault_key(identity, user_id, user_identity, content)
+
+    async def remove_user_vault_key(self, identity: Identity, user_id: str,
+                                 user_identity: Identity) -> Revision:
+        async with (await self._acquire_connection()) as conn:
+            return await conn.remove_user_vault_key(identity, user_id, user_identity)
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):
