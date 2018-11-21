@@ -602,8 +602,7 @@ class BinaryStorageConnection(object):
         await self.write_term('list_vaults_by_fingerprint', str(fingerprint))
         response = await self.read_term()
 
-        # return [(vault, user_vault_key, metadata)]
-        return ((rewrite_atoms_dict(r[0]), r[1]['encrypted_content'], r[2]) for r in response[1])
+        return [(rewrite_atoms_dict(r[0]), r[1]['encrypted_content'], r[2]) for r in response[1]]
 
     async def list_vault_users(self):
 
