@@ -304,11 +304,10 @@ class SyncryptApp(object):
     async def _list_vaults_with_name(self):
         logger.debug('Retrieving vault list...')
         backend = await self.open_backend()
-        my_fingerprint = self.identity.get_fingerprint()
         vaults = []
 
         for (vault, user_vault_key, encrypted_metadata) in \
-                    (await backend.list_vaults_by_fingerprint(my_fingerprint)):
+                    (await backend.list_vaults_for_identity(self.identity)):
 
             vault_id = vault['id'].decode('utf-8')
 

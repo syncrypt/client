@@ -3,7 +3,7 @@ import logging
 import os
 import pickle
 import shutil
-from typing import Any, cast  # pylint: disable=unused-import
+from typing import List, Any, cast  # pylint: disable=unused-import
 from uuid import uuid4
 
 from syncrypt.exceptions import VaultNotInitialized
@@ -102,6 +102,12 @@ class LocalStorageBackend(StorageBackend):
 
         return self.add_revision(revision)
 
+    async def list_vaults(self) -> List[Any]:
+        return []
+
+    async def list_vaults_for_identity(self, identity: Identity) -> List[Any]:
+        return []
+
     @require_vault
     @require_revision
     async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
@@ -181,7 +187,11 @@ class LocalStorageBackend(StorageBackend):
         return self.add_revision(revision)
 
     async def user_info(self):
-        return {"email": "user@localhost"}
+        return {
+            "email": "user@localhost",
+            "first_name": "",
+            "last_name": ""
+        }
 
     async def changes(self, since_rev, to_rev) -> RevisionQueue:
         assert since_rev is None or isinstance(since_rev, str)

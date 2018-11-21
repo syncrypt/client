@@ -1,6 +1,6 @@
 import asyncio  # pylint: disable=unused-import
 from abc import abstractmethod
-from typing import NewType, Union  # pylint: disable=unused-import
+from typing import List, Any, NewType, Union  # pylint: disable=unused-import
 
 from typing_extensions import Protocol
 
@@ -27,6 +27,14 @@ class StorageBackend(Protocol):
 
     @abstractmethod
     async def upload(self, bundle: Bundle, identity: Identity) -> Revision:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def list_vaults(self) -> List[Any]: # is this needed at all?
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def list_vaults_for_identity(self, identity: Identity) -> List[Any]:
         raise NotImplementedError()
 
     @abstractmethod

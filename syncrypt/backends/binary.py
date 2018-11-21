@@ -4,7 +4,7 @@ import math
 import ssl
 import struct
 import sys
-from typing import List, Optional, cast  # pylint: disable=unused-import
+from typing import List, Any, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 from erlastic import Atom
@@ -586,7 +586,7 @@ class BinaryStorageConnection(object):
                 previous_id = revision.revision_id
             await queue.put(None)
 
-    async def list_vaults(self):
+    async def list_vaults(self) -> List[Any]:
         self.logger.info('Getting a list of vaults')
 
         await self.write_term('list_vaults', ALL_VAULT_FIELDS)
@@ -594,7 +594,8 @@ class BinaryStorageConnection(object):
 
         return list(map(rewrite_atoms_dict, response[1]))
 
-    async def list_vaults_by_fingerprint(self, fingerprint):
+    async def list_vaults_for_identity(self, identity: Identity) -> List[Any]:
+        fingerprint = identity.get_fingerprint()
 
         self.logger.info('Getting a list of vaults by fingerprint: %s', fingerprint)
 
@@ -1140,6 +1141,14 @@ class BinaryStorageBackend(StorageBackend):
                                  user_identity: Identity) -> Revision:
         async with (await self._acquire_connection()) as conn:
             return await conn.remove_user_vault_key(identity, user_id, user_identity)
+
+    async def list_vaults(self):
+        async with (await self._acquire_connection()) as conn:
+            return (await conn.list_vaults())
+
+    async def list_vaults_for_identity(self, identity: Identity):
+        async with (await self._acquire_connection()) as conn:
+            return (await conn.list_vaults_for_identity(identity))
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):

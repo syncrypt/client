@@ -36,10 +36,8 @@ class FlyingVaultManager:
         # Maybe we can use VaultManager in the future?
         v_infos = {v["id"].decode(): v for v in (await backend.list_vaults())}
 
-        my_fingerprint = self.app.identity.get_fingerprint()
-
         with store.session() as session:
-            lst = await backend.list_vaults_by_fingerprint(my_fingerprint)
+            lst = await backend.list_vaults_for_identity(self.app.identity)
             for (vault, user_vault_key, encrypted_metadata) in lst:
 
                 await asyncio.sleep(0.001)
