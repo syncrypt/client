@@ -32,43 +32,6 @@ class RevisionManager:
         with store.session() as session:
             session.query(Revision).filter(Revision.vault_id == vault.config.id).delete()
 
-    async def update_for_vault(self, vault):
-        raise NotImplementedError()
-        # with store.session() as session:
-        #     try:
-        #         latest_rev = session.query(self.model)\
-        #                 .filter(Revision.vault_id==vault.config.id)\
-        #                 .order_by(desc(Revision.created_at)).limit(1).one()
-        #     except NoResultFound:
-        #         latest_rev = None
-
-        #     queue = await vault.backend.changes(latest_rev and latest_rev.id, None, verbose=True)
-        #     log_items = []
-        #     count = 0
-        #     while True:
-        #         item = await queue.get()
-        #         if item is None:
-        #             break
-        #         count += 1
-        #         store_hash, metadata, server_info = item
-        #         bundle = VirtualBundle(None, vault, store_hash=store_hash)
-        #         await bundle.write_encrypted_metadata(Once(metadata))
-
-        #         rev_id = server_info['id'].decode(vault.config.encoding)
-        #         rev = self.get_or_create_by_id(session, rev_id)
-        #         rev.vault_id = vault.config.id
-        #         rev.created_at = \
-        #                 iso8601.parse_date(server_info['created_at'].decode())\
-        #                     .astimezone(timezone.utc)\
-        #                     .replace(tzinfo=None)
-        #         rev.path = bundle.relpath
-        #         rev.operation = server_info['operation'].decode(vault.config.encoding)
-        #         rev.user_id = server_info['email'].decode(vault.config.encoding)
-        #         session.add(rev)
-        #         if count % 20 == 0:
-        #             session.commit()
-        #             session.expunge_all()
-
     async def apply(self, revision: Revision, vault: Vault):
 
         revision.assert_valid()

@@ -545,7 +545,7 @@ class SyncryptApp(object):
                         session.add(v)
 
         for vault in self.vaults:
-            await self.revisions.update_for_vault(vault)
+            await self.sync_vault(vault)
 
         await backend.close()
 
