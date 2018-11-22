@@ -213,3 +213,123 @@ class APITests(VaultLocalTestCase):
         finally:
             await client.close()
             await app.stop()
+
+    async def test_api_init_vault_fingerprints(self):
+        app = self.app
+        client = APIClient(self.app_config)
+
+        new_vault_folder = os.path.join(self.working_dir, 'newvault')
+        if os.path.exists(new_vault_folder):
+            shutil.rmtree(new_vault_folder)
+        os.makedirs(new_vault_folder)
+
+        await app.start()
+
+        try:
+            r = await client.login(**self.login_data)
+            await r.release()
+            self.assertEqual(r.status, 200)
+
+            r = await client.post('/v1/vault/',
+                    data=json.dumps({ 'folder': new_vault_folder }))
+            c = await r.json()
+            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
+            self.assertGreater(len(c['resource_uri']), 20)
+            await r.release()
+
+            vault_uri = c['resource_uri']
+
+            self.assertEqual(len(app.vaults), 1) # one vault
+            while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+                await asyncio.sleep(0.2)
+
+            r = await client.get('/v1/vault/')
+            c = await r.json()
+            self.assertEqual(len(c), 1) # one vault
+            self.assertEqual(c[0]['state'], 'ready')
+            await r.release()
+
+            c = c[0] # first vault
+
+            patch_data = json.dumps({
+                'metadata': dict(c['metadata'], name='newname')
+            })
+            r = await client.put(vault_uri, data=patch_data)
+            self.assertEqual(r.status, 200)
+            await r.release()
+
+            r = await client.get(vault_uri + 'fingerprints/')
+            c = await r.json()
+            self.assertEqual(len(c), 1)
+
+            await self.app.sync_vault(self.vault, full=True)
+
+            r = await client.get(vault_uri + 'fingerprints/')
+            c = await r.json()
+            self.assertEqual(len(c), 1)
+
+        finally:
+            await client.close()
+            await app.stop()
+
+    async def test_api_init_vault_users(self):
+        app = self.app
+        client = APIClient(self.app_config)
+
+        new_vault_folder = os.path.join(self.working_dir, 'newvault')
+        if os.path.exists(new_vault_folder):
+            shutil.rmtree(new_vault_folder)
+        os.makedirs(new_vault_folder)
+
+        await app.start()
+
+        try:
+            r = await client.login(**self.login_data)
+            await r.release()
+            self.assertEqual(r.status, 200)
+
+            r = await client.post('/v1/vault/',
+                    data=json.dumps({ 'folder': new_vault_folder }))
+            c = await r.json()
+            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
+            self.assertGreater(len(c['resource_uri']), 20)
+            await r.release()
+
+            vault_uri = c['resource_uri']
+
+            self.assertEqual(len(app.vaults), 1) # one vault
+            while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+                await asyncio.sleep(0.2)
+
+            r = await client.get('/v1/vault/')
+            c = await r.json()
+            self.assertEqual(len(c), 1) # one vault
+            self.assertEqual(c[0]['state'], 'ready')
+            await r.release()
+
+            c = c[0] # first vault
+
+            patch_data = json.dumps({
+                'metadata': dict(c['metadata'], name='newname')
+            })
+            r = await client.put(vault_uri, data=patch_data)
+            self.assertEqual(r.status, 200)
+            await r.release()
+
+            r = await client.get(vault_uri + 'users/')
+            users = await r.json()
+            self.assertEqual(len(users), 1)
+            self.assertIsNotNone(users[0]['resource_uri'])
+            self.assertIsNotNone(users[0]['user_id'])
+
+            await self.app.sync_vault(self.vault, full=True)
+
+            r = await client.get(vault_uri + 'users/')
+            c = await r.json()
+            self.assertEqual(len(users), 1)
+            self.assertIsNotNone(users[0]['resource_uri'])
+            self.assertIsNotNone(users[0]['user_id'])
+
+        finally:
+            await client.close()
+            await app.stop()

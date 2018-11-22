@@ -4,7 +4,8 @@ from typing import Sequence
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import InvalidRevision
-from syncrypt.models import Bundle, Identity, Revision, RevisionOp, UserVaultKey, Vault, store
+from syncrypt.models import (Bundle, Identity, Revision, RevisionOp, UserVaultKey, Vault, VaultUser,
+                             store)
 from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ class RevisionManager:
                 # CreateVault is the only operation that is allowed to provide its own key
                 signer_key = UserVaultKey(
                     vault_id=vault.id,
-                    #user_id=revision.user_id,
+                    user_id=revision.user_id,
                     fingerprint=revision.user_fingerprint,
                     public_key=revision.user_public_key,
                 )
@@ -75,6 +76,7 @@ class RevisionManager:
 
             if revision.operation == RevisionOp.CreateVault:
                 session.add(signer_key)
+                session.add(VaultUser(vault_id=vault.id, user_id=revision.user_id))
                 session.commit()
             elif revision.operation == RevisionOp.Upload:
                 bundle = await self.create_bundle_from_revision(revision, vault)

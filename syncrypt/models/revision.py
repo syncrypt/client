@@ -54,7 +54,7 @@ class Revision(Base):
     crypt_hash = Column(String(250), nullable=True)
     file_size_crypt = Column(Integer(), nullable=True)
 
-    # Additional fields for OP_ADD_USER & OP_REMOVE_USER
+    # Additional fields for OP_CREATE_VAULT, OP_ADD_USER & OP_REMOVE_USER
     user_id = Column(String(250), nullable=True)
 
     # Additional fields for OP_CREATE_VAULT & OP_ADD_USER_KEY
@@ -91,7 +91,7 @@ class Revision(Base):
             pass
         elif self.operation == RevisionOp.DeleteFile:
             assert self.file_hash, "file_hash"
-        elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):
+        elif self.operation in (RevisionOp.CreateVault, RevisionOp.AddUser, RevisionOp.RemoveUser):
             assert self.user_id, "user_id"
         elif self.operation in (RevisionOp.AddUserKey, RevisionOp.RemoveUserKey):
             assert self.user_id, "user_id"
@@ -107,6 +107,7 @@ class Revision(Base):
         message = str(self.operation.value).encode() + sep
         if self.operation == RevisionOp.CreateVault:
             message += self.vault_public_key + sep
+            message += self.user_id.encode() + sep
             message += self.user_public_key
         elif self.operation == RevisionOp.Upload:
             message += str(self.parent_id).encode() + sep

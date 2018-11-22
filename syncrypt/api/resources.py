@@ -9,7 +9,7 @@ from datetime import timezone
 from aiohttp import web
 from tzlocal import get_localzone
 
-from syncrypt.models import Identity
+from syncrypt.models import Identity, UserVaultKey
 
 from .auth import require_auth_token
 from .responses import JSONResponse
@@ -170,8 +170,13 @@ class VaultResource(Resource):
     async def dispatch_fingerprints(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
-        fingerprint_list = await vault.backend.list_vault_user_key_fingerprints()
-        return JSONResponse(fingerprint_list)
+        user_vault_keys = self.app.user_vault_keys.list_for_vault(vault)
+        def to_json(key):
+            return {
+                'email': key.user_id,
+                'fingerprint': key.fingerprint
+            }
+        return JSONResponse([key.fingerprint for key in user_vault_keys])
 
     async def dispatch_history(self, request):
         vault_id = request.match_info['id']
@@ -347,11 +352,14 @@ class VaultUserResource(Resource):
     async def get_obj(self, request):
         return {'email': request.match_info['email']}
 
-    def get_id(self, obj):
-        return obj['email']
+    def get_id(self, obj: UserVaultKey):
+        return obj.user_id
 
-    def dehydrate(self, obj):
-        return dict(obj, resource_uri=self.get_resource_uri(obj))
+    def dehydrate(self, obj: UserVaultKey):
+        return {
+            'user_id': obj.user_id,
+            'resource_uri': self.get_resource_uri(obj)
+        }
 
     @require_auth_token
     async def dispatch_keys(self, request):
@@ -366,13 +374,12 @@ class VaultUserResource(Resource):
 
     async def get_obj_list(self, request):
         vault = self.get_vault(request)
-        await vault.backend.open()
-        return await vault.backend.list_vault_users()
+        return self.app.user_vault_keys.list_for_vault(vault)
 
     async def delete_obj(self, request, obj):
         vault = self.get_vault(request)
         await vault.backend.open()
-        email = obj['email']
+        email = obj.user_id
         logger.info('Removing user "%s" from %s', email, vault)
         await vault.backend.remove_vault_user(email)
 
