@@ -1,4 +1,3 @@
-
 import asyncio
 import logging
 import os
@@ -9,7 +8,7 @@ from glob import glob
 
 import asynctest
 import pytest
-from hypothesis import example, given, settings
+from hypothesis import example, given, settings, HealthCheck
 
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
@@ -24,12 +23,13 @@ from .base import TestAppConfig
 def count_files(folder):
     return len([name for name in os.listdir(folder) if name != '.vault'])
 
+
 @pytest.mark.requires_server
 @pytest.mark.hypothesis
 class HypoBinaryTestCase(asynctest.TestCase):
     folder = 'tests/testbinaryempty/'
 
-    @settings(timeout=30, perform_health_check=False)
+    @settings(suppress_health_check=HealthCheck.all())
     @given(files(), files())
 
     # The following example will test "unicode surrogates" in filename and content
