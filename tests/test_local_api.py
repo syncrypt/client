@@ -197,14 +197,18 @@ class APITests(VaultLocalTestCase):
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
             self.assertEqual(len(c['items']), 3)
-            # TODO self.assertNotNull(c['items'][0]['created_at'])
+            self.assertIsNotNone(c['items'][0]['created_at'])
+            self.assertIsNotNone(c['items'][0]['revision_id'])
+            self.assertIsNotNone(c['items'][0]['operation'])
 
             await self.app.sync_vault(self.vault, full=True)
 
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
             self.assertEqual(len(c['items']), 3)
-            # TODO self.assertNotNull(c['items'][0]['created_at'])
+            self.assertIsNotNone(c['items'][0]['created_at'])
+            self.assertIsNotNone(c['items'][0]['revision_id'])
+            self.assertIsNotNone(c['items'][0]['operation'])
 
         finally:
             await client.close()

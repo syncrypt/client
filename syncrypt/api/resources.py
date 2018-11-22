@@ -183,6 +183,7 @@ class VaultResource(Resource):
             log_items.append({
                 'operation': rev.operation,
                 'user_email': rev.user_id,
+                'revision_id': rev.revision_id,
                 'created_at': rev.created_at and rev.created_at.replace(tzinfo=timezone.utc)\
                                             .astimezone(local_tz)\
                                             .strftime('%x %X'),

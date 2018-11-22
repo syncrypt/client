@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import pickle
+from datetime import datetime
 import shutil
 from typing import List, Any, cast  # pylint: disable=unused-import
 from uuid import uuid4
@@ -66,6 +67,7 @@ class LocalStorageBackend(StorageBackend):
             raise ValueError("Revision is not signed.")
 
         revision.revision_id = str(uuid4())
+        revision.created_at = datetime.now()
 
         with open(os.path.join(self.path, "txchain"), "ab") as txchain:
             logger.debug(
