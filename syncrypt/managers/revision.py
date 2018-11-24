@@ -75,6 +75,7 @@ class RevisionManager:
             )
 
             if revision.operation == RevisionOp.CreateVault:
+                session.add(vault)
                 session.add(signer_key)
                 session.add(VaultUser(vault_id=vault.id, user_id=revision.user_id))
                 session.commit()

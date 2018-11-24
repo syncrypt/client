@@ -192,7 +192,8 @@ class VaultResource(Resource):
                 'created_at': rev.created_at and rev.created_at.replace(tzinfo=timezone.utc)\
                                             .astimezone(local_tz)\
                                             .strftime('%x %X'),
-                'path': rev.path
+                'path': rev.path or '' # in Elm client, this is required, so temporarily give it an
+                                       # empty string
             })
 
         return JSONResponse({'items': log_items})
