@@ -258,17 +258,17 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await app.add_vault_user(self.vault, 'rakim@localhost')
 
         users = app.vault_users.list_for_vault(self.vault)
-        self.assertEqual(len(users), 2)
+        self.assertEqual(len(users), 3)
 
         await app.remove_vault_user(self.vault, 'ericb@localhost')
 
         users = app.vault_users.list_for_vault(self.vault)
-        self.assertEqual(len(users), 1)
+        self.assertEqual(len(users), 2)
 
         await app.pull(full=True) # after a full pull, we should arrive at the same state
 
         users = app.vault_users.list_for_vault(self.vault)
-        self.assertEqual(len(users), 1)
+        self.assertEqual(len(users), 2)
 
     async def test_add_user_with_a_key(self):
         app = SyncryptApp(self.app_config)
@@ -334,10 +334,16 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await app.initialize()
         await app.open_or_init(self.vault)
 
+        users = app.vault_users.list_for_vault(self.vault)
+        self.assertEqual(len(users), 1)
+
         await app.add_vault_user(self.vault, 'ericb@localhost')
+
+        users = app.vault_users.list_for_vault(self.vault)
+        self.assertEqual(len(users), 2)
 
         with self.assertRaises(AlreadyPresent):
             await app.add_vault_user(self.vault, 'ericb@localhost')
 
         users = app.vault_users.list_for_vault(self.vault)
-        self.assertEqual(len(users), 1)
+        self.assertEqual(len(users), 2)
