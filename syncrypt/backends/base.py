@@ -46,7 +46,7 @@ class StorageBackend(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+    async def remove_file(self, bundle: Bundle, identity: Identity) -> Revision:
         raise NotImplementedError
 
     async def download(self, bundle):

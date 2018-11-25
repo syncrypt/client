@@ -1,6 +1,7 @@
 import logging
 import os
 from getpass import getpass
+from typing import List
 
 import syncrypt
 from syncrypt.auth import AuthenticationProvider
@@ -169,6 +170,11 @@ class SyncryptCLIApp(SyncryptApp):
     async def print_list_of_vaults(self):
         for (vault_id, name) in (await self._list_vaults_with_name()):
             print("{0} {1}".format(vault_id, name))
+
+    async def remove_files(self, paths: List[str]):
+        vault = self.vaults[0]
+        for path in paths:
+            await self.remove_file(vault, path)
 
     async def print_list_of_all_vaults(self):
         backend = await self.open_backend()

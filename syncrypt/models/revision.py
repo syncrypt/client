@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 class RevisionOp(enum.Enum):
     CreateVault = "OP_CREATE_VAULT"
     Upload = "OP_UPLOAD"
-    # ^ rename to OP_INSERT_FILE or so to be consistent with OP_DELETE_FILE?
+    # ^ rename to OP_INSERT_FILE or so to be consistent with OP_REMOVE_FILE?
     SetMetadata = "OP_SET_METADATA"
-    DeleteFile = "OP_DELETE_FILE"
+    RemoveFile = "OP_REMOVE_FILE"
     RenameFile = "OP_RENAME_FILE"
     AddUser = "OP_ADD_USER"
     AddUserKey = "OP_ADD_USER_KEY"
@@ -89,7 +89,7 @@ class Revision(Base):
             assert self.file_hash, "file_hash"
         elif self.operation == RevisionOp.SetMetadata:
             pass
-        elif self.operation == RevisionOp.DeleteFile:
+        elif self.operation == RevisionOp.RemoveFile:
             assert self.file_hash, "file_hash"
         elif self.operation in (RevisionOp.CreateVault, RevisionOp.AddUser, RevisionOp.RemoveUser):
             assert self.user_id, "user_id"
@@ -118,7 +118,7 @@ class Revision(Base):
         elif self.operation == RevisionOp.SetMetadata:
             message += str(self.parent_id).encode() + sep
             message += self.revision_metadata
-        elif self.operation == RevisionOp.DeleteFile:
+        elif self.operation == RevisionOp.RemoveFile:
             message += str(self.parent_id).encode() + sep
             message += str(self.file_hash).encode()
         elif self.operation in (RevisionOp.AddUser, RevisionOp.RemoveUser):

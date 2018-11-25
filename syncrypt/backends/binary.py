@@ -1120,7 +1120,7 @@ class BinaryStorageBackend(StorageBackend):
         async with (await self._acquire_connection(skip_login=True)) as conn:
             return await conn.signup(username, password, firstname, surname)
 
-    async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+    async def remove_file(self, bundle: Bundle, identity: Identity) -> Revision:
         raise NotImplementedError()
 
     async def set_vault_metadata(self, identity: Identity) -> Revision:

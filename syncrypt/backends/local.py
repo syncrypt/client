@@ -227,7 +227,7 @@ class LocalStorageBackend(StorageBackend):
 
     @require_vault
     @require_revision
-    async def delete_file(self, bundle: Bundle, identity: Identity) -> Revision:
+    async def remove_file(self, bundle: Bundle, identity: Identity) -> Revision:
 
         vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
@@ -235,7 +235,7 @@ class LocalStorageBackend(StorageBackend):
 
         logger.info("Deleting %s", bundle)
 
-        revision = Revision(operation=RevisionOp.DeleteFile)
+        revision = Revision(operation=RevisionOp.RemoveFile)
         revision.vault_id = vault.config.id
         revision.parent_id = vault.revision
         revision.user_id = "user@localhost"

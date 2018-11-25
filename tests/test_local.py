@@ -170,7 +170,7 @@ class LocalStorageTestCase(VaultLocalTestCase):
             self.vault.config.get("vault.name"), self.other_vault.config.get("vault.name")
         )
 
-    async def test_delete_file(self):
+    async def test_remove_file(self):
         other_vault_path = os.path.join(VaultLocalTestCase.working_dir, "othervault")
 
         # remove "other vault" folder first
@@ -186,9 +186,9 @@ class LocalStorageTestCase(VaultLocalTestCase):
         await app.push()  # init all vaults
 
         pre_rev = self.vault.revision
-        await app.delete_file(os.path.join(self.vault.folder, "hello.txt"))
+        await app.remove_file(self.vault, os.path.join(self.vault.folder, "hello.txt"))
         self.assertNotEqual(pre_rev, self.vault.revision)
-        await app.delete_file(os.path.join(self.vault.folder, "random250k"))
+        await app.remove_file(self.vault, os.path.join(self.vault.folder, "random250k"))
         self.assertNotEqual(pre_rev, self.vault.revision)
 
         # now we will clone the initialized vault by copying the vault config

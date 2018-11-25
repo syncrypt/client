@@ -36,9 +36,9 @@ The signing user uploaded a new file or a new revision for an existing file.
 Signed contents: ``"OP_UPLOAD"``, Hash of encrypted filename, Hash of encrypted blob, Encrypted File Metadata, file size of
 encrypted blob
 
-### Delete File
+### Remove File
 
-Signed contents: ``"OP_DELETE_FILE"``, Hash of encrypted filename
+Signed contents: ``"OP_REMOVE_FILE"``, Hash of encrypted filename
 
 ### Add User Vault Key
 

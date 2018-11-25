@@ -163,6 +163,18 @@ class AddUser(SingleVaultCmd):
         self.loop.run_until_complete(self.app.add_user(self.config.email))
 
 
+class RemoveFile(SingleVaultCmd):
+    command = 'remove-file'
+    description = 'remove a file from the vault'
+
+    def configure_parser(self, parser):
+        super(RemoveFile, self).configure_parser(parser)
+        parser.add_argument('path', nargs='+', help='path to the file(s)')
+
+    def run(self):
+        self.loop.run_until_complete(self.app.remove_files(self.config.path))
+
+
 class DeleteVault(MultipleVaultCmd):
     command = 'delete-vault'
     description = 'permanently delete this vault from server (use with care)'
@@ -406,6 +418,7 @@ COMMANDS = [
     ImportVault(),
     UploadVaultKey(),
     DeleteVault(),
+    RemoveFile(),
     Clone(),
     AddUser(),
     Info(),
