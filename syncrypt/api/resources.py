@@ -171,11 +171,6 @@ class VaultResource(Resource):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
         user_vault_keys = self.app.user_vault_keys.list_for_vault(vault)
-        def to_json(key):
-            return {
-                'email': key.user_id,
-                'fingerprint': key.fingerprint
-            }
         return JSONResponse([key.fingerprint for key in user_vault_keys])
 
     async def dispatch_history(self, request):
