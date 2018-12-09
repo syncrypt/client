@@ -1145,6 +1145,10 @@ class BinaryStorageBackend(StorageBackend):
         async with (await self._acquire_connection()) as conn:
             return (await conn.list_vaults())
 
+    async def user_info(self):
+        async with (await self._acquire_connection()) as conn:
+            return (await conn.user_info())
+
     async def list_vaults_for_identity(self, identity: Identity):
         async with (await self._acquire_connection()) as conn:
             return (await conn.list_vaults_for_identity(identity))
