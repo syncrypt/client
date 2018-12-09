@@ -379,7 +379,7 @@ class VaultUserResource(Resource):
 
     async def get_obj_list(self, request):
         vault = self.get_vault(request)
-        return self.app.user_vault_keys.list_for_vault(vault)
+        return self.app.vault_users.list_for_vault(vault)
 
     async def delete_obj(self, request, obj):
         vault = self.get_vault(request)
