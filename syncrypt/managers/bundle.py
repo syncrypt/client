@@ -29,7 +29,6 @@ class BundleManager:
             session.query(self.model).filter(self.model.vault_id == vault.id).delete()
 
     async def get_bundle(self, vault: Vault, path: str) -> Bundle:
-        """return an iterator of all bundles in the vault that possible require download"""
         relpath = os.path.relpath(path, vault.folder)
         with store.session() as session:
             try:
