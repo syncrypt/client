@@ -94,10 +94,11 @@ class SyncryptApp(object):
         # Load cached vault information from config file
         with store.session() as session:
             for vault_dir in vault_dirs:
+                abs_vault_dir = os.path.normpath(os.path.abspath(vault_dir))
                 try:
-                    vault = session.query(Vault).filter(Vault.folder==vault_dir).one()
+                    vault = session.query(Vault).filter(Vault.folder==abs_vault_dir).one()
                 except NoResultFound:
-                    vault = Vault(vault_dir)
+                    vault = Vault(abs_vault_dir)
                     session.add(vault)
                 self.vaults.append(vault)
 
