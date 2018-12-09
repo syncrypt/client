@@ -154,7 +154,7 @@ setup(
         'erlastic',
         'typing_extensions',
         'iso8601',
-        'pycryptodomex>=3.7.0',
+        'pycryptodomex==3.7.0', # 3.7.1 introduced mypy stubs, incompatible currently
         'python-snappy',
         'smokesignal',
         'sqlalchemy>=1.2.13',
