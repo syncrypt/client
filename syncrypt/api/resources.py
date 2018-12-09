@@ -351,14 +351,18 @@ class VaultUserResource(Resource):
         return vault
 
     async def get_obj(self, request):
-        return {'email': request.match_info['email']}
+        return {
+            'email': request.match_info['email']
+        }
 
     def get_id(self, obj: UserVaultKey):
         return obj.user_id
 
     def dehydrate(self, obj: UserVaultKey):
         return {
-            'user_id': obj.user_id,
+            'email': obj.user_id,
+            'first_name': obj.user_id, # TBD
+            'last_name': obj.user_id, # TBD
             'resource_uri': self.get_resource_uri(obj)
         }
 

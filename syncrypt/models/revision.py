@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy import (Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, String,
                         UniqueConstraint)
+
 from syncrypt.exceptions import InvalidRevision
 
 from .base import Base
@@ -83,6 +84,10 @@ class Revision(Base):
             if not isinstance(self.vault_public_key, bytes):
                 raise InvalidRevision(
                     "Wrong type for vault_public_key: {0}".format(type(self.vault_public_key))
+                )
+            if self.user_id is None:
+                raise InvalidRevision(
+                    "CreateVault revision is missing field user_id"
                 )
         elif self.operation == RevisionOp.Upload:
             pass
