@@ -270,7 +270,7 @@ class BinaryStorageConnection():
 
         vault_id = response[1].decode(vault.config.encoding)
         auth = response[2].decode(vault.config.encoding)
-        revision_id = response[3].decode(vault.config.encoding)
+        server_info = rewrite_atoms_dict(response[3])
 
         if not vault_id:
             raise ServerError("Invalid vault ID: {0}".format(vault_id))
@@ -278,12 +278,12 @@ class BinaryStorageConnection():
         if not auth:
             raise ServerError("Invalid auth token: {0}".format(auth))
 
-        if not revision_id:
-            raise ServerError("Invalid revision ID: {0}".format(revision_id))
-
         revision.vault_id = vault_id
-        revision.revision_id = revision_id
-        revision.created_at = datetime.utcnow()
+
+        # assert :ok
+        ret_revision = self.server_info_to_revision(server_info, vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
 
         self.logger.info('Successfully created vault %s', vault_id)
 
@@ -459,9 +459,9 @@ class BinaryStorageConnection():
         # server should return the response
         response = await self.read_response()
         server_info = rewrite_atoms_dict(response)
-
-        # if all went well, store revision_id in vault
-        revision.revision_id = server_info['id'].decode()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
         return revision
 
     async def user_info(self):
@@ -502,9 +502,61 @@ class BinaryStorageConnection():
 
         # assert :ok
         response = await self.read_response()
-        server_info = rewrite_atoms_dict(response)
-        revision.revision_id = server_info['id'].decode()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
         return revision
+
+    def server_info_to_revision(self, server_info, vault: Vault, parent_id: Optional[str]=None):
+        operation = server_info['operation'].decode()
+        vault_public_key = None
+        user_id = None
+
+        if operation == 'store':
+            operation = RevisionOp.Upload
+        elif operation == 'create_vault':
+            operation = RevisionOp.CreateVault
+            vault_public_key = vault.identity.export_public_key()
+            user_id = 'test@syncrypt.space' # TBD
+        elif operation == 'set_metadata':
+            operation = RevisionOp.SetMetadata
+            vault_public_key = vault.identity.export_public_key()
+        elif operation == 'add_user':
+            operation = RevisionOp.AddUser
+            user_id = server_info['metadata'].decode()
+        elif operation == 'remove_user':
+            operation = RevisionOp.RemoveUser
+            user_id = server_info['metadata'].decode()
+        else:
+            raise ServerError("Unknown operation: " + operation)
+
+        user_fingerprint = server_info['user_key_fingerprint'].decode()
+        signature = server_info['signature']
+        file_hash = server_info['file_hash'].decode() if server_info['file_hash'] is not None else None
+        crypt_hash = server_info['content_hash'].decode() if server_info['content_hash'] is not None else None
+        file_size_crypt = server_info['size']
+        metadata = server_info['metadata']
+        user_public_key = server_info['user_public_key']
+        revision_id = server_info['id'].decode()
+        created_at = \
+                iso8601.parse_date(server_info['created_at'].decode())
+
+        return Revision(
+            operation=operation,
+            revision_id=revision_id,
+            parent_id=parent_id,
+            vault_id=vault.config.id,
+            created_at=created_at,
+            revision_metadata=metadata,
+            file_size_crypt=file_size_crypt,
+            file_hash=file_hash,
+            crypt_hash=crypt_hash,
+            user_id=user_id,
+            signature=signature,
+            user_public_key=user_public_key,
+            vault_public_key=vault_public_key,
+            user_fingerprint=user_fingerprint
+        )
 
     async def changes(self, since_rev, to_rev, queue: RevisionQueue, verbose=False):
 
@@ -524,57 +576,6 @@ class BinaryStorageConnection():
         previous_id = since_rev
         response = await self.read_response()
 
-        def server_info_to_revision(server_info, parent_id: Optional[str]):
-            operation = server_info['operation'].decode()
-            vault_public_key = None
-            user_id = None
-
-            if operation == 'store':
-                operation = RevisionOp.Upload
-            elif operation == 'create_vault':
-                operation = RevisionOp.CreateVault
-                vault_public_key = vault.identity.export_public_key()
-                user_id = 'test@syncrypt.space' # TBD
-            elif operation == 'set_metadata':
-                operation = RevisionOp.SetMetadata
-                vault_public_key = vault.identity.export_public_key()
-            elif operation == 'add_user':
-                operation = RevisionOp.AddUser
-                user_id = server_info['metadata'].decode()
-            elif operation == 'remove_user':
-                operation = RevisionOp.RemoveUser
-                user_id = server_info['metadata'].decode()
-            else:
-                raise ServerError("Unknown operation: " + operation)
-
-            user_fingerprint = server_info['user_key_fingerprint'].decode()
-            signature = server_info['signature']
-            file_hash = server_info['file_hash'].decode() if server_info['file_hash'] is not None else None
-            crypt_hash = server_info['content_hash'].decode() if server_info['content_hash'] is not None else None
-            file_size_crypt = server_info['size']
-            metadata = server_info['metadata']
-            user_public_key = server_info['user_public_key']
-            revision_id = server_info['id'].decode()
-            created_at = \
-                    iso8601.parse_date(server_info['created_at'].decode())
-
-            return Revision(
-                operation=operation,
-                revision_id=revision_id,
-                parent_id=parent_id,
-                vault_id=vault.config.id,
-                created_at=created_at,
-                revision_metadata=metadata,
-                file_size_crypt=file_size_crypt,
-                file_hash=file_hash,
-                crypt_hash=crypt_hash,
-                user_id=user_id,
-                signature=signature,
-                user_public_key=user_public_key,
-                vault_public_key=vault_public_key,
-                user_fingerprint=user_fingerprint
-            )
-
         # response is either list or stream
         if len(response) > 0 and response[0] == Atom('stream_response'):
             (_, file_count) = response
@@ -582,14 +583,14 @@ class BinaryStorageConnection():
             for _ in range(file_count):
                 server_info = await self.read_term(assert_ok=False)
                 server_info = rewrite_atoms_dict(server_info)
-                revision = server_info_to_revision(server_info, previous_id)
+                revision = self.server_info_to_revision(server_info, vault, previous_id)
                 await queue.put(revision)
                 previous_id = revision.revision_id
             await queue.put(None)
         else:
             for server_info in response:
                 server_info = rewrite_atoms_dict(server_info)
-                revision = server_info_to_revision(server_info, previous_id)
+                revision = self.server_info_to_revision(server_info, vault, previous_id)
                 await queue.put(None)
                 previous_id = revision.revision_id
             await queue.put(None)
@@ -646,7 +647,9 @@ class BinaryStorageConnection():
 
         # assert :ok
         response = await self.read_response()
-        revision.revision_id = response.decode()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
         return revision
 
     async def remove_user_vault_key(self, identity: Identity, user_id: str,
@@ -672,7 +675,9 @@ class BinaryStorageConnection():
 
         # assert :ok
         response = await self.read_response()
-        revision.revision_id = response.decode()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
         return revision
 
     async def get_user_vault_key(self, fingerprint, vault_id):
@@ -806,7 +811,9 @@ class BinaryStorageConnection():
 
         # assert :ok
         response = await self.read_response()
-        revision.revision_id = response.decode()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
         return revision
 
     async def remove_vault_user(self, user_id: str, identity: Identity) -> Revision:
@@ -829,7 +836,9 @@ class BinaryStorageConnection():
 
         # assert :ok
         response = await self.read_response()
-        revision.revision_id = response.decode()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
         return revision
 
     async def delete_vault(self, vault_id=None):
