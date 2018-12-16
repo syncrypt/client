@@ -320,7 +320,7 @@ class APITests(VaultLocalTestCase):
             users = await r.json()
             self.assertEqual(len(users), 1)
             self.assertIsNotNone(users[0]['resource_uri'])
-            self.assertIsNotNone(users[0]['user_id'])
+            self.assertIsNotNone(users[0]['email'])
 
             await self.app.sync_vault(self.vault, full=True)
 
@@ -328,7 +328,7 @@ class APITests(VaultLocalTestCase):
             c = await r.json()
             self.assertEqual(len(users), 1)
             self.assertIsNotNone(users[0]['resource_uri'])
-            self.assertIsNotNone(users[0]['user_id'])
+            self.assertIsNotNone(users[0]['email'])
 
         finally:
             await client.close()
