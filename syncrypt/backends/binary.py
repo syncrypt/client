@@ -4,7 +4,6 @@ import math
 import ssl
 import struct
 import sys
-from datetime import datetime
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
@@ -458,7 +457,6 @@ class BinaryStorageConnection():
 
         # server should return the response
         response = await self.read_response()
-        server_info = rewrite_atoms_dict(response)
         ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
         revision.revision_id = ret_revision.revision_id
         revision.created_at = ret_revision.created_at
