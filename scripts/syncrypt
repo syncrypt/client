@@ -299,7 +299,7 @@ class Log(MultipleVaultCmd):
                 help='print more information')
 
     def run(self):
-        self.loop.run_until_complete(self.app.print_log(self.config.verbose))
+        self.loop.run_until_complete(self.app.print_log(verbose=self.config.verbose))
 
 
 class Login(NoVaultCmd):

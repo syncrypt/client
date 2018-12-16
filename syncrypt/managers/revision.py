@@ -104,6 +104,7 @@ class RevisionManager:
 
             # 5. Store the revision in config and db
             revision.local_vault_id = vault.id
+            revision.creator_id = signer_key.user_id
             session.add(revision)
             session.commit()
             vault.revision_count = (

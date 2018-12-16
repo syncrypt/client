@@ -201,17 +201,19 @@ class SyncryptCLIApp(SyncryptApp):
                 await self.sync_vault(vault)
             for revision in self.revisions.list_for_vault(vault):
                 if verbose:
-                    print("[{created_at}] ({revision_id}) {op} | {user}"\
+                    print("[{created_at}] ({revision_id}) {op} | {creator} [{fingerprint}]"\
                         .format(
                             created_at=revision.created_at,
                             revision_id=revision.revision_id,
-                            user=revision.user_fingerprint,
+                            creator=revision.creator_id,
+                            fingerprint=revision.user_fingerprint,
                             op=revision.operation
                         ))
                 else:
-                    print("[{created_at}] {op} | {user}"\
+                    print("[{created_at}] {op} | {creator}"\
                         .format(
                             created_at=revision.created_at,
-                            user=revision.user_fingerprint,
+                            creator=revision.creator_id,
+                            fingerprint=revision.user_fingerprint,
                             op=revision.operation
                         ))

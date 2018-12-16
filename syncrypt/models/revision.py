@@ -42,6 +42,7 @@ class Revision(Base):
     # These are the core fields that every revision has to have.
     operation = Column(Enum(RevisionOp, values_callable=lambda x: [e.value for e in x]))
     created_at = Column(DateTime())
+    creator_id = Column(String(250))
     user_fingerprint = Column(String(64))
     signature = Column(LargeBinary(512))
 
