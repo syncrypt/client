@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
-from syncrypt.exceptions import (FolderExistsAndIsNotEmpty, InvalidAuthentification,
-                                 InvalidVaultPackage, SyncryptBaseException, AlreadyPresent,
-                                 VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
-                                 VaultNotInitialized)
+
+from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, InvalidAuthentification,
+                                 InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
+                                 VaultIsAlreadySyncing, VaultNotFound, VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
                                UserVaultKeyManager, VaultUserManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
@@ -738,7 +738,8 @@ class SyncryptApp(object):
         await self.revisions.apply(revision, vault)
 
     async def remove_file(self, vault: Vault, path: str):
-        bundle = await self.bundles.get_bundle(vault, path)
+        abs_path = os.path.normpath(os.path.abspath(path))
+        bundle = await self.bundles.get_bundle(vault, abs_path)
         await self.remove_bundle(bundle)
 
     #async def remove_file(self, path: str):
