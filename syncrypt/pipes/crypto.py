@@ -66,6 +66,7 @@ class PadAES(AESPipe):
         else:
             return this_block
 
+
 class UnpadAES(AESPipe):
     '''This pipe will remove PKCS5Padding from the stream'''
 
@@ -90,6 +91,7 @@ class UnpadAES(AESPipe):
         else:
             return this_block
 
+
 class EncryptAES(AESPipe):
     def __init__(self, key):
         super(EncryptAES, self).__init__()
@@ -111,6 +113,7 @@ class EncryptAES(AESPipe):
         logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
         return enc_data
 
+
 class DecryptAES(AESPipe):
     def __init__(self, key):
         self.aes = None
@@ -120,6 +123,8 @@ class DecryptAES(AESPipe):
     async def read(self, count=-1):
         if self.aes is None:
             iv = await self.input.read(self.block_size)
+            if len(iv) != self.block_size:
+                raise Exception('Premature end of stream, could not read IV')
             logger.debug('Initializing symmetric decryption: block=%d iv=%d',
                     self.block_size, len(iv))
             self.aes = AES.new(self.key, AES.MODE_CBC, iv)
@@ -127,6 +132,7 @@ class DecryptAES(AESPipe):
         logger.debug('Decrypting %d bytes', len(data))
         original_content = self.aes.decrypt(data)
         return original_content
+
 
 class EncryptRSA(Buffered):
     '''
