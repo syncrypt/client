@@ -182,7 +182,7 @@ class VaultResource(Resource):
         for rev in self.app.revisions.list_for_vault(vault):
             log_items.append({
                 'operation': rev.operation,
-                'user_email': rev.creator_id or 'unknown',
+                'user_email': rev.creator_id,
                 'user_fingerprint': rev.user_fingerprint,
                 'verified': True,
                 'revision_id': rev.revision_id,
