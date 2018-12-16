@@ -184,6 +184,7 @@ class VaultResource(Resource):
                 'operation': rev.operation,
                 'user_email': rev.creator_id or 'unknown',
                 'user_fingerprint': rev.user_fingerprint,
+                'verified': True,
                 'revision_id': rev.revision_id,
                 'created_at': rev.created_at and rev.created_at.replace(tzinfo=timezone.utc)\
                                             .astimezone(local_tz)\
