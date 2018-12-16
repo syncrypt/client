@@ -32,8 +32,12 @@ class BundleManager:
         relpath = os.path.relpath(path, vault.folder)
         with store.session() as session:
             try:
-                return session.query(Bundle).filter(Bundle.vault==vault,
-                        Bundle.relpath==relpath).one()
+                bundle = session.query(Bundle).filter(Bundle.vault==vault,
+                        Bundle.relpath==relpath.encode()).one()
+                # vault is loaded lazily. We already have the vault
+                # object here, so just set it.
+                bundle.vault = vault
+                return bundle
             except NoResultFound:
                 raise FileNotFoundError(
                     'No file with path "{0}" exists in {1}'.format(relpath, vault)
