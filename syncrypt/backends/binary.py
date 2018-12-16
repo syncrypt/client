@@ -695,6 +695,8 @@ class BinaryStorageConnection():
 
     async def download(self, bundle):
 
+        vault = self.vault
+
         self.logger.info('Downloading %s', bundle)
 
         # download key and file
@@ -737,7 +739,8 @@ class BinaryStorageConnection():
         else:
             stream_source = StreamReader(self.reader) >> Limit(file_size)
 
-        hash_ok = await bundle.write_encrypted_stream(
+        hash_ok = await vault.crypt_engine.write_encrypted_stream(
+                bundle,
                 stream_source,
                 assert_hash=content_hash
             )
