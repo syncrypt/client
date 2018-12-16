@@ -66,7 +66,7 @@ class BinaryStorageConnectionLoggerAdapter(logging.LoggerAdapter):
             return (msg, kwargs)
 
 
-class BinaryStorageConnection(object):
+class BinaryStorageConnection():
     '''
     A connection slot which is instantiated by BinaryStorageManager.
 
@@ -853,7 +853,7 @@ class BinaryStorageConnection(object):
         return self.server_version
 
 
-class BinaryStorageManager(object):
+class BinaryStorageManager():
     '''
     The BinaryStorageManager will manage n connection slots of type BinaryStorageConnection.
 
