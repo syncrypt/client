@@ -71,7 +71,7 @@ class LocalStorageBackend(base):  # type: ignore
             raise ValueError("Revision is not signed.")
 
         revision.revision_id = str(uuid4())
-        revision.created_at = datetime.now()
+        revision.created_at = datetime.utcnow()
 
         with open(os.path.join(self.path, "txchain"), "ab") as txchain:
             logger.debug(

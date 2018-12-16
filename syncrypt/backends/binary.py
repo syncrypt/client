@@ -4,9 +4,11 @@ import math
 import ssl
 import struct
 import sys
+from datetime import datetime
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
+import iso8601
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
                       stop_after_attempt, wait_exponential)
@@ -281,6 +283,7 @@ class BinaryStorageConnection():
 
         revision.vault_id = vault_id
         revision.revision_id = revision_id
+        revision.created_at = datetime.utcnow()
 
         self.logger.info('Successfully created vault %s', vault_id)
 
@@ -552,12 +555,15 @@ class BinaryStorageConnection():
             metadata = server_info['metadata']
             user_public_key = server_info['user_public_key']
             revision_id = server_info['id'].decode()
+            created_at = \
+                    iso8601.parse_date(server_info['created_at'].decode())
 
             return Revision(
                 operation=operation,
                 revision_id=revision_id,
                 parent_id=parent_id,
                 vault_id=vault.config.id,
+                created_at=created_at,
                 revision_metadata=metadata,
                 file_size_crypt=file_size_crypt,
                 file_hash=file_hash,
