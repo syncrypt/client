@@ -6,6 +6,9 @@ matrix:
     - os: linux
       python: 3.6
       env: DEPLOY_ARTIFACT=true
+    - os: linux
+      dist: xenial
+      python: 3.7
     - os: osx
       sudo: required
       language: generic
@@ -20,6 +23,13 @@ matrix:
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
       env: PYTHON_VERSION=3.6.5 DEPLOY_ARTIFACT=true
+    - os: osx
+      sudo: required
+      language: generic
+      # This will build OS X 10.11 instead of default 10.12.
+      # We need this to get builds running on older OS X versions.
+      osx_image: xcode7.3
+      env: PYTHON_VERSION=3.7.1
 addons:
   apt:
     packages:
@@ -46,8 +56,8 @@ install: |
       pip install 'setuptools>=38.5'
       pip install -e '.[dist]'
       pip install -e '.[test]'
-      if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]]; then
-          pip install --upgrade 'pyinstaller==3.3'
+      if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]] || [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then
+          pip install --upgrade 'pyinstaller==3.4'
       fi
   fi
 
