@@ -2,9 +2,10 @@ import asyncio
 import logging
 import os
 import pickle
-from datetime import datetime
 import shutil
-from typing import List, Any, cast  # pylint: disable=unused-import
+import sys
+from datetime import datetime
+from typing import Any, List, cast  # pylint: disable=unused-import
 from uuid import uuid4
 
 from syncrypt.exceptions import VaultNotInitialized
@@ -33,7 +34,10 @@ def require_revision(f):
     return inner
 
 
-class LocalStorageBackend(StorageBackend):
+PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
+base = object if PYTHON_3_5 else StorageBackend
+
+class LocalStorageBackend(base):  # type: ignore
     global_auth = None # type: str
     # ^ deprecated
 

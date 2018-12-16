@@ -4,7 +4,7 @@ import math
 import ssl
 import struct
 import sys
-from typing import List, Any, Optional, cast  # pylint: disable=unused-import
+from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 from erlastic import Atom
@@ -1002,8 +1002,10 @@ def get_manager_instance() -> BinaryStorageManager:
         get_manager_instance._manager = BinaryStorageManager() # type: ignore
     return get_manager_instance._manager # type: ignore
 
+PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
+base = object if PYTHON_3_5 else StorageBackend
 
-class BinaryStorageBackend(StorageBackend):
+class BinaryStorageBackend(base):  # type: ignore
     '''
     Implements the actual backend for the vault. Each Vault will have its own BinaryStorageBackend
     object associated with it, but all will use the same manager.
