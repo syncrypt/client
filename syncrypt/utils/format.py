@@ -53,5 +53,6 @@ def datetime_format_iso8601(dt):
         return local_dt.isoformat(timespec='milliseconds')
     except TypeError:
         z = dt.strftime('%z')
-        z = z[:3] + ':' + z[3:]
+        if z:
+            z = z[:3] + ':' + z[3:]
         return dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + z

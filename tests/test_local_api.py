@@ -198,6 +198,7 @@ class APITests(VaultLocalTestCase):
             c = await r.json()
             self.assertEqual(len(c['items']), 3)
             self.assertIsNotNone(c['items'][0]['created_at'])
+            self.assertFalse(c['items'][0]['created_at'].endswith(':'))
             self.assertIsNotNone(c['items'][0]['revision_id'])
             self.assertIsNotNone(c['items'][0]['operation'])
 
@@ -207,6 +208,7 @@ class APITests(VaultLocalTestCase):
             c = await r.json()
             self.assertEqual(len(c['items']), 3)
             self.assertIsNotNone(c['items'][0]['created_at'])
+            self.assertFalse(c['items'][0]['created_at'].endswith(':'))
             self.assertIsNotNone(c['items'][0]['revision_id'])
             self.assertIsNotNone(c['items'][0]['operation'])
 
