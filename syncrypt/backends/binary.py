@@ -645,9 +645,15 @@ class BinaryStorageConnection():
         revision.sign(identity=identity)
 
         # upload metadata
-        await self.write_term('add_user_vault_key', user_id, revision.user_public_key,
-                              revision.user_fingerprint, revision.parent_id, revision.signature,
-                              vault_key_package)
+        await self.write_term('add_user_vault_key',
+                user_id,
+                revision.user_public_key,
+                user_identity.get_fingerprint(),
+                revision.user_fingerprint,
+                revision.parent_id,
+                revision.signature,
+                vault_key_package
+        )
 
         # assert :ok
         response = await self.read_response()
@@ -674,8 +680,14 @@ class BinaryStorageConnection():
         revision.sign(identity=identity)
 
         # upload metadata
-        await self.write_term('remove_user_vault_key', user_id, revision.user_public_key,
-                              revision.user_fingerprint, revision.parent_id, revision.signature)
+        await self.write_term('remove_user_vault_key',
+                user_id,
+                revision.user_public_key,
+                user_identity.get_fingerprint(),
+                revision.user_fingerprint,
+                revision.parent_id,
+                revision.signature
+        )
 
         # assert :ok
         response = await self.read_response()
