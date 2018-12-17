@@ -525,6 +525,12 @@ class BinaryStorageConnection():
         elif operation == 'remove_user':
             operation = RevisionOp.RemoveUser
             user_id = server_info['metadata'].decode()
+        elif operation == 'add_user_vault_key':
+            operation = RevisionOp.AddUserKey
+            user_id = server_info['metadata'].decode()
+        elif operation == 'remove_user_vault_key':
+            operation = RevisionOp.RemoveUserKey
+            user_id = server_info['metadata'].decode()
         else:
             raise ServerError("Unknown operation: " + operation)
 
