@@ -52,6 +52,7 @@ install: |
       pip install 'setuptools>=38.5'
       pip install -e '.[dist]'
       pip install -e '.[test]'
+      pip install --upgrade 'git+git://github.com/gorakhargosh/watchdog@17b3c30c4a2c420b450a6612ee995c4e1bb441e8'
   else
       pip install 'setuptools>=38.5'
       pip install -e '.[dist]'

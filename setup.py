@@ -161,7 +161,7 @@ setup(
         'tenacity',
         'tzlocal',
         'u-msgpack-python==2.5.0',
-        'watchdog'
+        'watchdog>=0.9.0'
     ],
 
     # List additional groups of dependencies here (e.g. development
