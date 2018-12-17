@@ -1,4 +1,6 @@
 from math import log
+from datetime import timezone
+from tzlocal import get_localzone
 
 
 SIZE_UNITS = [('bytes', 0), ('kB', 0), ('MB', 2), ('GB', 2), ('TB', 2), ('PB', 2)]
@@ -40,3 +42,16 @@ def size_with_unit(size):
         return (float(size_formatted), unit)
     else:
         return (int(size_formatted), unit)
+
+
+local_tz = get_localzone()
+
+
+def datetime_format_iso8601(dt):
+    local_dt = dt.replace(tzinfo=timezone.utc).astimezone(local_tz)
+    try:
+        return local_dt.isoformat(timespec='milliseconds')
+    except TypeError:
+        z = dt.strftime('%z')
+        z = z[:3] + ':' + z[3:]
+        return dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + z

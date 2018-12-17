@@ -4,12 +4,11 @@ import itertools
 import json
 import logging
 import os.path
-from datetime import timezone
 
 from aiohttp import web
-from tzlocal import get_localzone
 
 from syncrypt.models import Identity, UserVaultKey
+from syncrypt.utils.format import datetime_format_iso8601
 
 from .auth import require_auth_token
 from .responses import JSONResponse
@@ -178,7 +177,6 @@ class VaultResource(Resource):
         vault = self.find_vault_by_id(vault_id)
 
         log_items = []
-        local_tz = get_localzone()
         for rev in self.app.revisions.list_for_vault(vault):
             log_items.append({
                 'operation': rev.operation,
@@ -186,9 +184,7 @@ class VaultResource(Resource):
                 'user_fingerprint': rev.user_fingerprint,
                 'verified': True,
                 'revision_id': rev.revision_id,
-                'created_at': rev.created_at and rev.created_at.replace(tzinfo=timezone.utc)\
-                                            .astimezone(local_tz)\
-                                            .strftime('%x %X'),
+                'created_at': datetime_format_iso8601(rev.created_at),
                 'path': rev.path
             })
 
