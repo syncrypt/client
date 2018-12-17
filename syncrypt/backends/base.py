@@ -67,5 +67,5 @@ class StorageBackend(Protocol):
     async def remove_vault_user(self, user_id: str, identity: Identity):
         raise NotImplementedError
 
-    async def add_user_vault_key(self, identity: Identity, user_id: str, user_identity: Identity, content):
+    async def add_user_vault_key(self, identity: Identity, user_id: str, user_identity: Identity, vault_key_package: bytes):
         raise NotImplementedError

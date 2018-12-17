@@ -628,7 +628,7 @@ class BinaryStorageConnection():
                 for user in map(rewrite_atoms_dict, response[1])]
 
     async def add_user_vault_key(self, identity: Identity, user_id: str, user_identity: Identity,
-                                 content: bytes):
+                                 vault_key_package: bytes):
 
         vault = self.vault
 
@@ -647,7 +647,7 @@ class BinaryStorageConnection():
         # upload metadata
         await self.write_term('add_user_vault_key', user_id, revision.user_public_key,
                               revision.user_fingerprint, revision.parent_id, revision.signature,
-                              content)
+                              vault_key_package)
 
         # assert :ok
         response = await self.read_response()
@@ -1158,9 +1158,9 @@ class BinaryStorageBackend(base):  # type: ignore
             return await conn.upload_identity(identity, description)
 
     async def add_user_vault_key(self, identity: Identity, user_id: str,
-                                 user_identity: Identity, content: bytes) -> Revision:
+                                 user_identity: Identity, vault_key_package: bytes) -> Revision:
         async with (await self._acquire_connection()) as conn:
-            return await conn.add_user_vault_key(identity, user_id, user_identity, content)
+            return await conn.add_user_vault_key(identity, user_id, user_identity, vault_key_package)
 
     async def remove_user_vault_key(self, identity: Identity, user_id: str,
                                  user_identity: Identity) -> Revision:

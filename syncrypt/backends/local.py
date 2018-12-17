@@ -292,7 +292,7 @@ class LocalStorageBackend(base):  # type: ignore
     @require_vault
     @require_revision
     async def add_user_vault_key(self, identity: Identity, user_id: str,
-                                user_identity: Identity, content):
+                                 user_identity: Identity, vault_key_package: bytes):
 
         vault = cast(Vault, self.vault) # We can savely cast because of @require_vault
 
