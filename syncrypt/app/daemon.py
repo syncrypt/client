@@ -110,14 +110,11 @@ class SyncryptDaemonApp(SyncryptApp):
 
         if new_state in (VaultState.READY,):
             await self.watch_vault(vault)
+            await self.autopull_vault(vault)
         else:
             if old_state in (VaultState.READY,):
                 await self.unwatch_vault(vault)
-
-        #if new_state == VaultState.SYNCED:
-        #    await self.autopull_vault(vault)
-        #elif old_state == VaultState.SYNCED:
-        #    await self.unautopull_vault(vault)
+                await self.unautopull_vault(vault)
 
     async def watch_vault(self, vault):
         'Install a watchdog for the given vault'
