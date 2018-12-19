@@ -244,12 +244,17 @@ class SyncryptApp(object):
         Here we will check if we need to update the metadata on the server. If so, create a
         revision and apply it.
         """
-        if vault.require_metadata_update():
-            logger.debug("Vault Metadata changed, we will write a new revision")
-            revision = await vault.backend.set_vault_metadata(self.identity)
-            await self.revisions.apply(revision, vault)
-        else:
+        if not vault.require_metadata_update():
             logger.debug("Vault metadata unchanged, skipping update")
+            return
+
+        if vault.state == VaultState.UNINITIALIZED or vault.identity.public_key is None:
+            logger.debug("Skipping vault metadata update, because vault key is not ready yet.")
+            return
+
+        logger.debug("Vault Metadata changed, we will write a new revision")
+        revision = await vault.backend.set_vault_metadata(self.identity)
+        await self.revisions.apply(revision, vault)
 
     async def upload_identity(self):
         backend = await self.open_backend()
