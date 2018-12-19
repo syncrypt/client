@@ -8,8 +8,9 @@ from zipfile import ZipFile
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, InvalidAuthentification,
-                                 InvalidVaultPackage, SyncryptBaseException, VaultAlreadyExists,
-                                 VaultIsAlreadySyncing, VaultNotFound, VaultNotInitialized)
+                                 InvalidVaultPackage, SyncRequired, SyncryptBaseException,
+                                 VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
+                                 VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
                                UserVaultKeyManager, VaultUserManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
@@ -608,8 +609,15 @@ class SyncryptApp(object):
         if bundle.remote_hash_differs:
             await self.semaphores['upload'].acquire(bundle)
             try:
-                revision = await bundle.vault.backend.upload(bundle, self.identity)
-                await self.revisions.apply(revision, bundle.vault)
+                while True:
+                    try:
+                        revision = await bundle.vault.backend.upload(bundle, self.identity)
+                        await self.revisions.apply(revision, bundle.vault)
+                        break
+                    except SyncRequired:
+                        asyncio.sleep(1)
+                        await self.sync_vault(bundle.vault)
+
                 self.stats['uploads'] += 1
             finally:
                 await self.semaphores['upload'].release(bundle)

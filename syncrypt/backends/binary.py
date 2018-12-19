@@ -15,7 +15,7 @@ from tenacity import (retry, retry_if_exception_type, retry_unless_exception_typ
 from syncrypt import __project__, __version__
 from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
                                  UnexpectedResponseException, UnsuccessfulResponse,
-                                 VaultNotInitialized)
+                                 VaultNotInitialized, SyncRequired)
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter, URLReader,
                             URLWriter)
@@ -135,7 +135,10 @@ class BinaryStorageConnection():
 
         if assert_ok and decoded[0] != Atom('ok'):
             if decoded[0] == Atom('error'):
-                raise ServerError(decoded[1:])
+                if len(decoded) > 1 and decoded[1] == Atom('sync_required'):
+                    raise SyncRequired()
+                else:
+                    raise ServerError(decoded[1:])
             else:
                 raise UnsuccessfulResponse(decoded)
 

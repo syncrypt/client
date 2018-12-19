@@ -68,6 +68,10 @@ class ServerError(UnsuccessfulResponse):
     pass
 
 
+class SyncRequired(ServerError):
+    pass
+
+
 class ConnectionResetException(BinaryStorageException):
     pass
 
