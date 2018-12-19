@@ -641,7 +641,8 @@ class SyncryptApp(object):
     async def pull_vault_periodically(self, vault):
         while True:
             await asyncio.sleep(int(vault.config.get('vault.pull_interval')))
-            await self.pull_vault(vault)
+            if vault.state != VaultState.SYNCING:
+                asyncio.get_event_loop().create_task(self.pull_vault(vault))
 
     async def sync_vault(self, vault, full=False):
 
