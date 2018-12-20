@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import hashlib
 import logging
 import os
@@ -16,6 +17,19 @@ from syncrypt.exceptions import IdentityError, IdentityNotInitialized, IdentityS
 from syncrypt.pipes import Once
 
 logger = logging.getLogger(__name__)
+
+
+def rsa_generate(rsa_key_len, id_rsa_pub_path, id_rsa_path):
+    if not os.path.exists(os.path.dirname(id_rsa_path)):
+        os.makedirs(os.path.dirname(id_rsa_path))
+    logger.info("Generating a %d bit RSA key pair...", rsa_key_len)
+    keys = RSA.generate(rsa_key_len)
+    logger.debug("Finished generating RSA key pair, writing to disk...")
+    with open(id_rsa_pub_path, "wb") as id_rsa_pub:
+        id_rsa_pub.write(keys.publickey().exportKey())
+    with open(id_rsa_path, "wb") as id_rsa:
+        id_rsa.write(keys.exportKey())
+    del keys
 
 
 class IdentityState(Enum):
@@ -111,25 +125,19 @@ class Identity(object):
     async def generate_keys(self):
         if self.state != IdentityState.UNINITIALIZED:
             raise IdentityStateError()
+
         self.state = IdentityState.INITIALIZING
-
-        def _generate():
-            if not os.path.exists(os.path.dirname(self.id_rsa_path)):
-                os.makedirs(os.path.dirname(self.id_rsa_path))
-            logger.info("Generating a %d bit RSA key pair...", self.config.rsa_key_len)
-            keys = RSA.generate(self.config.rsa_key_len)
-            logger.debug("Finished generating RSA key pair.")
-            with open(self.id_rsa_pub_path, "wb") as id_rsa_pub:
-                id_rsa_pub.write(keys.publickey().exportKey())
-            with open(self.id_rsa_path, "wb") as id_rsa:
-                id_rsa.write(keys.exportKey())
-            self._keypair = (keys.publickey(), keys)
-            assert self._keypair[0] is not None
-
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _generate)
-
-        self.state = IdentityState.INITIALIZED
+        with concurrent.futures.ProcessPoolExecutor() as pool:
+            args = (
+                self.config.rsa_key_len,
+                self.id_rsa_pub_path,
+                self.id_rsa_path
+            )
+            await loop.run_in_executor(pool, rsa_generate, *args)
+        logger.debug("Finished key generation, reading key...")
+        self.state = IdentityState.UNINITIALIZED
+        self.read()
 
     def assert_initialized(self):
         if not self.is_initialized():
