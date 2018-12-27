@@ -253,6 +253,8 @@ class SyncryptApp(object):
             return
 
         logger.debug("Vault Metadata changed, we will write a new revision")
+        logger.debug("Metadata is: %s", vault.remote_metadata)
+        logger.debug("Metadata should be: %s", vault.serialized_metadata)
         revision = await vault.backend.set_vault_metadata(self.identity)
         await self.revisions.apply(revision, vault)
 
