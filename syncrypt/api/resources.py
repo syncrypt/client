@@ -7,7 +7,7 @@ import os.path
 
 from aiohttp import web
 
-from syncrypt.models import Identity, UserVaultKey
+from syncrypt.models import Identity, UserVaultKey, Vault
 from syncrypt.utils.format import datetime_format_iso8601
 
 from .auth import require_auth_token
@@ -235,7 +235,7 @@ class VaultResource(Resource):
             self.app.save_vault_dir_in_config(vault)
             asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
-            vault = self.app.add_vault_by_path(request_dict['folder'])
+            vault = await self.app.add_vault(Vault(request_dict['folder']))
             self.app.save_vault_dir_in_config(vault)
             asyncio.get_event_loop().create_task(init_and_push(vault))
         return vault

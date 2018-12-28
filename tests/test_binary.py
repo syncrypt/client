@@ -75,7 +75,7 @@ class BinaryServerTests(VaultTestCase):
             self.assertEqual(bundle.remote_hash_differs, False)
 
     async def test_app_push(self):
-        self.app.add_vault(self.vault)
+        await self.app.add_vault(self.vault)
         await self.app.push()
 
     async def test_app_push1(self):
@@ -155,7 +155,7 @@ class BinaryServerTests(VaultTestCase):
             shutil.rmtree(other_vault_path)
 
         app = self.app
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
 
         await app.open_or_init(self.vault)
         await app.push() # init all vaults
@@ -168,7 +168,7 @@ class BinaryServerTests(VaultTestCase):
             self.other_vault.config.unset('vault.revision')
 
         await app.open_or_init(self.other_vault)
-        app.add_vault(self.other_vault)
+        await app.add_vault(self.other_vault)
 
         await app.pull()
 
@@ -180,7 +180,7 @@ class BinaryServerTests(VaultTestCase):
 
     async def test_revision_increase_after_push(self):
         app = SyncryptApp(self.app_config)
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
         await app.open_or_init(self.vault)
         prev_rev = self.vault.revision
         await app.push()
@@ -193,7 +193,7 @@ class BinaryServerTests(VaultTestCase):
         vault = self.vault
 
         app = SyncryptApp(self.app_config)
-        app.add_vault(vault)
+        await app.add_vault(vault)
         await app.open_or_init(self.vault)
         await app.pull_vault(vault)
         await app.get_remote_size_for_vault(vault)

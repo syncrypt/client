@@ -64,7 +64,7 @@ class APITests(VaultTestCase):
     async def test_api_bundle(self):
         'try to get a list of files via API'
         app = self.app
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
         client = APIClient(self.app_config)
 
         await app.init_vault(self.vault)
@@ -258,7 +258,7 @@ class APITests(VaultTestCase):
         app = self.app
         client = APIClient(self.app_config)
 
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
 
         await app.init_vault(self.vault)
         await app.start()
@@ -306,7 +306,7 @@ class APITests(VaultTestCase):
         app = self.app
         client = APIClient(self.app_config)
 
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
 
         await app.init_vault(self.vault)
         await app.start()

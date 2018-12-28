@@ -120,11 +120,7 @@ class SyncryptApp(object):
         backend = self.config.backend_cls(**self.config.backend_kwargs)
         await backend.signup(username, password, firstname, surname)
 
-    def add_vault_by_path(self, path):
-        v = Vault(path)
-        return self.add_vault(v)
-
-    def add_vault(self, vault):
+    async def add_vault(self, vault):
         for v in self.vaults:
             if os.path.abspath(v.folder) == os.path.abspath(vault.folder):
                 raise VaultIsAlreadySyncing(v.folder)
@@ -306,7 +302,7 @@ class SyncryptApp(object):
 
         logger.info("Cloned %s to %s" % (vault.folder, os.path.abspath(clone_target)))
 
-        self.add_vault(Vault(clone_target))
+        await self.add_vault(Vault(clone_target))
 
         await self.pull()
 
@@ -437,7 +433,7 @@ class SyncryptApp(object):
 
             vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
 
-        self.add_vault(vault)
+        await self.add_vault(vault)
 
         await self.pull_vault(vault, full=True)
 

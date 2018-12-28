@@ -62,7 +62,7 @@ class HypoBinaryTestCase(asynctest.TestCase):
             if os.path.exists(other_vault_path):
                 shutil.rmtree(other_vault_path)
 
-            app.add_vault(self.vault)
+            await app.add_vault(self.vault)
 
             await app.open_or_init(self.vault)
             await app.push() # init all vaults
@@ -75,7 +75,7 @@ class HypoBinaryTestCase(asynctest.TestCase):
                 self.other_vault.config.unset('vault.revision')
                 self.other_vault.config.unset('remote.auth')
 
-            app.add_vault(self.other_vault)
+            await app.add_vault(self.other_vault)
 
             await app.open_or_init(self.other_vault)
             await app.pull()

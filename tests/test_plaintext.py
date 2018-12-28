@@ -58,7 +58,7 @@ class PlaintextTestCase(VaultLocalTestCase):
 
     async def test_revision_increase_after_push(self):
         app = SyncryptApp(self.app_config)
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
         await app.initialize()
         await app.open_or_init(self.vault)
         prev_rev = self.vault.revision
@@ -77,7 +77,7 @@ class PlaintextTestCase(VaultLocalTestCase):
         app = self.app
         await self.app.initialize()
 
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
 
         await app.open_or_init(self.vault)
         await app.push()  # init all vaults
@@ -92,7 +92,7 @@ class PlaintextTestCase(VaultLocalTestCase):
             self.other_vault.config.unset("vault.revision")
 
         await app.open_or_init(self.other_vault)
-        app.add_vault(self.other_vault)
+        await app.add_vault(self.other_vault)
 
         await app.pull_vault(self.other_vault)
 
@@ -122,7 +122,7 @@ class PlaintextTestCase(VaultLocalTestCase):
         app = self.app
         await self.app.initialize()
 
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
 
         await app.open_or_init(self.vault)
 
@@ -136,7 +136,7 @@ class PlaintextTestCase(VaultLocalTestCase):
             self.other_vault.config.unset("vault.revision")
 
         await app.open_or_init(self.other_vault)
-        app.add_vault(self.other_vault)
+        await app.add_vault(self.other_vault)
 
         await app.pull_vault(self.other_vault)
         self.assertGreater(self.other_vault.revision_count, 0)
@@ -173,7 +173,7 @@ class PlaintextTestCase(VaultLocalTestCase):
         app = self.app
         await self.app.initialize()
 
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
 
         await app.open_or_init(self.vault)
         await app.push()  # init all vaults
@@ -194,7 +194,7 @@ class PlaintextTestCase(VaultLocalTestCase):
             self.other_vault.config.unset("vault.revision")
 
         await app.open_or_init(self.other_vault)
-        app.add_vault(self.other_vault)
+        await app.add_vault(self.other_vault)
 
         await app.pull_vault(self.other_vault)
 
@@ -217,7 +217,7 @@ class PlaintextTestCase(VaultLocalTestCase):
     async def test_local_full_pull(self):
         app = self.app
         await self.app.initialize()
-        app.add_vault(self.vault)
+        await app.add_vault(self.vault)
         await app.open_or_init(self.vault)
         await app.push()
         await app.pull(full=True)
