@@ -220,6 +220,7 @@ class VaultResource(Resource):
 
         async def init_and_push(vault):
             await self.app.open_or_init(vault)
+            await self.app.pull_vault(vault)
             await self.app.push_vault(vault)
 
         content = await request.content.read()

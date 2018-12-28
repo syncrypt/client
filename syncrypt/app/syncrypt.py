@@ -12,7 +12,7 @@ from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, Inva
                                  VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
-                               UserVaultKeyManager, VaultUserManager)
+                               UserVaultKeyManager, VaultUserManager, VaultManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             StdoutWriter)
@@ -78,6 +78,7 @@ class SyncryptApp(object):
         store.init(config)
 
         self.flying_vaults = FlyingVaultManager(self)
+        self.db_vaults = VaultManager(self) # might be renamed to/merged with self.vaults
         self.revisions = RevisionManager(self)
         self.bundles = BundleManager(self)
         self.user_vault_keys = UserVaultKeyManager(self)
@@ -124,6 +125,8 @@ class SyncryptApp(object):
         for v in self.vaults:
             if os.path.abspath(v.folder) == os.path.abspath(vault.folder):
                 raise VaultIsAlreadySyncing(v.folder)
+        logger.info("Adding vault %s", vault)
+        await self.reset_vault_database(vault, remove_vault=True)
         self.vaults.append(vault)
         return vault
 
@@ -146,6 +149,7 @@ class SyncryptApp(object):
     async def remove_vault(self, vault):
         with self.config.update_context():
             self.config.remove_vault_dir(os.path.abspath(vault.folder))
+        await self.reset_vault_database(vault, remove_vault=True)
         self.vaults.remove(vault)
 
     async def delete_vault(self, vault):
@@ -655,15 +659,21 @@ class SyncryptApp(object):
             if vault.state != VaultState.SYNCING:
                 asyncio.get_event_loop().create_task(self.pull_vault(vault))
 
+    async def reset_vault_database(self, vault, remove_vault=False):
+        await self.revisions.delete_for_vault(vault)
+        await self.user_vault_keys.delete_for_vault(vault)
+        await self.vault_users.delete_for_vault(vault)
+        await self.bundles.delete_for_vault(vault)
+        if remove_vault:
+            await self.db_vaults.delete(vault.id)
+        else:
+            vault.reset_revision()
+            assert vault.revision is None
+
     async def sync_vault(self, vault, full=False):
 
         if full:
-            await self.revisions.delete_for_vault(vault)
-            await self.user_vault_keys.delete_for_vault(vault)
-            await self.vault_users.delete_for_vault(vault)
-            await self.bundles.delete_for_vault(vault)
-            vault.reset_revision()
-            assert vault.revision is None
+            await self.reset_vault_database(vault)
 
         await self.open_or_init(vault)
         queue = await vault.backend.changes(vault.revision, None)

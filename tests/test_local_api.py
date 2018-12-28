@@ -377,6 +377,9 @@ class APITests(VaultLocalTestCase):
             self.assertEqual(r.status, 200)
             self.assertEqual(len(app.vaults), 0) # no vault
 
+            shutil.rmtree(new_vault_folder)
+            os.makedirs(new_vault_folder)
+
             # lets re-add the same vault in this directory
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
