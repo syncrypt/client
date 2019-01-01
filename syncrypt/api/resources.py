@@ -203,7 +203,7 @@ class VaultResource(Resource):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
 
-        limit = int(request.GET.get("limit", 100))
+        # limit = int(request.GET.get("limit", 100))
         ws = web.WebSocketResponse()
         logger.debug("WebSocket connection opened for %s", request.path)
 
@@ -235,7 +235,9 @@ class VaultResource(Resource):
         @smokesignal.on("post_apply_revision")
         def handler(*args, **kwargs):
             revision = kwargs['revision']
-            queue.put_nowait(revision)
+            revision_vault  = kwargs['vault']
+            if revision_vault.id == vault.id:
+                queue.put_nowait(revision)
 
         writer_future = asyncio.ensure_future(writer())
         await reader()
