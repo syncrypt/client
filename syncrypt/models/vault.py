@@ -149,7 +149,7 @@ class Vault(MetadataHolder, Base):
         except AttributeError:
             CryptEngineCls = self.config.crypt_engine_cls
             kwargs = self.config.crypt_engine_kwargs
-            self._crypt_engine = CryptEngineCls(self, **kwargs) # type: CryptEngine
+            self._crypt_engine = CryptEngineCls(**kwargs) # type: CryptEngine
             return self._crypt_engine
 
     # Deprecated
