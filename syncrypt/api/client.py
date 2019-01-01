@@ -41,3 +41,9 @@ class APIClient:
                 ctx.raise_for_status()
             return ctx
         return api_call
+
+    def ws_connect(self, request_uri, **kwargs):
+        # Build URL
+        url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
+        kwargs['headers'] = dict(kwargs.get('headers', {}), **{AUTH_TOKEN_HEADER: self.auth_token})
+        return self.session.ws_connect(url, **kwargs)

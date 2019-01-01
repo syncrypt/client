@@ -1,6 +1,7 @@
 import logging
 from typing import Sequence
 
+import smokesignal
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.exceptions import InvalidRevision
@@ -41,6 +42,8 @@ class RevisionManager:
         if vault.revision != revision.parent_id:
             raise InvalidRevision("Expected parent to be {0}, but is {1}".format(revision.parent_id,
                 vault.revision))
+
+        smokesignal.emit('pre_apply_revision', vault=vault, revision=revision)
 
         with store.session() as session:
 
@@ -116,6 +119,8 @@ class RevisionManager:
             session.add(vault)
             vault.update_revision(revision)
             session.commit()
+
+        smokesignal.emit('post_apply_revision', vault=vault, revision=revision)
 
     async def create_bundle_from_revision(self, revision, vault):
         bundle = Bundle(vault=vault, store_hash=revision.file_hash)

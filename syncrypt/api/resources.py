@@ -5,15 +5,29 @@ import json
 import logging
 import os.path
 
+import smokesignal
 from aiohttp import web
 
-from syncrypt.models import Identity, UserVaultKey, Vault
+from syncrypt.models import Identity, Revision, UserVaultKey, Vault
 from syncrypt.utils.format import datetime_format_iso8601
 
 from .auth import require_auth_token
 from .responses import JSONResponse
 
 logger = logging.getLogger(__name__)
+
+
+def rev_to_json(rev: Revision):
+    # Maybe Revision should get own resource?
+    return {
+            'operation': rev.operation,
+            'user_email': rev.creator_id,
+            'user_fingerprint': rev.user_fingerprint,
+            'verified': True,
+            'revision_id': rev.revision_id,
+            'created_at': datetime_format_iso8601(rev.created_at),
+            'path': rev.path
+            }
 
 
 class Resource(object):
@@ -104,6 +118,9 @@ class VaultResource(Resource):
         router.add_route('GET',
                 '/{version}/{name}/{{id}}/history/'.format(**opts),
                 self.dispatch_history)
+        router.add_route('GET',
+                '/{version}/{name}/{{id}}/historystream/'.format(**opts),
+                self.dispatch_history_stream)
         router.add_route('POST',
                 '/{version}/{name}/{{id}}/export/'.format(**opts),
                 self.dispatch_export)
@@ -178,17 +195,54 @@ class VaultResource(Resource):
 
         log_items = []
         for rev in self.app.revisions.list_for_vault(vault):
-            log_items.append({
-                'operation': rev.operation,
-                'user_email': rev.creator_id,
-                'user_fingerprint': rev.user_fingerprint,
-                'verified': True,
-                'revision_id': rev.revision_id,
-                'created_at': datetime_format_iso8601(rev.created_at),
-                'path': rev.path
-            })
+            log_items.append(rev_to_json(rev))
 
         return JSONResponse({'items': log_items})
+
+    async def dispatch_history_stream(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+
+        limit = int(request.GET.get("limit", 100))
+        ws = web.WebSocketResponse()
+        logger.debug("WebSocket connection opened for %s", request.path)
+
+        await ws.prepare(request)
+        MAX_ITEMS_BEFORE_DRAIN = 64
+        MAX_ITEMS_LOGGING_QUEUE = 4096
+
+        queue = asyncio.Queue(maxsize=MAX_ITEMS_LOGGING_QUEUE)  # type: asyncio.Queue
+
+        async def writer():
+            while not ws.closed:
+                item = await queue.get()
+                try:
+                    # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
+                    # queue before draining the connection
+                    for _ in range(MAX_ITEMS_BEFORE_DRAIN):
+                        ws.send_bytes(
+                            JSONResponse.encode_body(rev_to_json(item))
+                        )
+                        item = queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                await ws.drain()
+
+        async def reader():
+            while not ws.closed:
+                await ws.receive()
+
+        @smokesignal.on("post_apply_revision")
+        def handler(*args, **kwargs):
+            revision = kwargs['revision']
+            queue.put_nowait(revision)
+
+        writer_future = asyncio.ensure_future(writer())
+        await reader()
+        writer_future.cancel()
+        smokesignal.disconnect(handler)
+        logger.debug("WebSocket connection closed for %s", request.path)
+        return ws
 
     async def dispatch_export(self, request):
         vault_id = request.match_info['id']

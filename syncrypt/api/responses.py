@@ -20,9 +20,13 @@ class JSONResponse(web.Response):
         "Access-Control-Allow-Headers": "X-Authtoken, Content-Type, Origin, Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers",
     }
 
+    @staticmethod
+    def encode_body(obj):
+        return json.dumps(obj, cls=EnumEncoder).encode("utf-8")
+
     def __init__(self, obj, **kwargs):
         super(JSONResponse, self).__init__(
-            body=json.dumps(obj, cls=EnumEncoder).encode("utf-8"),
+            body=JSONResponse.encode_body(obj),
             content_type="application/json",
             headers=self.cors_headers,
             **kwargs
