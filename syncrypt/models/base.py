@@ -1,4 +1,3 @@
-
 import umsgpack
 from sqlalchemy.ext.declarative import declarative_base
 

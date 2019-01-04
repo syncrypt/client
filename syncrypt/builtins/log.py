@@ -1,23 +1,34 @@
 "This builtin module implements log streaming and log persistence"
-
 import asyncio
 import json
 import logging
 import os.path
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from logging import StreamHandler
 from logging.handlers import BufferingHandler
+from typing import Any, Dict
 
+import dateutil.parser
 import smokesignal
 from aiohttp import web
 
 from syncrypt.api.responses import JSONResponse
+from syncrypt.models import LogItem, store
 from syncrypt.utils.format import datetime_format_iso8601
 
 logger = logging.getLogger(__name__)
 MAX_ITEMS_LOGGING_QUEUE = 4096
 MAX_ITEMS_BEFORE_DRAIN = 64
+
+
+def logitem_to_json(logitem: LogItem) -> Dict[str, Any]:
+    return {
+            "level": logitem.level,
+            "created_at": datetime_format_iso8601(logitem.created_at),
+            "message": logitem.text,
+            "vault_id": logitem.local_vault_id
+            }
 
 
 class QueueHandler(StreamHandler):
@@ -50,7 +61,7 @@ class JSONFormatter(logging.Formatter):
         super(JSONFormatter, self).__init__()
 
     def format(self, record):
-        created_at = datetime.fromtimestamp(record.created)
+        created_at = datetime.fromtimestamp(record.created).astimezone(timezone.utc)
         return json.dumps(
             {
                 "level": getattr(record, "levelname", None),
@@ -63,121 +74,90 @@ class JSONFormatter(logging.Formatter):
 
 class SqliteHandler(BufferingHandler):
 
-    def __init__(self, conn, *args, **kwargs):
-        self.conn = conn
+    def __init__(self, session, *args, **kwargs):
+        self.session = session
         super(SqliteHandler, self).__init__(*args, **kwargs)
 
     def format(self, record):
-        return (
-            datetime.fromtimestamp(record.created),
-            record.getMessage(),
-            record.levelname,
-            record.vault_id if hasattr(record, "vault_id") else None,
+        return LogItem(
+            created_at=datetime.fromtimestamp(record.created).astimezone(timezone.utc),
+            text=record.getMessage(),
+            level=record.levelname,
+            local_vault_id=getattr(record, "vault_id", None)
         )
 
     def flush(self):
-        c = self.conn.cursor()
-        c.executemany(
-            "INSERT INTO log VALUES (?, ?, ?, ?)",
-            [self.format(record) for record in self.buffer],
-        )
-        self.conn.commit()
+        self.session.bulk_save_objects([
+            self.format(rec) for rec in self.buffer
+        ])
+        self.session.commit()
         super(SqliteHandler, self).flush()  # zap the buffer
 
     def close(self):
-        self.conn.commit()
+        self.session.close()
 
 
-# Change connection's row_factory to a log entry so we can
-# plug the fetch results directly into a JSONResponse
-# https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.row_factory
-def log_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        name = col[0]
-        if name in ("level", "message"):
-            d[name] = row[idx]
-        elif name == "vault":
-            d["vault_id"] = row[idx]
-        elif name == "date":
-            d["created_at"] = datetime_format_iso8601(
-                datetime.fromisoformat(row[idx]),
-                is_utc=False
-            )
-    return d
-
-
-def open_database(app):
-    filename = os.path.join(app.config.config_dir, "vault_log.db")
-    return sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
-
-
-def select_recent_log_items(app, vault_id=None, limit=100, conn=None):
+def recent_log_items(app, vault_id=None, limit=100, session=None):
     "return ``limit`` most recent log items"
-    if not conn:
-        conn = open_database(app)
-    conn.row_factory = log_factory
+    objects = session.query(LogItem)
     if vault_id:
-        cursor = conn.execute(
-            "SELECT * FROM log WHERE vault = ? ORDER BY date DESC LIMIT ?",
-            (vault_id, limit),
-        )
-    else:
-        cursor = conn.execute("SELECT * FROM log ORDER BY date DESC LIMIT ?", (limit,))
-    return cursor.fetchall()
+        objects = objects.filter(LogItem.local_vault_id == vault_id)
+    return objects.limit(limit)
 
 
 async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=None):
     "Stream Python logs via WebSockets"
     await ws.prepare(request)
-    for item in select_recent_log_items(app, vault_id, 100):
-        ws.send_str(json.dumps(item))
-    root_logger = logging.getLogger()
-    queue = asyncio.Queue(maxsize=MAX_ITEMS_LOGGING_QUEUE)  # type: asyncio.Queue
-    handler = QueueHandler(queue, JSONFormatter(app))
-    if vault_id:
-        handler.addFilter(VaultFilter(app.find_vault_by_id(vault_id)))
-    if filters:
-        for fltr in filters:
-            handler.addFilter(fltr)
+    with store.session() as session:
+        for logitem in recent_log_items(app, vault_id, 100, session):
+            ws.send_str(JSONResponse.encode_body(logitem_to_json(logitem)).decode('utf-8'))
+        root_logger = logging.getLogger()
+        queue = asyncio.Queue(maxsize=MAX_ITEMS_LOGGING_QUEUE)  # type: asyncio.Queue
+        handler = QueueHandler(queue, JSONFormatter(app))
+        if vault_id:
+            handler.addFilter(VaultFilter(app.find_vault_by_id(vault_id)))
+        if filters:
+            for fltr in filters:
+                handler.addFilter(fltr)
 
-    async def writer():
-        while not ws.closed:
-            item = await queue.get()
-            try:
-                # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
-                # queue before draining the connection
-                for _ in range(MAX_ITEMS_BEFORE_DRAIN):
-                    ws.send_str(str(item))
-                    item = queue.get_nowait()
-            except asyncio.QueueEmpty:
-                pass
-            await ws.drain()
+        async def writer():
+            while not ws.closed:
+                item = await queue.get()
+                try:
+                    # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
+                    # queue before draining the connection
+                    for _ in range(MAX_ITEMS_BEFORE_DRAIN):
+                        ws.send_str(str(item))
+                        item = queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                await ws.drain()
 
-    async def reader():
-        while not ws.closed:
-            await ws.receive()
+        async def reader():
+            while not ws.closed:
+                await ws.receive()
 
-    root_logger.addHandler(handler)
-    writer_future = asyncio.ensure_future(writer())
-    await reader()
-    root_logger.removeHandler(handler)
-    writer_future.cancel()
+        root_logger.addHandler(handler)
+        writer_future = asyncio.ensure_future(writer())
+        await reader()
+        root_logger.removeHandler(handler)
+        writer_future.cancel()
 
 
 def create_dispatch_log_list(app):
-    conn = open_database(app)
-
     async def dispatch_log_list(request):
         vault_id = request.match_info.get("vault_id", None)
         limit = int(request.GET.get("limit", 100))
-        return JSONResponse(select_recent_log_items(app, vault_id, limit, conn=conn))
+        with store.session() as session:
+            return JSONResponse(
+                [logitem_to_json(logitem) for logitem in
+                    recent_log_items(app, vault_id, limit, session)]
+            )
 
     return dispatch_log_list
 
 
 def create_dispatch_stream_log(app):
-
     async def dispatch_stream_log(request):
         vault_id = request.match_info.get("vault_id", None)
         limit = int(request.GET.get("limit", 100))
@@ -192,16 +172,9 @@ def create_dispatch_stream_log(app):
 
 @smokesignal.once("pre_setup")
 def pre_setup(app):
+    session = store._session()
     root_logger = logging.getLogger()
-    conn = open_database(app)
-    conn.execute(
-        """CREATE TABLE IF NOT EXISTS log
-                    (date datetime,
-                     message text,
-                     level text,
-                     vault text)"""
-    )
-    root_logger.addHandler(SqliteHandler(conn=conn, capacity=30))
+    root_logger.addHandler(SqliteHandler(session=session, capacity=30))
 
 
 @smokesignal.on("post_api_initialize")
