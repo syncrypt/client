@@ -84,8 +84,8 @@ class APIWebsocketTests(VaultLocalTestCase):
                 await r.release()
 
                 msg = await asyncio.wait_for(ws.receive(), timeout=2.0)
-                self.assertEqual(msg.type, aiohttp.WSMsgType.BINARY)
-                rev = json.loads(msg.data.decode('utf-8'))
+                self.assertEqual(msg.type, aiohttp.WSMsgType.TEXT)
+                rev = json.loads(msg.data)
                 self.assertEqual(rev['verified'], True)
                 self.assertEqual(rev['operation'], "OP_SET_METADATA")
 

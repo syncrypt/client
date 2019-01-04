@@ -200,17 +200,32 @@ class APITests(VaultLocalTestCase):
             self.assertIsNotNone(c['items'][0]['created_at'])
             self.assertFalse(c['items'][0]['created_at'].endswith(':'))
             self.assertIsNotNone(c['items'][0]['revision_id'])
-            self.assertIsNotNone(c['items'][0]['operation'])
+            self.assertEqual(c['items'][0]['operation'], "OP_CREATE_VAULT")
+            self.assertEqual(c['items'][1]['operation'], "OP_SET_METADATA")
 
-            await self.app.sync_vault(self.vault, full=True)
+            with open(os.path.join(new_vault_folder, "test.txt"), "w") as f:
+                f.write('hello')
+
+            await self.app.push()
 
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
-            self.assertEqual(len(c['items']), 3)
+            self.assertEqual(len(c['items']), 4)
+            self.assertEqual(c['items'][-1]['operation'], "OP_UPLOAD")
+            self.assertEqual(c['items'][-1]['path'], "test.txt")
+
+            await self.app.sync_vault(self.app.vaults[0], full=True)
+
+            r = await client.get(vault_uri + 'history/')
+            c = await r.json()
+            self.assertEqual(len(c['items']), 4)
             self.assertIsNotNone(c['items'][0]['created_at'])
             self.assertFalse(c['items'][0]['created_at'].endswith(':'))
             self.assertIsNotNone(c['items'][0]['revision_id'])
-            self.assertIsNotNone(c['items'][0]['operation'])
+            self.assertEqual(c['items'][0]['operation'], "OP_CREATE_VAULT")
+            self.assertEqual(c['items'][1]['operation'], "OP_SET_METADATA")
+            self.assertEqual(c['items'][-1]['operation'], "OP_UPLOAD")
+            self.assertEqual(c['items'][-1]['path'], "test.txt")
 
         finally:
             await client.close()

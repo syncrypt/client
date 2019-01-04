@@ -26,7 +26,7 @@ def rev_to_json(rev: Revision):
             'verified': True,
             'revision_id': rev.revision_id,
             'created_at': datetime_format_iso8601(rev.created_at),
-            'path': rev.path
+            'path': rev.path.decode() if rev.path else None
             }
 
 

@@ -86,12 +86,14 @@ class RevisionManager:
                 bundle = await self.create_bundle_from_revision(revision, vault)
                 session.add(bundle)
                 session.commit()
+                revision.path = bundle.relpath
             elif revision.operation == RevisionOp.SetMetadata:
                 await vault.write_encrypted_metadata(Once(revision.revision_metadata))
             elif revision.operation == RevisionOp.RemoveFile:
                 bundle = await self.app.bundles.get_bundle_by_hash(vault, revision.file_hash)
                 session.delete(bundle)
                 session.commit()
+                revision.path = bundle.relpath
             elif revision.operation == RevisionOp.AddUser:
                 self.app.vault_users.add(vault, revision.user_id)
             elif revision.operation == RevisionOp.RemoveUser:
