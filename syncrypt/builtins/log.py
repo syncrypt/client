@@ -13,6 +13,7 @@ import smokesignal
 from aiohttp import web
 
 from syncrypt.api.responses import JSONResponse
+from syncrypt.utils.format import datetime_format_iso8601
 
 logger = logging.getLogger(__name__)
 MAX_ITEMS_LOGGING_QUEUE = 4096
@@ -49,10 +50,11 @@ class JSONFormatter(logging.Formatter):
         super(JSONFormatter, self).__init__()
 
     def format(self, record):
+        created_at = datetime.fromtimestamp(record.created)
         return json.dumps(
             {
                 "level": getattr(record, "levelname", None),
-                "createdAt": getattr(record, "asctime", None),
+                "created_at": datetime_format_iso8601(created_at),
                 "message": super(JSONFormatter, self).format(record),
                 "vault_id": getattr(record, "vault_id", None),
             }
@@ -98,7 +100,9 @@ def log_factory(cursor, row):
         elif name == "vault":
             d["vault_id"] = row[idx]
         elif name == "date":
-            d["createdAt"] = row[idx]
+            d["created_at"] = datetime_format_iso8601(
+                datetime.fromisoformat(row[idx])
+            )
     return d
 
 
