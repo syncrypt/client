@@ -4,7 +4,6 @@ import logging
 from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 
 from .base import Base
-from .identity import Identity
 
 logger = logging.getLogger(__name__)
 
