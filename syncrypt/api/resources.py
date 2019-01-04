@@ -220,8 +220,8 @@ class VaultResource(Resource):
                     # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
                     # queue before draining the connection
                     for _ in range(MAX_ITEMS_BEFORE_DRAIN):
-                        ws.send_bytes(
-                            JSONResponse.encode_body(rev_to_json(item))
+                        ws.send_str(
+                            JSONResponse.encode_body(rev_to_json(item)).decode('utf-8')
                         )
                         item = queue.get_nowait()
                 except asyncio.QueueEmpty:
