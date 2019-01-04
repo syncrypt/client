@@ -54,7 +54,7 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(
             {
                 "level": getattr(record, "levelname", None),
-                "created_at": datetime_format_iso8601(created_at),
+                "created_at": datetime_format_iso8601(created_at, is_utc=False),
                 "message": super(JSONFormatter, self).format(record),
                 "vault_id": getattr(record, "vault_id", None),
             }
@@ -101,7 +101,8 @@ def log_factory(cursor, row):
             d["vault_id"] = row[idx]
         elif name == "date":
             d["created_at"] = datetime_format_iso8601(
-                datetime.fromisoformat(row[idx])
+                datetime.fromisoformat(row[idx]),
+                is_utc=False
             )
     return d
 

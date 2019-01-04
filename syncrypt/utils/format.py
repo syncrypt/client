@@ -47,8 +47,11 @@ def size_with_unit(size):
 local_tz = get_localzone()
 
 
-def datetime_format_iso8601(dt):
-    local_dt = dt.replace(tzinfo=timezone.utc).astimezone(local_tz)
+def datetime_format_iso8601(dt, is_utc=True):
+    if is_utc:
+        local_dt = dt.replace(tzinfo=timezone.utc).astimezone(local_tz)
+    else:
+        local_dt = dt
     try:
         return local_dt.isoformat(timespec='milliseconds')
     except TypeError:
