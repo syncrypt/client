@@ -2,14 +2,11 @@
 import asyncio
 import json
 import logging
-import os.path
-import sqlite3
 from datetime import datetime, timezone
 from logging import StreamHandler
 from logging.handlers import BufferingHandler
 from typing import Any, Dict
 
-import dateutil.parser
 import smokesignal
 from aiohttp import web
 

@@ -1,9 +1,7 @@
 import enum
 import logging
 
-from sqlalchemy import (Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, String,
-                        UniqueConstraint)
-from syncrypt.exceptions import InvalidRevision
+from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String
 
 from .base import Base
 from .identity import Identity
