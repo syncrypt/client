@@ -7,6 +7,7 @@ from syncrypt.models import Bundle, Vault, store
 
 logger = logging.getLogger(__name__)
 
+
 class BundleManager:
     model = Bundle
 

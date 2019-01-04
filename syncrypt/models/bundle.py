@@ -10,6 +10,7 @@ from sqlalchemy.orm import relationship
 
 from syncrypt.pipes import FileWriter, Once
 from syncrypt.utils.filesystem import splitpath
+from syncrypt.exceptions import InvalidBundleKey, InvalidBundleMetadata
 from .base import Base, MetadataHolder
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,13 @@ class Bundle(MetadataHolder, Base):
         try:
             metadata_contents = await metadata_file.read()
             metadata = umsgpack.loads(metadata_contents)
+
+            if not isinstance(metadata, dict):
+                raise InvalidBundleMetadata()
+
+            if not 'key' in metadata or not metadata['key']:
+                raise InvalidBundleKey()
+
             self.key = metadata['key']
             self.relpath = self.decode_path(metadata['filename'])
             assert len(self.key) == self.key_size
@@ -122,7 +130,7 @@ class Bundle(MetadataHolder, Base):
 
         try:
             await self.load_key()
-        except FileNotFoundError:
+        except (FileNotFoundError, InvalidBundleKey):
             await self.generate_key()
 
         assert self.path is not None

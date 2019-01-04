@@ -11,6 +11,14 @@ class FolderExistsAndIsNotEmpty(SyncryptBaseException):
         )
 
 
+class InvalidBundleMetadata(SyncryptBaseException):
+    pass
+
+
+class InvalidBundleKey(SyncryptBaseException):
+    pass
+
+
 class InvalidRevision(SyncryptBaseException):
     pass
 
