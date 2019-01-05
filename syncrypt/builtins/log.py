@@ -9,14 +9,17 @@ from typing import Any, Dict
 
 import smokesignal
 from aiohttp import web
-
 from syncrypt.api.responses import JSONResponse
 from syncrypt.models import LogItem, store
 from syncrypt.utils.format import datetime_format_iso8601
+from tzlocal import get_localzone
 
 logger = logging.getLogger(__name__)
 MAX_ITEMS_LOGGING_QUEUE = 4096
 MAX_ITEMS_BEFORE_DRAIN = 64
+
+
+local_tz = get_localzone()
 
 
 def logitem_to_json(logitem: LogItem) -> Dict[str, Any]:
@@ -58,11 +61,11 @@ class JSONFormatter(logging.Formatter):
         super(JSONFormatter, self).__init__()
 
     def format(self, record):
-        created_at = datetime.fromtimestamp(record.created).astimezone(timezone.utc)
+        created_at = datetime.fromtimestamp(record.created, tz=local_tz).astimezone(timezone.utc)
         return json.dumps(
             {
                 "level": getattr(record, "levelname", None),
-                "created_at": datetime_format_iso8601(created_at, is_utc=False),
+                "created_at": datetime_format_iso8601(created_at),
                 "message": super(JSONFormatter, self).format(record),
                 "vault_id": getattr(record, "vault_id", None),
             }
@@ -77,7 +80,7 @@ class SqliteHandler(BufferingHandler):
 
     def format(self, record):
         return LogItem(
-            created_at=datetime.fromtimestamp(record.created).astimezone(timezone.utc),
+            created_at=datetime.fromtimestamp(record.created, tz=local_tz).astimezone(timezone.utc),
             text=record.getMessage(),
             level=record.levelname,
             local_vault_id=getattr(record, "vault_id", None)
