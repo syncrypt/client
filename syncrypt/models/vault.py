@@ -5,13 +5,14 @@ import os
 import os.path
 import shutil
 import zipfile
+from collections import OrderedDict
 from enum import Enum
 from fnmatch import fnmatch
 from glob import glob
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Dict  # pylint: disable=unused-import
 
-from sqlalchemy import LargeBinary, Column, Integer, String, orm
+from sqlalchemy import Column, Integer, LargeBinary, String, orm
 
 from syncrypt.config import VaultConfig
 from syncrypt.exceptions import VaultFolderDoesNotExist
@@ -98,10 +99,10 @@ class Vault(MetadataHolder, Base):
             return self._config
 
     def __get_metadata(self):
-        return {
-            "name": self.config.vault.get("name", ""),
-            "icon": self.config.vault.get("icon", None),
-        }
+        return OrderedDict([
+            ("name", self.config.vault.get("name", "")),
+            ("icon", self.config.vault.get("icon", None))
+        ])
 
     def __set_metadata(self, metadata):
         if "name" in metadata:
