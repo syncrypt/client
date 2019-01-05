@@ -72,7 +72,7 @@ class FileWriter(Sink):
             if self.store_temporary:
                 fn = self.get_temporary_filename(fn)
             logger.debug('Writing to %s', fn)
-            self.handle = await trio.open_file(self.filename, 'wb')
+            self.handle = await trio.open_file(fn, 'wb')
         contents = await self.input.read(count)
         await self.handle.write(contents)
         return contents
@@ -99,4 +99,5 @@ class FileWriter(Sink):
         if self.input:
             await self.input.close()
         if self.handle:
+            await self.handle.flush()
             await self.handle.aclose()

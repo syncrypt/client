@@ -560,21 +560,15 @@ class SyncryptApp(object):
 
     async def push(self):
         "Push all registered vaults"
-
-        async with AsyncContext(concurrency=3) as ctx:
+        async with trio.open_nursery() as nursery:
             for vault in self.vaults:
 
                 if not self.identity.is_initialized():
                     logger.error('Identity is not initialized yet')
-                    await self.set_vault_state(vault, VaultState.FAILURE)
+                    await self.set_vault_state(vault, VaultState.UNINITIALIZED)
                     continue
 
-                await ctx.create_task(vault, self.push_vault(vault))
-                for _ in ctx.completed_tasks():
-                    pass
-            await ctx.wait()
-            for _ in ctx.completed_tasks():
-                pass
+                nursery.start_soon(self.push_vault, vault)
 
     async def push_vault(self, vault):
         "Push a single vault"
@@ -583,19 +577,20 @@ class SyncryptApp(object):
         self.identity.assert_initialized()
 
         await self.sync_vault(vault)
+        limit = trio.CapacityLimiter(3)
 
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
-            await vault.backend.open()
-            await self.update_vault_metadata(vault)
 
-            async with AsyncContext(self._bundle_actions) as ctx:
+            async with trio.open_nursery() as nursery:
+                await vault.backend.open()
+                await self.update_vault_metadata(vault)
+
                 for bundle in vault.walk_disk():
-                    await ctx.create_task(bundle, self.push_bundle(bundle))
-                    ctx.raise_for_failures()
-                await ctx.wait()
-                ctx.raise_for_failures()
-            await self.set_vault_state(vault, VaultState.READY)
+                    async with limit:
+                        nursery.start_soon(self.push_bundle, bundle)
+
+                await self.set_vault_state(vault, VaultState.READY)
         except Exception:
             vault.logger.exception("Failure during vault initialization")
             await self.set_vault_state(vault, VaultState.FAILURE)
@@ -695,34 +690,20 @@ class SyncryptApp(object):
         # Then, we will do a change detection for the local folder and download every bundle that
         # has changed.
         # TODO: do a change detection (.vault/metadata store vs filesystem)
-        async with AsyncContext(self._bundle_actions) as ctx:
+        limit = trio.CapacityLimiter(3)
 
-            for bundle in (await self.bundles.download_bundles_for_vault(vault)):
-                await ctx.create_task(bundle, self.pull_bundle(bundle))
-                ctx.raise_for_failures()
+        try:
+            async with trio.open_nursery() as nursery:
+                bundles = await self.bundles.download_bundles_for_vault(vault)
 
-            await ctx.wait()
-            for result in ctx.completed_tasks():
-                if not result.exception():
-                    successful.append(result)
+                for bundle in bundles:
+                    async with limit:
+                        await self.pull_bundle(bundle)
 
-            await self.set_vault_state(vault, VaultState.READY)
-
-        #success = len(successful) == total
-
-        #if success:
-        #    if total == 0:
-        #        vault.logger.info('No changes in %s', vault)
-        #    else:
-        #        vault.logger.info('Successfully pulled %d revisions for %s', total, vault)
-        #        if latest_revision:
-        #            vault.update_revision(latest_revision)
-
-        #    await self.set_vault_state(vault, VaultState.READY)
-        #else:
-        #    vault.logger.error('%s failure(s) occured while pulling %d revisions for %s',
-        #            total - len(successful), total, vault)
-        #    await self.set_vault_state(vault, VaultState.FAILURE)
+                await self.set_vault_state(vault, VaultState.READY)
+        except Exception:
+            vault.logger.exception("Failure while pulling vault")
+            await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
