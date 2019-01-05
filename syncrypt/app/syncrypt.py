@@ -557,6 +557,7 @@ class SyncryptApp(object):
 
     async def push(self):
         "Push all registered vaults"
+
         async with AsyncContext(concurrency=3) as ctx:
             for vault in self.vaults:
 
@@ -577,6 +578,8 @@ class SyncryptApp(object):
         logger.info('Pushing %s', vault)
 
         self.identity.assert_initialized()
+
+        await self.sync_vault(vault)
 
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
