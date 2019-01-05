@@ -1,4 +1,5 @@
 import hashlib
+import trio
 import logging
 import os
 import posixpath
@@ -87,23 +88,20 @@ class Bundle(MetadataHolder, Base):
                 self.remote_crypt_hash != self.crypt_hash
 
     async def load_key(self):
-        metadata_file = await aiofiles.open(self.path_metadata, 'rb')
-        try:
-            metadata_contents = await metadata_file.read()
-            metadata = umsgpack.loads(metadata_contents)
+        async with await trio.open_file(self.path_metadata, 'rb') as md_file:
+            metadata_contents = await md_file.read()
+        metadata = umsgpack.loads(metadata_contents)
 
-            if not isinstance(metadata, dict):
-                raise InvalidBundleMetadata()
+        if not isinstance(metadata, dict):
+            raise InvalidBundleMetadata()
 
-            if not 'key' in metadata or not metadata['key']:
-                logger.warning('No or invalid key found for %s in metadata: %s', self, metadata)
-                raise InvalidBundleKey()
+        if not 'key' in metadata or not metadata['key']:
+            logger.warning('No or invalid key found for %s in metadata: %s', self, metadata)
+            raise InvalidBundleKey()
 
-            self.key = metadata['key']
-            self.relpath = self.decode_path(metadata['filename'])
-            assert len(self.key) == self.key_size
-        finally:
-            await metadata_file.close()
+        self.key = metadata['key']
+        self.relpath = self.decode_path(metadata['filename'])
+        assert len(self.key) == self.key_size
 
     @property
     def path(self):

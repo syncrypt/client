@@ -1,5 +1,3 @@
-import asyncio
-
 from .base import Buffered, BufferedFree, Count, Limit, Once, Pipe, Repeat
 from .compression import SnappyCompress, SnappyDecompress
 from .crypto import (DecryptAES, DecryptRSA, DecryptRSA_PKCS1_OAEP, EncryptAES, EncryptRSA,

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 import argparse
-import asyncio
 import logging
 import logging.config
 import sys
+
+import trio
+#import trio_asyncio
 
 from syncrypt import __version__
 from syncrypt.app import SyncryptCLIApp
@@ -18,7 +20,7 @@ except ImportError:
 
 
 COPYRIGHT = '''Syncrypt v{version}
-(c) 2016-2018 Syncrypt UG | https://syncrypt.space
+(c) 2016-2019 Syncrypt UG | https://syncrypt.space
 Licensed under the GPLv3 | Source: https://github.com/syncrypt/client'''\
     .format(version=__version__)
 
@@ -51,18 +53,17 @@ class SyncryptCmd():
     def parse(self, args):
         self.config = self.parser.parse_args(args)
 
-    def setup(self):
+    async def setup(self, nursery):
         self.app_config = AppConfig(self.config.config)
         setup_logging(self.config.loglevel)
-        self.loop = asyncio.get_event_loop()
-        self.app = SyncryptCLIApp(self.app_config, vault_dirs=self.vault_dirs)
-        self.loop.run_until_complete(self.app.initialize())
+        self.app = SyncryptCLIApp(self.app_config, vault_dirs=self.vault_dirs,
+                nursery=nursery)
+        await self.app.initialize()
 
-    def shutdown(self):
-        self.loop.run_until_complete(self.app.close())
-        self.loop.close()
+    async def shutdown(self):
+        await self.app.close()
 
-    def run(self):
+    async def run(self):
         raise NotImplementedError()
 
 
@@ -79,9 +80,9 @@ class SingleVaultCmd(SyncryptCmd):
         parser.add_argument('-d', metavar='DIRECTORY', type=str,
                 default='.', dest='directory', help='directory (default: .)')
 
-    def setup(self):
+    async def setup(self, nursery):
         self.vault_dirs = [self.config.directory]
-        super(SingleVaultCmd, self).setup()
+        await super(SingleVaultCmd, self).setup(nursery)
 
 
 class MultipleVaultCmd(SyncryptCmd):
@@ -97,12 +98,12 @@ class MultipleVaultCmd(SyncryptCmd):
         parser.add_argument('-d', metavar='DIRECTORY', type=str,
                 action='append', dest='directory', help='directory (default: .)')
 
-    def setup(self):
+    async def setup(self, nursery):
         # For now, each command will work on a default AppConfig object. When
         # you want app-level configuration, use ``syncrypt_daemon``.
         if self.config.directory: # not None and not empty
             self.vault_dirs = self.config.directory
-        super(MultipleVaultCmd, self).setup()
+        await super(MultipleVaultCmd, self).setup(nursery)
 
 
 class NoVaultCmd(SyncryptCmd):
@@ -118,7 +119,7 @@ class Clone(NoVaultCmd):
         parser.add_argument('vault_id', help='vault id or name')
         parser.add_argument('directory', nargs='?', help='local directory')
 
-    def run(self):
+    async def run(self):
         try:
             from uuid import UUID
             vault_id = str(UUID(self.config.vault_id))
@@ -135,7 +136,7 @@ class Clone(NoVaultCmd):
                     self.config.directory or vault_name))
 
         if vault:
-            self.loop.run_until_complete(self.app.pull_vault(vault))
+            await self.app.pull_vault(vault)
 
 
 class Pull(MultipleVaultCmd):
@@ -147,8 +148,8 @@ class Pull(MultipleVaultCmd):
         parser.add_argument('-f', '--full', action='store_true',
                 help='retrieve complete history instead of changes')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.pull(full=self.config.full))
+    async def run(self):
+        await self.app.pull(full=self.config.full)
 
 
 class AddUser(SingleVaultCmd):
@@ -159,8 +160,8 @@ class AddUser(SingleVaultCmd):
         super(AddUser, self).configure_parser(parser)
         parser.add_argument('email', help='the user\'s email')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.add_user(self.config.email))
+    async def run(self):
+        await self.app.add_user(self.config.email)
 
 
 class RemoveFile(SingleVaultCmd):
@@ -171,24 +172,24 @@ class RemoveFile(SingleVaultCmd):
         super(RemoveFile, self).configure_parser(parser)
         parser.add_argument('path', nargs='+', help='path to the file(s)')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.remove_files(self.config.path))
+    async def run(self):
+        await self.app.remove_files(self.config.path)
 
 
 class DeleteVault(MultipleVaultCmd):
     command = 'delete-vault'
     description = 'permanently delete this vault from server (use with care)'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.delete_vaults())
+    async def run(self):
+        await self.app.delete_vaults()
 
 
 class UploadVaultKey(SingleVaultCmd):
     command = 'upload-vault-key'
     description = 'upload the vault key encrypted with my user key'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.upload_vault_key())
+    async def run(self):
+        await self.app.upload_vault_key()
 
 
 class ListVaults(NoVaultCmd):
@@ -200,11 +201,11 @@ class ListVaults(NoVaultCmd):
         parser.add_argument('-a', '--all', dest='all', action='store_true',
                 help='also list vaults without key')
 
-    def run(self):
+    async def run(self):
         if self.config.all:
-            self.loop.run_until_complete(self.app.print_list_of_all_vaults())
+            await self.app.print_list_of_all_vaults()
         else:
-            self.loop.run_until_complete(self.app.print_list_of_vaults())
+            await self.app.print_list_of_vaults()
 
 
 class ListKeys(NoVaultCmd):
@@ -220,13 +221,11 @@ class ListKeys(NoVaultCmd):
         parser.add_argument('--art', action='store_true', dest='art',
                 help='show ascii art for each key')
 
-    def run(self):
+    async def run(self):
         if self.config.upload:
-            self.loop.run_until_complete(self.app.upload_identity())
+            await self.app.upload_identity()
         else:
-            self.loop.run_until_complete(
-                    self.app.list_keys(self.config.user, with_art=self.config.art)
-                )
+            await self.app.list_keys(self.config.user, with_art=self.config.art)
 
 class Push(MultipleVaultCmd):
     command = 'push'
@@ -235,8 +234,8 @@ class Push(MultipleVaultCmd):
     def configure_parser(self, parser):
         super(Push, self).configure_parser(parser)
 
-    def run(self):
-        self.loop.run_until_complete(self.app.push())
+    async def run(self):
+        await self.app.push()
 
 
 class Init(SingleVaultCmd):
@@ -249,17 +248,19 @@ class Init(SingleVaultCmd):
         parser.add_argument('-k', '--upload-vault-key', action='store_true',
                 dest='upload_vault_key', help='upload encrypted vault key')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.init(host=self.config.host,
-            upload_vault_key=self.config.upload_vault_key))
+    async def run(self):
+        await self.app.init(
+                host=self.config.host,
+                upload_vault_key=self.config.upload_vault_key
+            )
 
 
 class Info(MultipleVaultCmd):
     command = 'info'
     description = 'show vault information'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.info())
+    async def run(self):
+        await self.app.info()
 
 
 class ConfigSet(SingleVaultCmd):
@@ -271,10 +272,8 @@ class ConfigSet(SingleVaultCmd):
         parser.add_argument('setting', help='the thing to set')
         parser.add_argument('value', help='the value to set it to')
 
-    def run(self):
-        self.loop.run_until_complete(
-            self.app.set(self.config.setting, self.config.value)
-        )
+    async def run(self):
+        await self.app.set(self.config.setting, self.config.value)
 
 
 class ConfigUnset(SingleVaultCmd):
@@ -285,8 +284,8 @@ class ConfigUnset(SingleVaultCmd):
         super(ConfigUnset, self).configure_parser(parser)
         parser.add_argument('setting', help='the thing to unset')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.unset(self.config.setting))
+    async def run(self):
+        await self.app.unset(self.config.setting)
 
 
 class Log(MultipleVaultCmd):
@@ -298,40 +297,40 @@ class Log(MultipleVaultCmd):
         parser.add_argument('-v', '--verbose', action='store_true',
                 help='print more information')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.print_log(verbose=self.config.verbose))
+    async def run(self):
+        await self.app.print_log(verbose=self.config.verbose)
 
 
 class Login(NoVaultCmd):
     command = 'login'
     description = 'login to server and store auth token'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.login())
+    async def run(self):
+        await self.app.login()
 
 
 class UploadKey(NoVaultCmd):
     command = 'upload-key'
     description = 'uploads your current public user key'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.upload_identity())
+    async def run(self):
+        await self.app.upload_identity()
 
 
 class Register(NoVaultCmd):
     command = 'register'
     description = 'register a new user'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.register())
+    async def run(self):
+        await self.app.register()
 
 
 class Logout(NoVaultCmd):
     command = 'logout'
     description = 'logout and remove auth token'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.logout())
+    async def run(self):
+        await self.app.logout()
 
 
 class ExportVault(SingleVaultCmd):
@@ -342,8 +341,8 @@ class ExportVault(SingleVaultCmd):
         super(ExportVault, self).configure_parser(parser)
         parser.add_argument('-o', '--output', dest='filename', help='export filename')
 
-    def run(self):
-        self.loop.run_until_complete(self.app.export_package(self.config.filename))
+    async def run(self):
+        await self.app.export_package(self.config.filename)
 
 
 class ImportVault(SingleVaultCmd):
@@ -355,7 +354,7 @@ class ImportVault(SingleVaultCmd):
         parser.add_argument(dest='filename', help='filename of the package')
         parser.add_argument(dest='target', help='vault folder to create')
 
-    def run(self):
+    async def run(self):
         self.loop.run_until_complete(
                 self.app.import_package(
                     self.config.filename,
@@ -366,16 +365,16 @@ class CheckUpdate(NoVaultCmd):
     command = 'check-update'
     description = 'compare the installed version to the latest one'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.check_update())
+    async def run(self):
+        await self.app.check_update()
 
 
 class GenerateKey(NoVaultCmd):
     command = 'generate-key'
     description = 'generate your user key'
 
-    def run(self):
-        self.loop.run_until_complete(self.app.identity.generate_keys())
+    async def run(self):
+        await self.app.identity.generate_keys()
 
 
 class ExportKey(NoVaultCmd):
@@ -386,8 +385,8 @@ class ExportKey(NoVaultCmd):
         super(ExportKey, self).configure_parser(parser)
         parser.add_argument(dest="filename", help="filename of the package")
 
-    def run(self):
-        self.loop.run_until_complete(self.app.export_user_key(self.config.filename))
+    async def run(self):
+        await self.app.export_user_key(self.config.filename)
 
 
 class ImportKey(NoVaultCmd):
@@ -398,8 +397,8 @@ class ImportKey(NoVaultCmd):
         super(ImportKey, self).configure_parser(parser)
         parser.add_argument(dest="filename", help="filename of the package")
 
-    def run(self):
-        self.loop.run_until_complete(self.app.import_user_key(self.config.filename))
+    async def run(self):
+        await self.app.import_user_key(self.config.filename)
 
 
 COMMANDS = [
@@ -450,18 +449,23 @@ global_parser.add_argument('command', help='Subcommand to run', choices=COMMAND_
 global_parser.add_argument('-v', '--version', action='store_true', help='Show version information')
 global_parser.add_argument('--short-version', action='store_true', help='Show short version information')
 
+async def run_command(cmd: SyncryptCmd):
+    async with trio.open_nursery() as nursery:
+        await cmd.setup(nursery)
+        try:
+            await cmd.run()
+        except SyncryptBaseException as e:
+            # For SyncryptBaseExceptions we will output the abbreviated form. Full stack
+            # backtrace can be printed by running the command with -l DEBUG
+            logger.debug('Command failed because of the following exception:', exc_info=e)
+            logger.error(str(e))
+        await cmd.shutdown()
+
 if __name__ == '__main__':
     # setlocale() is called here so that strftime will use the correct user
     # locale when formatting datetime objects.
     import locale
     locale.setlocale(locale.LC_TIME, '')
-
-    try:
-        # Use uvloop if available (currently only on *nix and py 3.5)
-        import uvloop
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    except ImportError:
-        pass
 
     args = global_parser.parse_args(sys.argv[1:2])
 
@@ -473,15 +477,6 @@ if __name__ == '__main__':
         for c in COMMANDS:
             if c.command == args.command:
                 c.parse(sys.argv[2:])
-                c.setup()
-                try:
-                    c.run()
-                except SyncryptBaseException as e:
-                    # For SyncryptBaseExceptions we will output the abbreviated form. Full stack
-                    # backtrace can be printed by running the command with -l DEBUG
-                    logger.debug('Command failed because of the following exception:', exc_info=e)
-                    logger.error(str(e))
-                c.shutdown()
+                trio.run(run_command, c)
     else:
         global_parser.print_help()
-

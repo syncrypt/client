@@ -206,7 +206,7 @@ class LocalStorageBackend(base):  # type: ignore
         asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
         return queue
 
-    async def _changes(self, since_rev, to_rev, queue: RevisionQueue):
+    async def _changes(self, since_rev, to_rev):
         logger.info("Reading signchain from %s", os.path.join(self.path, "txchain"))
         with open(os.path.join(self.path, "txchain"), "rb") as txchain:
             try:
@@ -221,13 +221,12 @@ class LocalStorageBackend(base):  # type: ignore
                 logger.debug("Loaded %s", rev)
 
                 while rev.revision_id != to_rev:
-                    await queue.put(rev)
+                    yield rev
                     rev = pickle.load(txchain)
             except EOFError:
                 pass
             finally:
                 logger.debug("Finished serving changes")
-                await queue.put(None)
 
     @require_vault
     @require_revision

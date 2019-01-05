@@ -6,7 +6,6 @@ import os.path
 import shutil
 import unittest
 
-import aiofiles
 import asynctest
 import pytest
 

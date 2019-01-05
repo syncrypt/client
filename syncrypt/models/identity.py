@@ -1,4 +1,3 @@
-import asyncio
 import concurrent.futures
 import hashlib
 import logging
@@ -9,6 +8,7 @@ from enum import Enum
 from io import BytesIO
 
 import Cryptodome.Util.number
+import trio
 from Cryptodome.Hash import SHA256
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import pkcs1_15
@@ -127,14 +127,19 @@ class Identity(object):
             raise IdentityStateError()
 
         self.state = IdentityState.INITIALIZING
-        loop = asyncio.get_event_loop()
+        # TODO
         with concurrent.futures.ProcessPoolExecutor() as pool:
             args = (
                 self.config.rsa_key_len,
                 self.id_rsa_pub_path,
                 self.id_rsa_path
             )
-            await loop.run_in_executor(pool, rsa_generate, *args)
+            rsa_generate(*args)
+            # async with trio_asyncio.open_loop() as loop:
+            #    await trio_asyncio.run_asyncio(
+            #            loop.run_in_executor, pool, rsa_generate, *args
+            #        )
+
         logger.debug("Finished key generation, reading key...")
         self.state = IdentityState.UNINITIALIZED
         self.read()

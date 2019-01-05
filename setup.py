@@ -147,7 +147,6 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
-        'aiofiles',
         'aiohttp>=2.3.7,<3.0',
         'certifi',
         'colorlog',

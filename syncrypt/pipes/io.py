@@ -3,7 +3,7 @@ import os.path
 import shutil
 import sys
 
-import aiofiles
+import trio
 
 from .base import Sink, Source
 
@@ -19,7 +19,6 @@ class StreamReader(Source):
         pass
 
 class FileReader(Source):
-    # simple wrapper for aiofiles
     def __init__(self, filename):
         self.filename = filename
         self.handle = None
@@ -27,12 +26,12 @@ class FileReader(Source):
 
     async def read(self, count=-1):
         if self.handle is None and not self._eof:
-            self.handle = await aiofiles.open(self.filename, 'rb')
+            self.handle = await trio.open_file(self.filename, 'rb')
         return (await self.handle.read(count))
 
     async def close(self):
         if self.handle:
-            await self.handle.close()
+            await self.handle.aclose()
 
 class StreamWriter(Sink):
     def __init__(self, writer):
@@ -73,7 +72,7 @@ class FileWriter(Sink):
             if self.store_temporary:
                 fn = self.get_temporary_filename(fn)
             logger.debug('Writing to %s', fn)
-            self.handle = await aiofiles.open(fn, 'wb')
+            self.handle = await trio.open_file(self.filename, 'wb')
         contents = await self.input.read(count)
         await self.handle.write(contents)
         return contents
@@ -100,4 +99,4 @@ class FileWriter(Sink):
         if self.input:
             await self.input.close()
         if self.handle:
-            await self.handle.close()
+            await self.handle.aclose()

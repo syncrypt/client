@@ -1,5 +1,6 @@
 import asyncio
 import smokesignal
+import trio
 import logging
 import os.path
 import socket
@@ -32,10 +33,11 @@ class SyncryptApp(object):
     orchestrate multiple vaults.
     '''
 
-    def __init__(self, config, auth_provider=None, vault_dirs=None):
+    def __init__(self, config, auth_provider=None, vault_dirs=None, nursery=None):
         self.auth_provider = auth_provider
         self.vaults = [] # type: List[Vault]
         self.config = config
+        self.nursery = nursery # type: trio.Nursery
         self.concurrency = int(self.config.app['concurrency'])
 
         # These enforce global limits on various bundle actions
@@ -635,24 +637,21 @@ class SyncryptApp(object):
 
         self.identity.assert_initialized()
 
-        async with AsyncContext(concurrency=3) as ctx:
+        logger.debug('syncrypt.pull')
+
+        async with trio.open_nursery() as nursery:
             for vault in self.vaults:
 
-                #if vault.state == VaultState.SYNCING:
-                #    logger.warning("Skipping %s because it state is %s", vault, vault.state)
-                #    continue
+                if vault.state == VaultState.SYNCING:
+                    logger.warning("Skipping %s because it state is %s", vault, vault.state)
+                    continue
 
                 if not self.identity.is_initialized():
                     logger.error('Identity is not initialized yet')
                     await self.set_vault_state(vault, VaultState.FAILURE)
                     continue
 
-                await ctx.create_task(vault, self.pull_vault(vault, full=full))
-                for _ in ctx.completed_tasks():
-                    pass
-            await ctx.wait()
-            for _ in ctx.completed_tasks():
-                pass
+                nursery.start_soon(self.pull_vault, vault, full)
 
     async def pull_vault_periodically(self, vault):
         while True:
@@ -680,13 +679,7 @@ class SyncryptApp(object):
             await self.reset_vault_database(vault)
 
         await self.open_or_init(vault)
-        queue = await vault.backend.changes(vault.revision, None)
-
-        while True:
-            revision = await queue.get()
-            if revision is None:
-                break
-
+        async for revision in vault.backend._changes(vault.revision, None):
             await self.revisions.apply(revision, vault)
 
     async def pull_vault(self, vault, full=False):

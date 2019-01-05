@@ -4,7 +4,6 @@ import os.path
 import shutil
 import unittest
 
-import aiofiles
 import asynctest
 
 from syncrypt.pipes import (Buffered, Count, DecryptRSA, DecryptRSA_PKCS1_OAEP, EncryptRSA,
