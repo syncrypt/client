@@ -12,7 +12,7 @@ from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, Inva
                                  VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
-                               UserVaultKeyManager, VaultUserManager, VaultManager)
+                               UserVaultKeyManager, VaultManager, VaultUserManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
 from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWriter, Once,
                             StdoutWriter)
@@ -535,7 +535,7 @@ class SyncryptApp(object):
         return (await vault.backend.vault_size(vault))
 
     async def refresh_vault_info(self):
-        logger.info('Refreshing vault information')
+        logger.debug('Refreshing vault information (byte_size) from server...')
         backend = await self.open_backend()
 
         with store.session() as session:
@@ -546,15 +546,12 @@ class SyncryptApp(object):
                 for v in self.vaults:
                     if v.config.id == remote_id:
                         v.byte_size = int(v_info.get('byte_size', 0))
-                        v.file_count = int(v_info.get('file_count', 0))
-                        v.user_count = int(v_info.get('user_count', 0))
-                        v.revision_count = int(v_info.get('revision_count', 0))
-                        modification_date = v_info.get('modification_date') or b''
-                        v.modification_date = modification_date.decode()
+                        #v.file_count = int(v_info.get('file_count', 0))
+                        #v.user_count = int(v_info.get('user_count', 0))
+                        #v.revision_count = int(v_info.get('revision_count', 0))
+                        #modification_date = v_info.get('modification_date') or b''
+                        #v.modification_date = modification_date.decode()
                         session.add(v)
-
-        for vault in self.vaults:
-            await self.sync_vault(vault)
 
         await backend.close()
 

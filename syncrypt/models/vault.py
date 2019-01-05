@@ -12,7 +12,7 @@ from glob import glob
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Dict  # pylint: disable=unused-import
 
-from sqlalchemy import Column, Integer, LargeBinary, String, orm
+from sqlalchemy import Column, DateTime, Integer, LargeBinary, String, orm
 
 from syncrypt.config import VaultConfig
 from syncrypt.exceptions import VaultFolderDoesNotExist
@@ -63,11 +63,11 @@ class Vault(MetadataHolder, Base):
     id = Column(String(128), primary_key=True)
     folder = Column(String(255))
     byte_size = Column(Integer())
-    file_count = Column(Integer())
+    file_count = Column(Integer(), default=0)
     remote_metadata = Column(LargeBinary(2048))
-    modification_date = Column(String(255))  # date?
-    revision_count = Column(Integer())
-    user_count = Column(Integer())
+    modification_date = Column(DateTime())
+    revision_count = Column(Integer(), default=0)
+    user_count = Column(Integer(), default=0)
 
     def __init__(self, folder):
         self.state = VaultState.UNINITIALIZED

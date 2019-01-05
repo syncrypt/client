@@ -140,7 +140,7 @@ class VaultResource(Resource):
             user_count=v.user_count,
             file_count=v.file_count,
             revision_count=v.revision_count,
-            modification_date=v.modification_date,
+            modification_date=v.modification_date and datetime_format_iso8601(v.modification_date),
         )
 
         # Compile some information about the underlying crypto system(s)
@@ -323,7 +323,7 @@ class FlyingVaultResource(Resource):
         deh_obj['user_count'] = obj.user_count
         deh_obj['file_count'] = obj.file_count
         deh_obj['revision_count'] = obj.revision_count
-        deh_obj['modification_date'] = obj.modification_date
+        deh_obj['modification_date'] = obj.modification_date and datetime_format_iso8601(obj.modification_date)
         deh_obj['remote_id'] = obj.id
         return deh_obj
 

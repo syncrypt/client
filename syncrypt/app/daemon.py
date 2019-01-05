@@ -21,6 +21,7 @@ class SyncryptDaemonApp(SyncryptApp):
 
         self.shutdown_event = asyncio.Event()
         self.restart_flag = False
+        self.refresh_vault_info_task = None
         self.initial_push = kwargs.pop('initial_push', True)
 
         super(SyncryptDaemonApp, self).__init__(config, **kwargs)
@@ -74,17 +75,14 @@ class SyncryptDaemonApp(SyncryptApp):
             except Exception:
                 logger.exception("General failure during vault initialization")
 
-        try:
-            if self.vaults:
-                await self.refresh_vault_info()
-
-        except InvalidAuthentification:
-            logger.info('Continuing without getting current vault information')
+        self.refresh_vault_info_task = asyncio.Task(self.refresh_vault_info_periodically())
 
         if self.initial_push:
             await self.push()
 
     async def stop(self):
+        if self.refresh_vault_info_task:
+            self.refresh_vault_info_task.cancel()
         for vault in self.vaults:
             await self.unwatch_vault(vault)
             await self.unautopull_vault(vault)
@@ -130,6 +128,15 @@ class SyncryptDaemonApp(SyncryptApp):
         folder = os.path.abspath(vault.folder)
         logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
         self._autopull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
+
+    async def refresh_vault_info_periodically(self):
+        while True:
+            try:
+                if self.vaults:
+                    await self.refresh_vault_info()
+            except:
+                logger.exception('Exception while refreshing vaults')
+            await asyncio.sleep(30.0)
 
     async def unwatch_vault(self, vault):
         'Remove watchdog and auto-pulls'

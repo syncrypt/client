@@ -83,6 +83,11 @@ class RevisionManager:
                 session.add(VaultUser(vault_id=vault.id, user_id=revision.user_id))
                 session.commit()
             elif revision.operation == RevisionOp.Upload:
+                try:
+                    bundle = await self.app.bundles.get_bundle_by_hash(vault, revision.file_hash)
+                    session.delete(bundle)
+                except FileNotFoundError:
+                    pass
                 bundle = await self.create_bundle_from_revision(revision, vault)
                 session.add(bundle)
                 session.commit()
@@ -117,6 +122,21 @@ class RevisionManager:
                 .filter(Revision.local_vault_id == vault.id)
                 .count()
             )
+            if revision.operation in (RevisionOp.Upload, RevisionOp.RemoveFile):
+                vault.file_count = (
+                    session.query(Bundle)
+                    .filter(Bundle.vault_id == vault.id)
+                    .count()
+                )
+            if revision.operation in (RevisionOp.CreateVault, RevisionOp.AddUser, RevisionOp.RemoveUser):
+                vault.user_count = (
+                    session.query(VaultUser)
+                    .filter(VaultUser.vault_id == vault.id)
+                    .count()
+                )
+            vault.modification_date = revision.created_at
+            logger.debug("Vault state revision_count=%s file_count=%s user_count=%s",
+                    vault.revision_count, vault.file_count, vault.user_count)
             # vault.revision = revision.id
             session.add(vault)
             vault.update_revision(revision)
