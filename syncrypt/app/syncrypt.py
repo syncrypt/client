@@ -675,18 +675,20 @@ class SyncryptApp(object):
 
         await self.open_or_init(vault)
         async for revision in vault.backend._changes(vault.revision, None):
+            await self.set_vault_state(vault, VaultState.SYNCING)
             await self.revisions.apply(revision, vault)
+
+        await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_vault(self, vault, full=False):
         vault.logger.info('Pulling %s', vault)
         successful = []
 
-        await self.set_vault_state(vault, VaultState.SYNCING)
-
         # First, we will iterate through the changes, validate the chain and build up the state of
         # the vault (files, keys, ...). This is called "syncing".
         await self.sync_vault(vault, full=full)
 
+        await self.set_vault_state(vault, VaultState.SYNCING)
         # Then, we will do a change detection for the local folder and download every bundle that
         # has changed.
         # TODO: do a change detection (.vault/metadata store vs filesystem)
@@ -704,6 +706,7 @@ class SyncryptApp(object):
         except Exception:
             vault.logger.exception("Failure while pulling vault")
             await self.set_vault_state(vault, VaultState.FAILURE)
+        await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
