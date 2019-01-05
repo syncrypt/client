@@ -132,6 +132,8 @@ class APITests(VaultLocalTestCase):
             revision_count = c['revision_count']
 
             self.assertEqual(c['metadata'].get('name'), 'newname')
+            self.assertEqual(c['file_count'], 0)
+            self.assertEqual(c['user_count'], 1)
 
             r = await client.put(vault_uri, data=patch_data)
             self.assertEqual(r.status, 200)
@@ -226,6 +228,13 @@ class APITests(VaultLocalTestCase):
             self.assertEqual(c['items'][1]['operation'], "OP_SET_METADATA")
             self.assertEqual(c['items'][-1]['operation'], "OP_UPLOAD")
             self.assertEqual(c['items'][-1]['path'], "test.txt")
+
+            r = await client.get(vault_uri)
+            c = await r.json()
+            await r.release()
+            self.assertEqual(c['file_count'], 1)
+            self.assertEqual(c['revision_count'], 4)
+            self.assertEqual(c['user_count'], 1)
 
         finally:
             await client.close()
