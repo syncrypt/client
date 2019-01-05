@@ -23,6 +23,10 @@ class InvalidRevision(SyncryptBaseException):
     pass
 
 
+class UnexpectedParentInRevision(InvalidRevision):
+    pass
+
+
 class VaultException(SyncryptBaseException):
     pass
 

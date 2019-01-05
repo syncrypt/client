@@ -6,9 +6,12 @@ from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
+from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
+                      stop_after_attempt, wait_exponential)
 
 from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, InvalidAuthentification,
-                                 InvalidVaultPackage, SyncRequired, SyncryptBaseException,
+                                 InvalidRevision, InvalidVaultPackage, SyncRequired,
+                                 SyncryptBaseException, UnexpectedParentInRevision,
                                  VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
                                  VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
@@ -670,6 +673,9 @@ class SyncryptApp(object):
             vault.reset_revision()
             assert vault.revision is None
 
+    @retry(retry=retry_if_exception_type(UnexpectedParentInRevision),
+           stop=stop_after_attempt(5),
+           wait=wait_exponential(multiplier=1, max=10))
     async def sync_vault(self, vault, full=False):
 
         if full:
