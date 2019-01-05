@@ -177,10 +177,7 @@ class VaultResource(Resource):
             await self.app.remove_vault(obj)
 
     @require_auth_token
-    async def dispatch_list(self, request, force_refresh=True):
-        if request.query.get('force_refresh', '0') == '1':
-            await self.app.refresh_vault_info()
-
+    async def dispatch_list(self, request):
         return await super(VaultResource, self).dispatch_list(request)
 
     async def dispatch_fingerprints(self, request):
