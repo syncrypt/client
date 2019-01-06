@@ -96,6 +96,7 @@ class Bundle(MetadataHolder, Base):
                 raise InvalidBundleMetadata()
 
             if not 'key' in metadata or not metadata['key']:
+                logger.warning('No or invalid key found for %s in metadata: %s', self, metadata)
                 raise InvalidBundleKey()
 
             self.key = metadata['key']
@@ -109,6 +110,7 @@ class Bundle(MetadataHolder, Base):
         return os.path.join(self.vault.folder, self.relpath)
 
     async def generate_key(self):
+        logger.debug('Generating key for %s', self)
         self.key = os.urandom(self.key_size)
         if not os.path.exists(os.path.dirname(self.path_metadata)):
             os.makedirs(os.path.dirname(self.path_metadata))
