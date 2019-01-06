@@ -6,14 +6,10 @@ from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
 from sqlalchemy.orm.exc import NoResultFound
-from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
-                      stop_after_attempt, wait_exponential)
-
 from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, InvalidAuthentification,
-                                 InvalidRevision, InvalidVaultPackage, SyncRequired,
-                                 SyncryptBaseException, UnexpectedParentInRevision,
-                                 VaultAlreadyExists, VaultIsAlreadySyncing, VaultNotFound,
-                                 VaultNotInitialized)
+                                 InvalidVaultPackage, SyncRequired, SyncryptBaseException,
+                                 UnexpectedParentInRevision, VaultAlreadyExists,
+                                 VaultIsAlreadySyncing, VaultNotFound, VaultNotInitialized)
 from syncrypt.managers import (BundleManager, FlyingVaultManager, RevisionManager,
                                UserVaultKeyManager, VaultManager, VaultUserManager)
 from syncrypt.models import Bundle, Identity, IdentityState, Vault, VaultState, store
@@ -22,6 +18,7 @@ from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWr
 from syncrypt.utils.filesystem import is_empty
 from syncrypt.utils.format import format_fingerprint
 from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from .asynccontext import AsyncContext
 
