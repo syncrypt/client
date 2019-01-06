@@ -370,6 +370,11 @@ definitions:
       - id
       - folder
       - status
+      - ignore_paths
+      - metadata
+      - file_count
+      - user_count
+      - revision_count
     properties:
       id:
         type: string
@@ -377,6 +382,10 @@ definitions:
       folder:
         type: string
         example: /path/to/local/folder
+      ignore_paths:
+        type: array
+        items:
+          type: string
       status:
         type: string
         example: synced

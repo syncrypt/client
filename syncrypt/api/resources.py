@@ -131,8 +131,13 @@ class VaultResource(Resource):
     def dehydrate(self, v):
         dct = super(VaultResource, self).dehydrate(v)
 
-        dct.update(folder=v.folder, state=v.state, remote_id=v.config.id,
-                   metadata=v._metadata, ignore=v.config.get('vault.ignore').split(','))
+        dct.update(
+             folder=v.folder,
+             state=v.state,
+             remote_id=v.config.id,
+             metadata=v._metadata,
+             ignore_paths=v.config.get('vault.ignore').split(',')
+        )
 
         # Annotate each obj with vault information from the model
         dct.update(
@@ -300,9 +305,19 @@ class VaultResource(Resource):
         vault = self.find_vault_by_id(request.match_info['id'])
         if vault is None:
             raise ValueError() # this should return 404
+
+        if 'ignore_paths' in request_dict:
+
+            if not isinstance(request_dict['ignore_paths'], list):
+                raise ValueError("ignore_paths must be a list")
+
+            with vault.config.update_context():
+                vault.config.set('vault.ignore', ','.join(request_dict['ignore_paths']))
+
         if 'metadata' in request_dict:
             vault._metadata = request_dict['metadata']
             await self.app.update_vault_metadata(vault)
+
         return vault
 
 

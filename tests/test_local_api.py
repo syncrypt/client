@@ -427,3 +427,56 @@ class APITests(VaultLocalTestCase):
         finally:
             await client.close()
             await app.stop()
+
+    async def test_api_vault_ignore_paths(self):
+        app = self.app
+        client = APIClient(self.app_config)
+
+        new_vault_folder = os.path.join(self.working_dir, 'newvault')
+        if os.path.exists(new_vault_folder):
+            shutil.rmtree(new_vault_folder)
+        os.makedirs(new_vault_folder)
+
+        await app.start()
+
+        try:
+            r = await client.login(**self.login_data)
+            await r.release()
+            self.assertEqual(r.status, 200)
+
+            r = await client.post('/v1/vault/',
+                    data=json.dumps({ 'folder': new_vault_folder }))
+            c = await r.json()
+            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
+            self.assertGreater(len(c['resource_uri']), 20)
+            await r.release()
+
+            vault_uri = c['resource_uri']
+
+            self.assertEqual(len(app.vaults), 1) # one vault
+            while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+                await asyncio.sleep(0.2)
+
+            r = await client.get(vault_uri)
+            c = await r.json()
+            await r.release()
+
+            self.assertEqual(c['resource_uri'], vault_uri)
+            self.assertEqual(c['ignore_paths'], ['.*'])
+
+            patch_data = json.dumps({
+                'ignore_paths': ['.*', 'NO-SHARE', 'this_also_not.txt']
+            })
+            r = await client.put(vault_uri, data=patch_data)
+            await r.release()
+
+            r = await client.get(vault_uri)
+            c = await r.json()
+            await r.release()
+
+            self.assertEqual(c['resource_uri'], vault_uri)
+            self.assertEqual(c['ignore_paths'], ['.*', 'NO-SHARE', 'this_also_not.txt'])
+
+        finally:
+            await client.close()
+            await app.stop()
