@@ -107,7 +107,7 @@ install:
 before_build:
   - "mypy syncrypt tests scripts/syncrypt_daemon"
   - "pylint syncrypt scripts"
-  - "py.test -m \"not (requires_server or external_resources)\""
+  - "py.test -m \"not (requires_server or external_resources)\" -k \"not api\""
 
 build_script:
   # Build the compiled extension
