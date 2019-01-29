@@ -1,20 +1,20 @@
-import trio
 import os
 import os.path
 
 import pytest
+import trio
 
 from syncrypt.config import AppConfig
 from syncrypt.models import Identity
 
-from .base import VaultTestCase
+from .base import working_dir
 
 
 @pytest.mark.slow
-async def test_creation():
+async def test_creation(working_dir):
 
-    key = os.path.join(self.working_dir, "id_rsa")
-    key_pub = os.path.join(self.working_dir, "id_rsa.pub")
+    key = os.path.join(working_dir, "id_rsa")
+    key_pub = os.path.join(working_dir, "id_rsa.pub")
 
     if os.path.exists(key):
         os.unlink(key)
@@ -36,11 +36,12 @@ async def test_creation():
 
 
 @pytest.mark.slow
-async def test_async_key_generation():
+@pytest.mark.skip
+async def test_async_key_generation(working_dir):
     "check wether key generation can happen concurrently"
 
-    key = os.path.join(self.working_dir, "id_rsa")
-    key_pub = os.path.join(self.working_dir, "id_rsa.pub")
+    key = os.path.join(working_dir, "id_rsa")
+    key_pub = os.path.join(working_dir, "id_rsa.pub")
 
     if os.path.exists(key):
         os.unlink(key)
@@ -69,11 +70,11 @@ async def test_async_key_generation():
 
 
 @pytest.mark.slow
-async def test_signing():
+async def test_signing(working_dir):
     "test our sign and verify functions"
 
-    key = os.path.join(self.working_dir, "id_rsa")
-    key_pub = os.path.join(self.working_dir, "id_rsa.pub")
+    key = os.path.join(working_dir, "id_rsa")
+    key_pub = os.path.join(working_dir, "id_rsa.pub")
 
     if os.path.exists(key):
         os.unlink(key)

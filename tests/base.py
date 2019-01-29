@@ -1,4 +1,4 @@
-import asyncio
+import pytest
 import os
 import os.path
 import shutil
@@ -13,6 +13,11 @@ from syncrypt.backends.binary import get_manager_instance
 from syncrypt.config import AppConfig
 from syncrypt.models import Vault, store
 from syncrypt.utils.logging import setup_logging
+
+
+@pytest.fixture
+async def working_dir():
+    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
 
 
 class TestAuthenticationProvider(CredentialsAuthenticationProvider):
@@ -48,7 +53,6 @@ class VaultTestCase(unittest.TestCase):
 
     # If available, use filesystem mounted shared memory in order to save
     # disk IO operations during testing
-    working_dir = "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
     vault = None  # type: Vault
     remote = {
             "type": "binary",
