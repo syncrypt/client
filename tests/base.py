@@ -15,11 +15,6 @@ from syncrypt.models import Vault, store
 from syncrypt.utils.logging import setup_logging
 
 
-@pytest.fixture
-async def working_dir():
-    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
-
-
 class TestAuthenticationProvider(CredentialsAuthenticationProvider):
 
     def __init__(self):
@@ -47,64 +42,70 @@ class TestAppConfig(AppConfig):
             )
 
 
-class VaultTestCase(unittest.TestCase):
-    folder = None  # type: str
+@pytest.fixture
+async def working_dir(x):
+    yield "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
+
+
+@pytest.fixture
+async def local_app(working_dir):
+    print("CREATING APP", working_dir)
+    app_config_file = os.path.join(my_working_dir, "test_config")
+    app_config = TestAppConfig(app_config_file, remote = {
+            "type": "binary",
+            "host": "localhost",
+            })
+    app = SyncryptApp(app_config, auth_provider=TestAuthenticationProvider())
+    await app.initialize()
+    yield app
+    await app.close()
+
+
+async def generic_vault(folder, app_cls=SyncryptApp, remote = {
+            "type": "binary",
+            "host": "localhost",
+            }):
     app_cls = SyncryptApp
 
     # If available, use filesystem mounted shared memory in order to save
     # disk IO operations during testing
     vault = None  # type: Vault
-    remote = {
-            "type": "binary",
-            "host": "localhost",
-            }
 
-    def setUp(self):
-        if self.folder:
-            vault_folder = os.path.join(self.working_dir, "testvault")
-            if os.path.exists(vault_folder):
-                shutil.rmtree(vault_folder)
-            shutil.copytree(self.folder, vault_folder)
-            self.vault = Vault(vault_folder)
+    app_config_file = os.path.join(my_working_dir, "test_config")
 
-        app_config_file = os.path.join(self.working_dir, "test_config")
+    setup_logging("DEBUG")
 
-        setup_logging("DEBUG")
+    if os.path.exists(app_config_file):
+        os.remove(app_config_file)
 
-        if os.path.exists(app_config_file):
-            os.remove(app_config_file)
+    app_config = TestAppConfig(app_config_file, remote)
 
-        self.app_config = TestAppConfig(app_config_file, self.remote)
+    store.drop(app_config)
 
-        store.drop(self.app_config)
+    app = app_cls(app_config, auth_provider=TestAuthenticationProvider())
+    await app.initialize()
 
-        self.app = self.app_cls(
-            self.app_config, auth_provider=TestAuthenticationProvider()
-        )
-        asyncio.get_event_loop().run_until_complete(self.app.initialize())
+    yield vault
+    
+    await app.close()
 
-    def tearDown(self):
-        asyncio.get_event_loop().run_until_complete(self.app.close())
-
-    def assertSameFilesInFolder(self, *folders):
-        files_per_folder = [sorted(os.listdir(folder)) for folder in folders]
-        self.assertEqual(*[len(files) for files in files_per_folder])
-        for fn in zip(*files_per_folder):
-            self.assertEqual(*fn)
-            self.assertEqual(*[os.stat(os.path.join(folder, filename)).st_size for folder, filename in
-                zip(folders, fn)])
+#    def assertSameFilesInFolder(self, *folders):
+#        files_per_folder = [sorted(os.listdir(folder)) for folder in folders]
+#        assertEqual(*[len(files) for files in files_per_folder])
+#        for fn in zip(*files_per_folder):
+#            assertEqual(*fn)
+#            assertEqual(*[os.stat(os.path.join(folder, filename)).st_size for folder, filename in
+#                zip(folders, fn)])
 
 
-class VaultLocalTestCase(VaultTestCase):
-    localstoragedir = "/dev/shm/localstorage" if os.access("/dev/shxm", os.W_OK) \
-                else os.path.join(os.path.dirname(__file__), "testlocalstorage")
+@pytest.fixture
+async def local_vault(local_app, working_dir):
     folder = 'tests/testlocalvault/'
-    remote = {
-        "type": "local",
-        "folder": localstoragedir
-    }
+    vault_folder = os.path.join(working_dir, "testvault")
+    if os.path.exists(vault_folder):
+        shutil.rmtree(vault_folder)
+    shutil.copytree(folder, vault_folder)
+    vault = Vault(vault_folder)
+    await local_app.add_vault(vault)
 
-    def setUp(self):
-        if os.path.exists(self.localstoragedir):
-            shutil.rmtree(self.localstoragedir)
-        super(VaultLocalTestCase, self).setUp()
+    yield vault
