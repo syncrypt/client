@@ -6,7 +6,6 @@ import shutil
 import unittest
 from glob import glob
 
-import asynctest
 import pytest
 from hypothesis import example, given, settings, HealthCheck
 
@@ -26,7 +25,7 @@ def count_files(folder):
 
 @pytest.mark.requires_server
 @pytest.mark.hypothesis
-class HypoBinaryTestCase(asynctest.TestCase):
+class HypoBinaryTestCase(unittest.TestCase):
     folder = 'tests/testbinaryempty/'
 
     @settings(suppress_health_check=HealthCheck.all())

@@ -6,7 +6,6 @@ import shutil
 import unittest
 from glob import glob
 
-import asynctest
 import pytest
 
 from syncrypt.app import SyncryptApp
@@ -29,7 +28,6 @@ def generate_fake_revision(vault):
 
 
 class LocalStorageTestCase(VaultLocalTestCase):
-    @asynctest.ignore_loop
     async def test_backend_type(self):
         self.assertEqual(type(self.vault.backend), LocalStorageBackend)
 

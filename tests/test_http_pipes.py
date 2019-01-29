@@ -6,7 +6,6 @@ import os.path
 import shutil
 import unittest
 
-import asynctest
 import pytest
 
 from syncrypt.pipes import (Buffered, BufferedFree, ChunkedURLWriter, Count, Hash, Once, Repeat,
@@ -15,7 +14,7 @@ from syncrypt.pipes import (Buffered, BufferedFree, ChunkedURLWriter, Count, Has
 from .base import VaultTestCase
 
 
-class URLReaderTests(asynctest.TestCase):
+class URLReaderTests(unittest.TestCase):
 
     @pytest.mark.external_resources
     async def test_url_10mb(self):

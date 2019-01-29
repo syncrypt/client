@@ -6,7 +6,6 @@ import shutil
 import unittest
 from glob import glob
 
-import asynctest
 import pytest
 
 from syncrypt.app import SyncryptApp
@@ -20,11 +19,9 @@ from tests.base import VaultTestCase
 class BinaryServerTests(VaultTestCase):
     folder = 'tests/testbinaryvault/'
 
-    @asynctest.ignore_loop
     async def test_backend_type(self):
         self.assertEqual(type(self.vault.backend), BinaryStorageBackend)
 
-    @asynctest.ignore_loop
     async def test_vault(self):
         self.assertEqual(len(list(self.vault.walk_disk())), 8)
 

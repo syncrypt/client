@@ -6,7 +6,6 @@ import shutil
 import unittest
 from glob import glob
 
-import asynctest
 import pytest
 
 from syncrypt.app import SyncryptApp
@@ -21,7 +20,6 @@ from tests.base import VaultLocalTestCase
 class PlaintextTestCase(VaultLocalTestCase):
     folder = 'tests/testplainvault/'
 
-    @asynctest.ignore_loop
     async def test_backend_type(self):
         self.assertEqual(type(self.vault.backend), LocalStorageBackend)
         self.assertEqual(type(self.vault.crypt_engine), PlaintextEngine)

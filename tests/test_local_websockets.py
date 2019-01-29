@@ -8,7 +8,6 @@ import unittest
 from glob import glob
 
 import aiohttp
-import asynctest
 import pytest
 from async_timeout import timeout
 

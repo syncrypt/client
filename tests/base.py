@@ -5,7 +5,6 @@ import shutil
 import unittest
 from glob import glob
 
-import asynctest
 
 from syncrypt.app import SyncryptApp
 from syncrypt.auth import CredentialsAuthenticationProvider
@@ -43,7 +42,7 @@ class TestAppConfig(AppConfig):
             )
 
 
-class VaultTestCase(asynctest.TestCase):
+class VaultTestCase(unittest.TestCase):
     folder = None  # type: str
     app_cls = SyncryptApp
 
