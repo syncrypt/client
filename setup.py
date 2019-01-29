@@ -179,7 +179,7 @@ setup(
         'test': [
             'pytest-runner',
             'pytest>=2.8.0',
-            'hypothesis<=3.60.1', # 3.65 seems to break builds
+            'pytest-trio',
             'mypy',  # used for static type checking
             'pylint'  # used for static code analysis
         ],

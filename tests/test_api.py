@@ -8,7 +8,6 @@ import unittest
 from glob import glob
 
 import aiohttp
-import hypothesis.strategies as st
 import pytest
 
 import syncrypt
