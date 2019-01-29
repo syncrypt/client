@@ -1,4 +1,5 @@
 import asyncio
+import smokesignal
 import logging
 import os.path
 import socket
@@ -791,4 +792,5 @@ class SyncryptApp(object):
     async def close(self):
         await self.wait()
         for vault in self.vaults:
-            await vault.close()
+            await self.set_vault_state(vault, VaultState.SHUTDOWN)
+        smokesignal.emit('shutdown')

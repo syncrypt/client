@@ -8,14 +8,15 @@ from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 import iso8601
+import smokesignal
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
                       stop_after_attempt, wait_exponential)
 
 from syncrypt import __project__, __version__
 from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
-                                 UnexpectedResponseException, UnsuccessfulResponse,
-                                 VaultNotInitialized, SyncRequired)
+                                 SyncRequired, UnexpectedResponseException, UnsuccessfulResponse,
+                                 VaultNotInitialized)
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter, URLReader,
                             URLWriter)
@@ -940,14 +941,14 @@ class BinaryStorageManager():
     async def close(self):
         logger.debug('Closing backend manager')
         logged = False
+        if not self._monitor_task is None:
+            self._monitor_task.cancel()
         for conn in self.slots:
             if conn.connected or conn.connecting:
                 if not logged:
                     logger.debug('Disconnecting from server')
                     logged = True
                 await conn.disconnect()
-        if not self._monitor_task is None:
-            self._monitor_task.cancel()
         self.slots = []
         self.loop = None
 
@@ -1038,6 +1039,18 @@ def get_manager_instance() -> BinaryStorageManager:
     if not hasattr(get_manager_instance, '_manager'):
         get_manager_instance._manager = BinaryStorageManager() # type: ignore
     return get_manager_instance._manager # type: ignore
+
+
+@smokesignal.on("shutdown")
+def on_shutdown():
+    loop = asyncio.get_event_loop()
+    logger.debug("ON SHUTDOWN")
+    #task = loop.create_task(get_manager_instance().close())
+    #import ipdb; ipdb.set_trace()
+    #asyncio.get_event_loop().run_in_executor(None,
+    #    get_manager_instance().close()
+    #)
+
 
 PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
 base = object if PYTHON_3_5 else StorageBackend
@@ -1209,4 +1222,6 @@ class BinaryStorageBackend(base):  # type: ignore
         # Closing a binary connection is a no-op, because unused connections
         # automatically close and we wanna keep the connection to the server
         # in case we wanna reuse the slot later.
+        logger.debug("ON CLOSE")
         pass
+

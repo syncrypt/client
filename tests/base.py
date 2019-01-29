@@ -82,7 +82,6 @@ class VaultTestCase(asynctest.TestCase):
 
     def tearDown(self):
         asyncio.get_event_loop().run_until_complete(self.app.close())
-        asyncio.get_event_loop().run_until_complete(get_manager_instance().close())
 
     def assertSameFilesInFolder(self, *folders):
         files_per_folder = [sorted(os.listdir(folder)) for folder in folders]

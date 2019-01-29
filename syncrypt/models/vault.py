@@ -39,6 +39,7 @@ class VaultState(Enum):
     SYNCING = "syncing"
     READY = "ready"
     FAILURE = "failure"
+    SHUTDOWN = "shutdown"
 
 
 class VaultLoggerAdapter(logging.LoggerAdapter):

@@ -114,6 +114,9 @@ class SyncryptDaemonApp(SyncryptApp):
                 await self.unwatch_vault(vault)
                 await self.unautopull_vault(vault)
 
+        if new_state == VaultState.SHUTDOWN:
+            await vault.close()
+
     async def watch_vault(self, vault):
         'Install a watchdog for the given vault'
         vault.check_existence()
