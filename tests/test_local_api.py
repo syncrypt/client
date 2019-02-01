@@ -14,10 +14,15 @@ import syncrypt
 from syncrypt.api import APIClient
 from syncrypt.app import SyncryptDaemonApp
 from syncrypt.models import Vault, VaultState
-from tests.base import VaultLocalTestCase
+from tests.base import working_dir, local_daemon_app
 
 
-class APITests(VaultLocalTestCase):
+async def test_api_login(local_daemon_app, working_dir):
+    'try to get a list of files via API'
+    import ipdb; ipdb.set_trace()
+
+
+class APITests():
     app_cls = SyncryptDaemonApp  # type: ignore
     login_data = {
         'email': 'test@syncrypt.space',

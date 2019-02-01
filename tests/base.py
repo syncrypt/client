@@ -1,12 +1,12 @@
-import pytest
 import os
 import os.path
 import shutil
 import unittest
 from glob import glob
 
+import pytest
 
-from syncrypt.app import SyncryptApp
+from syncrypt.app import SyncryptApp, SyncryptDaemonApp
 from syncrypt.auth import CredentialsAuthenticationProvider
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
 from syncrypt.backends.binary import get_manager_instance
@@ -58,6 +58,21 @@ async def local_app(working_dir):
     await app.initialize()
     yield app
     await app.close()
+
+
+@pytest.fixture
+async def local_daemon_app(working_dir):
+    app_config_file = os.path.join(working_dir, "test_config")
+    app_config = TestAppConfig(app_config_file, remote = {
+            "type": "binary",
+            "host": "localhost",
+            })
+    app = SyncryptDaemonApp(app_config, auth_provider=TestAuthenticationProvider())
+    await app.initialize()
+    await app.start()
+    yield app
+    await app.close()
+    await app.stop()
 
 
 async def generic_vault(folder, app_cls=SyncryptApp, remote = {
