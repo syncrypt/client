@@ -43,14 +43,13 @@ class TestAppConfig(AppConfig):
 
 
 @pytest.fixture
-async def working_dir(x):
-    yield "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
+def working_dir():
+    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
 
 
 @pytest.fixture
 async def local_app(working_dir):
-    print("CREATING APP", working_dir)
-    app_config_file = os.path.join(my_working_dir, "test_config")
+    app_config_file = os.path.join(working_dir, "test_config")
     app_config = TestAppConfig(app_config_file, remote = {
             "type": "binary",
             "host": "localhost",
@@ -71,7 +70,7 @@ async def generic_vault(folder, app_cls=SyncryptApp, remote = {
     # disk IO operations during testing
     vault = None  # type: Vault
 
-    app_config_file = os.path.join(my_working_dir, "test_config")
+    app_config_file = os.path.join(working_dir, "test_config")
 
     setup_logging("DEBUG")
 
@@ -86,7 +85,7 @@ async def generic_vault(folder, app_cls=SyncryptApp, remote = {
     await app.initialize()
 
     yield vault
-    
+
     await app.close()
 
 #    def assertSameFilesInFolder(self, *folders):
