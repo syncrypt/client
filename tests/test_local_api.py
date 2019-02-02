@@ -14,14 +14,27 @@ import syncrypt
 from syncrypt.api import APIClient
 from syncrypt.app import SyncryptDaemonApp
 from syncrypt.models import Vault, VaultState
-from tests.base import working_dir, local_daemon_app
+from tests.base import *
 
 
-async def test_api_login(local_daemon_app, working_dir):
+login_data = {
+    'email': 'test@syncrypt.space',
+    'password': 'test!password'
+}
+
+async def test_api_login(local_daemon_app, local_api_client):
     'try to get a list of files via API'
-    import ipdb; ipdb.set_trace()
+    client = local_api_client
+    r = await client.login(**login_data)
+    await r.release()
+    assert r.status == 200
+    r = await client.get('/v1/auth/check/')
+    c = await r.json()
+    await r.release()
+    assert r.status == 200
+    assert c['connected'] == True
 
-
+"""
 class APITests():
     app_cls = SyncryptDaemonApp  # type: ignore
     login_data = {
@@ -37,13 +50,13 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.get('/v1/auth/check/')
             c = await r.json()
             await r.release()
-            self.assertEqual(r.status, 200)
-            self.assertEqual(c['connected'], True)
+            assert r.status == 200
+            assert c['connected'] == True
 
         finally:
             await client.close()
@@ -63,7 +76,7 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -79,15 +92,15 @@ class APITests():
             self.assertIn(c['state'], ('uninitialized', 'initializing'))
             await r.release()
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
 
             r = await client.get('/v1/vault/')
             c = await r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'ready')
+            assert len(c) == 1 # one vault
+            assert c[0]['state'] == 'ready'
             await r.release()
 
         finally:
@@ -106,51 +119,51 @@ class APITests():
         try:
 
             r = await client.get('/v1/vault/')
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             c = await r.json()
             await r.release()
 
-            self.assertEqual(len(c), 1) # only one vault
+            assert len(c) == 1 # only one vault
 
             vault_uri = c[0]['resource_uri']
 
             r = await client.get(vault_uri)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             c = await r.json()
             await r.release()
 
-            self.assertEqual(c['metadata'].get('name'), 'testvault')
+            assert c['metadata'].get('name') == 'testvault'
 
             patch_data = json.dumps({
                 'metadata': dict(c['metadata'], name='newname')
             })
             r = await client.put(vault_uri, data=patch_data)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             await r.release()
 
             r = await client.get(vault_uri)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             c = await r.json()
             await r.release()
 
             revision_count = c['revision_count']
 
-            self.assertEqual(c['metadata'].get('name'), 'newname')
-            self.assertEqual(c['file_count'], 0)
-            self.assertEqual(c['user_count'], 1)
+            assert c['metadata'].get('name') == 'newname'
+            assert c['file_count'] == 0
+            assert c['user_count'] == 1
 
             r = await client.put(vault_uri, data=patch_data)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             await r.release()
 
             r = await client.get(vault_uri)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             c = await r.json()
             await r.release()
 
-            self.assertEqual(c['metadata'].get('name'), 'newname')
+            assert c['metadata'].get('name') == 'newname'
             # revision count should not change with the repeated patch with same name
-            self.assertEqual(c['revision_count'], revision_count)
+            assert c['revision_count'] == revision_count
 
         finally:
             await client.close()
@@ -170,7 +183,7 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -181,14 +194,14 @@ class APITests():
 
             vault_uri = c['resource_uri']
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'ready')
+            assert len(c) == 1 # one vault
+            assert c[0]['state'] == 'ready'
             await r.release()
 
             c = c[0] # first vault
@@ -197,17 +210,17 @@ class APITests():
                 'metadata': dict(c['metadata'], name='newname')
             })
             r = await client.put(vault_uri, data=patch_data)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             await r.release()
 
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
-            self.assertEqual(len(c['items']), 3)
+            assert len(c['items']) == 3
             self.assertIsNotNone(c['items'][0]['created_at'])
             self.assertFalse(c['items'][0]['created_at'].endswith(':'))
             self.assertIsNotNone(c['items'][0]['revision_id'])
-            self.assertEqual(c['items'][0]['operation'], "OP_CREATE_VAULT")
-            self.assertEqual(c['items'][1]['operation'], "OP_SET_METADATA")
+            assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
+            assert c['items'][1]['operation'] == "OP_SET_METADATA"
 
             with open(os.path.join(new_vault_folder, "test.txt"), "w") as f:
                 f.write('hello')
@@ -216,29 +229,29 @@ class APITests():
 
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
-            self.assertEqual(len(c['items']), 4)
-            self.assertEqual(c['items'][-1]['operation'], "OP_UPLOAD")
-            self.assertEqual(c['items'][-1]['path'], "test.txt")
+            assert len(c['items']) == 4
+            assert c['items'][-1]['operation'] == "OP_UPLOAD"
+            assert c['items'][-1]['path'] == "test.txt"
 
             await self.app.sync_vault(self.app.vaults[0], full=True)
 
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
-            self.assertEqual(len(c['items']), 4)
+            assert len(c['items']) == 4
             self.assertIsNotNone(c['items'][0]['created_at'])
             self.assertFalse(c['items'][0]['created_at'].endswith(':'))
             self.assertIsNotNone(c['items'][0]['revision_id'])
-            self.assertEqual(c['items'][0]['operation'], "OP_CREATE_VAULT")
-            self.assertEqual(c['items'][1]['operation'], "OP_SET_METADATA")
-            self.assertEqual(c['items'][-1]['operation'], "OP_UPLOAD")
-            self.assertEqual(c['items'][-1]['path'], "test.txt")
+            assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
+            assert c['items'][1]['operation'] == "OP_SET_METADATA"
+            assert c['items'][-1]['operation'] == "OP_UPLOAD"
+            assert c['items'][-1]['path'] == "test.txt"
 
             r = await client.get(vault_uri)
             c = await r.json()
             await r.release()
-            self.assertEqual(c['file_count'], 1)
-            self.assertEqual(c['revision_count'], 4)
-            self.assertEqual(c['user_count'], 1)
+            assert c['file_count'] == 1
+            assert c['revision_count'] == 4
+            assert c['user_count'] == 1
 
         finally:
             await client.close()
@@ -258,7 +271,7 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -269,14 +282,14 @@ class APITests():
 
             vault_uri = c['resource_uri']
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'ready')
+            assert len(c) == 1 # one vault
+            assert c[0]['state'] == 'ready'
             await r.release()
 
             c = c[0] # first vault
@@ -285,18 +298,18 @@ class APITests():
                 'metadata': dict(c['metadata'], name='newname')
             })
             r = await client.put(vault_uri, data=patch_data)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             await r.release()
 
             r = await client.get(vault_uri + 'fingerprints/')
             c = await r.json()
-            self.assertEqual(len(c), 1)
+            assert len(c) == 1
 
             await self.app.sync_vault(self.vault, full=True)
 
             r = await client.get(vault_uri + 'fingerprints/')
             c = await r.json()
-            self.assertEqual(len(c), 1)
+            assert len(c) == 1
 
         finally:
             await client.close()
@@ -316,7 +329,7 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -327,14 +340,14 @@ class APITests():
 
             vault_uri = c['resource_uri']
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'ready')
+            assert len(c) == 1 # one vault
+            assert c[0]['state'] == 'ready'
             await r.release()
 
             c = c[0] # first vault
@@ -343,12 +356,12 @@ class APITests():
                 'metadata': dict(c['metadata'], name='newname')
             })
             r = await client.put(vault_uri, data=patch_data)
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
             await r.release()
 
             r = await client.get(vault_uri + 'users/')
             users = await r.json()
-            self.assertEqual(len(users), 1)
+            assert len(users) == 1
             self.assertIsNotNone(users[0]['resource_uri'])
             self.assertIsNotNone(users[0]['email'])
 
@@ -356,7 +369,7 @@ class APITests():
 
             r = await client.get(vault_uri + 'users/')
             c = await r.json()
-            self.assertEqual(len(users), 1)
+            assert len(users) == 1
             self.assertIsNotNone(users[0]['resource_uri'])
             self.assertIsNotNone(users[0]['email'])
 
@@ -378,7 +391,7 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -389,21 +402,21 @@ class APITests():
 
             vault_uri = c['resource_uri']
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'ready')
+            assert len(c) == 1 # one vault
+            assert c[0]['state'] == 'ready'
             await r.release()
 
             c = c[0] # first vault
 
             r = await client.delete(vault_uri)
-            self.assertEqual(r.status, 200)
-            self.assertEqual(len(app.vaults), 0) # no vault
+            assert r.status == 200
+            assert len(app.vaults) == 0 # no vault
 
             shutil.rmtree(new_vault_folder)
             os.makedirs(new_vault_folder)
@@ -418,14 +431,14 @@ class APITests():
 
             vault_uri = c['resource_uri']
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
-            self.assertEqual(len(c), 1) # one vault
-            self.assertEqual(c[0]['state'], 'ready')
+            assert len(c) == 1 # one vault
+            assert c[0]['state'] == 'ready'
             await r.release()
 
         finally:
@@ -446,7 +459,7 @@ class APITests():
         try:
             r = await client.login(**self.login_data)
             await r.release()
-            self.assertEqual(r.status, 200)
+            assert r.status == 200
 
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
@@ -457,7 +470,7 @@ class APITests():
 
             vault_uri = c['resource_uri']
 
-            self.assertEqual(len(app.vaults), 1) # one vault
+            assert len(app.vaults) == 1 # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
                 await asyncio.sleep(0.2)
 
@@ -465,8 +478,8 @@ class APITests():
             c = await r.json()
             await r.release()
 
-            self.assertEqual(c['resource_uri'], vault_uri)
-            self.assertEqual(c['ignore_paths'], ['.*'])
+            assert c['resource_uri'] == vault_uri
+            assert c['ignore_paths'] == ['.*']
 
             patch_data = json.dumps({
                 'ignore_paths': ['.*', 'NO-SHARE', 'this_also_not.txt']
@@ -478,9 +491,10 @@ class APITests():
             c = await r.json()
             await r.release()
 
-            self.assertEqual(c['resource_uri'], vault_uri)
-            self.assertEqual(c['ignore_paths'], ['.*', 'NO-SHARE', 'this_also_not.txt'])
+            assert c['resource_uri'] == vault_uri
+            assert c['ignore_paths'], ['.*', 'NO-SHARE' == 'this_also_not.txt']
 
         finally:
             await client.close()
             await app.stop()
+"""

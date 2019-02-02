@@ -1,15 +1,18 @@
 import json
 
 import aiohttp
+import trio
+import trio_asyncio
 
 from .auth import AUTH_TOKEN_HEADER
 
 
 class APIClient:
-    def __init__(self, app_config):
+    def __init__(self, app_config, loop=None):
         self.host = app_config.get('api.host')
         self.port = app_config.get('api.port')
         self.auth_token = app_config.get('api.auth_token')
+        self.loop = loop
         self._session = None
 
     def login(self, **kwargs):
@@ -24,7 +27,7 @@ class APIClient:
     @property
     def session(self):
         if not self._session:
-            self._session = aiohttp.ClientSession()
+            self._session = aiohttp.ClientSession(loop=self.loop)
         return self._session
 
     def __getattr__(self, http_method):
@@ -36,7 +39,16 @@ class APIClient:
             # Build URL
             url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
 
-            ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
+            async def nested():
+                print("xx2")
+                ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
+                print("xx2", ctx)
+                return ctx
+
+            print("xx")
+            ctx = await trio_asyncio.run_asyncio(nested)
+            print("xxy")
+            #ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
             if raise_for_status:
                 ctx.raise_for_status()
             return ctx

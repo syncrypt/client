@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import trio
 import argparse
 import asyncio
 import os.path
@@ -41,36 +42,42 @@ os.makedirs(log_dir, exist_ok=True)
 setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
 
-def run_syncrypt():
-    app = SyncryptDaemonApp(app_config, initial_push=config.initial_push)
+async def run_syncrypt():
+    async with trio.open_nursery() as nursery:
+        app = SyncryptDaemonApp(app_config,
+                nursery=nursery,
+                initial_push=config.initial_push
+        )
 
-    smokesignal.emit('pre_setup', app=app)
+        smokesignal.emit('pre_setup', app=app)
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(app.start())
-    loop.run_until_complete(app.initialize())
+        await app.start()
+        await app.initialize()
 
-    smokesignal.emit('post_setup', app=app)
-    loop.create_task(app.post_setup())
+        smokesignal.emit('post_setup', app=app)
 
-    try:
-        loop.run_until_complete(app.wait_for_shutdown())
-    except KeyboardInterrupt:
-        pass
+        nursery.start_soon(app.post_setup)
 
-    smokesignal.emit('shutdown', app=app)
+        await trio.sleep(100)
 
-    return app.restart_flag
+        #try:
+        #    loop.run_until_complete(app.wait_for_shutdown())
+        #except KeyboardInterrupt:
+        #    pass
+
+        smokesignal.emit('shutdown', app=app)
+
+        return app.restart_flag
 
 
 if config.detach:
     class SyncryptDaemon(Daemon):
         def run(self):
-            while run_syncrypt():
+            while trio.run(run_syncrypt):
                 time.sleep(2)
     syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
     getattr(syncryptd, config.command)()
 else:
-    while run_syncrypt():
+    while trio.run(run_syncrypt):
         time.sleep(2)
 

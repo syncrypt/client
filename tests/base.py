@@ -5,7 +5,10 @@ import unittest
 from glob import glob
 
 import pytest
+import trio
+import trio_asyncio
 
+from syncrypt.api import APIClient
 from syncrypt.app import SyncryptApp, SyncryptDaemonApp
 from syncrypt.auth import CredentialsAuthenticationProvider
 from syncrypt.backends import BinaryStorageBackend, LocalStorageBackend
@@ -61,18 +64,38 @@ async def local_app(working_dir):
 
 
 @pytest.fixture
-async def local_daemon_app(working_dir):
+async def asyncio_loop():
+    # When a ^C happens, trio send a Cancelled exception to each running
+    # coroutine. We must protect this one to avoid deadlock if it is cancelled
+    # before another coroutine that uses trio-asyncio.
+    with trio.open_cancel_scope(shield=True):
+        async with trio_asyncio.open_loop() as loop:
+            yield loop
+
+
+@pytest.fixture
+async def local_daemon_app(working_dir, asyncio_loop):
     app_config_file = os.path.join(working_dir, "test_config")
     app_config = TestAppConfig(app_config_file, remote = {
             "type": "binary",
             "host": "localhost",
             })
-    app = SyncryptDaemonApp(app_config, auth_provider=TestAuthenticationProvider())
-    await app.initialize()
-    await app.start()
-    yield app
-    await app.close()
-    await app.stop()
+
+    async with trio.open_nursery() as nursery:
+        app = SyncryptDaemonApp(app_config, nursery=nursery,
+                auth_provider=TestAuthenticationProvider())
+        await app.initialize()
+        await app.start()
+        yield app
+        await app.close()
+        await app.stop()
+
+
+@pytest.fixture
+async def local_api_client(local_daemon_app, asyncio_loop):
+    client = APIClient(local_daemon_app.config, loop=asyncio_loop)
+    yield client
+    await client.close()
 
 
 async def generic_vault(folder, app_cls=SyncryptApp, remote = {

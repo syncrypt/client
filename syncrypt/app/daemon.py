@@ -1,7 +1,10 @@
 import asyncio
+import trio
 import logging
 import os.path
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+
+import trio
 
 import syncrypt
 from syncrypt.api import SyncryptAPI
@@ -19,7 +22,7 @@ class SyncryptDaemonApp(SyncryptApp):
 
     def __init__(self, config, **kwargs):
 
-        self.shutdown_event = asyncio.Event()
+        self.shutdown_event = trio.Event()
         self.restart_flag = False
         self.refresh_vault_info_task = None
         self.initial_push = kwargs.pop('initial_push', True)
@@ -30,8 +33,8 @@ class SyncryptDaemonApp(SyncryptApp):
 
     async def start(self):
         try:
-            self.api.initialize()
-            await self.api.start()
+            self.nursery.start_soon(self.api.run)
+            await trio.sleep(4.0)
         except OSError:
             logger.error('Port is blocked, could not start API REST server')
             logger.info('Attempting to query running server for version...')

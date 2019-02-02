@@ -42,11 +42,11 @@ class SyncryptApp(object):
 
         # These enforce global limits on various bundle actions
         self.semaphores = {
-            'update': JoinableSetSemaphore(8),
-            'stat': JoinableSetSemaphore(8),
-            'upload': JoinableSetSemaphore(8),
-            'download': JoinableSetSemaphore(8)
-        } # type: Dict[str, JoinableSetSemaphore[Bundle]]
+            'update': trio.CapacityLimiter(8),
+            'stat': trio.CapacityLimiter(8),
+            'upload': trio.CapacityLimiter(8),
+            'download': trio.CapacityLimiter(8),
+        } # type: Dict[str, trio.CapacityLimiter]
 
         self.stats = {
             'uploads': 0,
@@ -63,20 +63,11 @@ class SyncryptApp(object):
         # A map from Bundle -> Exception that contains all failed pushes
         self._failed_pushes = {} # type: Dict[Bundle, Any]
 
-        # This semaphore enforces the global concurrency limit for both pushes and pulls.
-        self._bundle_actions = JoinableSemaphore(self.concurrency)
-
         # A map from folder -> Watchdog. Used by the daemon and the "watch" command.
         self._watchdogs = {} # type: Dict[str, Any]
 
         # A map from folder -> Task. Used by the daemon to autopull vault periodically.
         self._autopull_tasks = {} # type: Dict[str, Any]
-
-        def handler(loop, args, **kwargs):
-            if 'exception' in kwargs and isinstance(kwargs['exception'], asyncio.CancelledError):
-                return
-            logger.error("Unhandled exception in event loop: %s, %s", args, kwargs)
-        asyncio.get_event_loop().set_exception_handler(handler)
 
         store.init(config)
 
@@ -764,7 +755,7 @@ class SyncryptApp(object):
     #        await self.remove_bundle(bundle)
 
     async def wait(self):
-        await self._bundle_actions.join()
+        pass # TODO
 
     async def close(self):
         await self.wait()

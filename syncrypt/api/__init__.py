@@ -1,9 +1,12 @@
 import asyncio
 import json
 import logging
+import math
 import os.path
 
 import smokesignal
+import trio
+import trio_asyncio
 from aiohttp import web
 from aiohttp.abc import AbstractAccessLogger
 
@@ -292,8 +295,7 @@ class SyncryptAPI():
             logger.exception("The following exception occurred")
             return self.exception_response(ex)
 
-    def initialize(self):
-        loop = asyncio.get_event_loop()
+    def initialize(self, loop):
         self.web_app = web.Application(loop=loop, middlewares=[self.error_middleware])
 
         VaultResource(self.app).add_routes(self.web_app.router)
@@ -339,17 +341,36 @@ class SyncryptAPI():
     async def dispatch_options(self, request):
         return JSONResponse({})
 
-    async def start(self):
-        if self.web_app is None:
-            raise RuntimeError('Start requested without initialization')
+    async def run(self):
+        async with trio_asyncio.open_loop() as loop:
 
-        loop = asyncio.get_event_loop()
+            self.initialize(loop)
 
-        self.handler = self.web_app.make_handler(access_log_class=AccessLogger)
-        self.server = await loop.create_server(self.handler,
-                self.app.config.api['host'], self.app.config.api['port'])
-        logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
-                .format(self.app.config))
+            self.handler = self.web_app.make_handler(access_log_class=AccessLogger)
+            runner = web.AppRunner(self.web_app)
+            await trio_asyncio.run_asyncio(runner.setup)
+            site = web.TCPSite(runner,
+                self.app.config.api['host'],
+                self.app.config.api['port']
+            )
+            await trio_asyncio.run_asyncio(site.start)
+            logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
+                    .format(self.app.config))
+            try:
+                await trio.sleep(math.inf)
+            finally:
+                print("p")
+                #TODO await trio_asyncio.run_asyncio(site.stop)
+
+
+        #self.server = await loop.create_server(self.handler,
+        #        self.app.config.api['host'], self.app.config.api['port'])
+        #logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
+        #        .format(self.app.config))
+
+    #async def start(self):
+    #    nursery.
+    #    pass
 
     async def stop(self):
         if self.server:
