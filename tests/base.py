@@ -126,13 +126,16 @@ async def generic_vault(folder, app_cls=SyncryptApp, remote = {
 
     await app.close()
 
-#    def assertSameFilesInFolder(self, *folders):
-#        files_per_folder = [sorted(os.listdir(folder)) for folder in folders]
-#        assertEqual(*[len(files) for files in files_per_folder])
-#        for fn in zip(*files_per_folder):
-#            assertEqual(*fn)
-#            assertEqual(*[os.stat(os.path.join(folder, filename)).st_size for folder, filename in
-#                zip(folders, fn)])
+
+def assertSameFilesInFolder(self, *folders):
+    def all_same(items):
+        return all(x == items[0] for x in items)
+    files_per_folder = [sorted(os.listdir(folder)) for folder in folders]
+    assert all_same([len(files) for files in files_per_folder])
+    for fn in zip(*files_per_folder):
+        assert all_same(fn)
+        assert all_same([os.stat(os.path.join(folder, filename)).st_size for folder, filename in
+            zip(folders, fn)])
 
 
 @pytest.fixture

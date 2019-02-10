@@ -14,7 +14,7 @@ from syncrypt.exceptions import AlreadyPresent, InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 
-from .base import local_app, local_vault, working_dir
+from .base import local_app, local_vault, working_dir, assertSameFilesInFolder
 
 
 def generate_fake_revision(vault):
@@ -199,7 +199,7 @@ async def test_remove_file(local_app, local_vault, working_dir):
 
     files_in_new_vault = len(glob(os.path.join(other_vault_path, "*")))
     assert files_in_new_vault == 6
-    #assertSameFilesInFolder(local_vault.folder, other_vault_path)
+    assertSameFilesInFolder(local_vault.folder, other_vault_path)
 
     keys = UserVaultKeyManager(app)
     # We have one valid key for both vaults
@@ -227,7 +227,7 @@ async def test_local_fake_revision(local_app, local_vault, working_dir):
     # add fake revision to local storage
     local_vault.backend.add_revision(generate_fake_revision(local_vault))
 
-    with assertRaises(InvalidRevision):
+    with pytest.raises(InvalidRevision):
         await app.pull_vault(local_vault)
 
 

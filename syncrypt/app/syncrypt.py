@@ -589,22 +589,15 @@ class SyncryptApp(object):
     async def push_bundle(self, bundle: Bundle):
         'update bundle and maybe upload'
 
-        await self.semaphores['update'].acquire(bundle)
-        try:
+        async with self.semaphores['update']:
             await bundle.update()
-        finally:
-            await self.semaphores['update'].release(bundle)
 
-        await self.semaphores['stat'].acquire(bundle)
-        try:
+        async with self.semaphores['stat']:
             await bundle.vault.backend.stat(bundle)
             self.stats['stats'] += 1
-        finally:
-            await self.semaphores['stat'].release(bundle)
 
         if bundle.remote_hash_differs:
-            await self.semaphores['upload'].acquire(bundle)
-            try:
+            async with self.semaphores['upload']:
                 while True:
                     try:
                         revision = await bundle.vault.backend.upload(bundle, self.identity)
@@ -615,8 +608,6 @@ class SyncryptApp(object):
                         await self.sync_vault(bundle.vault)
 
                 self.stats['uploads'] += 1
-            finally:
-                await self.semaphores['upload'].release(bundle)
 
     async def pull(self, full=False):
         "Pull all registered vaults"
@@ -701,30 +692,21 @@ class SyncryptApp(object):
 
     async def pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
-        await self.semaphores['update'].acquire(bundle)
-        try:
+        async with self.semaphores['update']:
             await bundle.update()
-        finally:
-            await self.semaphores['update'].release(bundle)
 
-        await self.semaphores['stat'].acquire(bundle)
-        try:
+        async with self.semaphores['stat']:
             await bundle.vault.backend.stat(bundle)
             self.stats['stats'] += 1
-        finally:
-            await self.semaphores['stat'].release(bundle)
 
         if bundle.remote_crypt_hash is None:
             logger.warn('File not found: %s', bundle)
             return
 
         if bundle.remote_hash_differs:
-            await self.semaphores['download'].acquire(bundle)
-            try:
+            async with self.semaphores['download']:
                 await bundle.vault.backend.download(bundle)
                 self.stats['downloads'] += 1
-            finally:
-                await self.semaphores['download'].release(bundle)
 
     async def remove_bundle(self, bundle: Bundle):
         vault = bundle.vault

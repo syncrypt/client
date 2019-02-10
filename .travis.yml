@@ -60,7 +60,7 @@ before_script:
   - pylint syncrypt scripts
   - |
     if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-      py.test -m 'not (requires_server or external_resources)' -k "not api"
+      py.test -m 'not (requires_server or external_resources)'
     else
       py.test -m 'not (requires_server or external_resources)'
     fi
