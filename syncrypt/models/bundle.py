@@ -4,7 +4,6 @@ import logging
 import os
 import posixpath
 
-import aiofiles
 import umsgpack
 from sqlalchemy import Column, ForeignKey, Integer, LargeBinary, String, orm
 from sqlalchemy.orm import relationship

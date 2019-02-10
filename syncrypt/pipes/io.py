@@ -53,7 +53,6 @@ class StdoutWriter(StreamWriter):
         super(StdoutWriter, self).__init__(self.handle.buffer)
 
 class FileWriter(Sink):
-    # simple wrapper for aiofiles
     def __init__(self, filename, create_dirs=False, create_backup=False, store_temporary=False):
         self.filename = filename
         self.handle = None
