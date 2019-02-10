@@ -50,14 +50,14 @@ async def test_async_key_generation(working_dir):
 
     identity = Identity(key, key_pub, AppConfig())
 
-    loop = asyncio.get_event_loop()
+    # loop = asyncio.get_event_loop()
 
     x = [0]
 
-    async def counter():
-        while True:
-            await asyncio.sleep(0.001)
-            x[0] += 1
+    # async def counter():
+    #    while True:
+    #        await asyncio.sleep(0.001)
+    #        x[0] += 1
 
     await identity.init()
     task = loop.create_task(counter())

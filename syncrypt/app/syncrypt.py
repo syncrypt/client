@@ -664,7 +664,6 @@ class SyncryptApp(object):
 
     async def pull_vault(self, vault, full=False):
         vault.logger.info('Pulling %s', vault)
-        successful = []
 
         # First, we will iterate through the changes, validate the chain and build up the state of
         # the vault (files, keys, ...). This is called "syncing".

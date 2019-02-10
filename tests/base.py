@@ -98,35 +98,6 @@ async def local_api_client(local_daemon_app, asyncio_loop):
     await client.close()
 
 
-async def generic_vault(folder, app_cls=SyncryptApp, remote = {
-            "type": "binary",
-            "host": "localhost",
-            }):
-    app_cls = SyncryptApp
-
-    # If available, use filesystem mounted shared memory in order to save
-    # disk IO operations during testing
-    vault = None  # type: Vault
-
-    app_config_file = os.path.join(working_dir, "test_config")
-
-    setup_logging("DEBUG")
-
-    if os.path.exists(app_config_file):
-        os.remove(app_config_file)
-
-    app_config = TestAppConfig(app_config_file, remote)
-
-    store.drop(app_config)
-
-    app = app_cls(app_config, auth_provider=TestAuthenticationProvider())
-    await app.initialize()
-
-    yield vault
-
-    await app.close()
-
-
 def assertSameFilesInFolder(self, *folders):
     def all_same(items):
         return all(x == items[0] for x in items)

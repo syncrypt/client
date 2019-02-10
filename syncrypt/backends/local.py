@@ -203,7 +203,7 @@ class LocalStorageBackend(base):  # type: ignore
         assert since_rev is None or isinstance(since_rev, str)
 
         queue = cast(RevisionQueue, asyncio.Queue(8))
-        asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
+        #TODO asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
         return queue
 
     async def _changes(self, since_rev, to_rev):
