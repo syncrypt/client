@@ -25,19 +25,19 @@ environment:
       WHEEL_PLATFORM: "cp36-cp36m"
       DEPLOY_ARTIFACT: "true"
 
-    - PYTHON: "C:\\Python35"
-      PYTHON_VERSION: "3.5.x"
+    - PYTHON: "C:\\Python37"
+      PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "32"
       DIST_PLATFORM: "win-i386"
       WHEEL_ARCH: "win32"
-      WHEEL_PLATFORM: "cp35-cp35m"
+      WHEEL_PLATFORM: "cp37-cp37m"
 
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x"
+    - PYTHON: "C:\\Python37-x64"
+      PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
-      WHEEL_PLATFORM: "cp35-cp35m"
+      WHEEL_PLATFORM: "cp37-cp37m"
 
 init:
   # Set "build version number" to "short-commit-hash" or when tagged to "tag name" (Travis style)
