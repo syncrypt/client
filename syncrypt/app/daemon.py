@@ -33,8 +33,9 @@ class SyncryptDaemonApp(SyncryptApp):
 
     async def start(self):
         try:
-            self.nursery.start_soon(self.api.run)
-            await trio.sleep(4.0)
+            # TODO: Look into nursery.start, maybe ready.wait() is not needed
+            self.nursery.start_soon(self.api.start)
+            await self.api.ready.wait()
         except OSError:
             logger.error('Port is blocked, could not start API REST server')
             logger.info('Attempting to query running server for version...')
@@ -78,7 +79,7 @@ class SyncryptDaemonApp(SyncryptApp):
             except Exception:
                 logger.exception("General failure during vault initialization")
 
-        self.refresh_vault_info_task = asyncio.Task(self.refresh_vault_info_periodically())
+        #self.refresh_vault_info_task = asyncio.Task(self.refresh_vault_info_periodically())
 
         if self.initial_push:
             await self.push()

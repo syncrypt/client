@@ -42,6 +42,9 @@ class SyncryptAPI():
         self.app = app
         self.web_app = None
         self.server = None
+        self.ready = trio.Event()
+        self.shutdown = trio.Event()
+        self.dead = trio.Event()
 
         if not self.app.config.get('api.auth_token'):
             logger.info('Generating API auth token...')
@@ -191,7 +194,7 @@ class SyncryptAPI():
 
     @require_auth_token
     async def get_version(self, request):
-        if int(request.GET.get('check_for_update', 1)):
+        if int(request.query.get('check_for_update', 0)):
             can_update, available = await is_update_available()
             return JSONResponse({
                 'update_available': can_update,
@@ -295,8 +298,8 @@ class SyncryptAPI():
             logger.exception("The following exception occurred")
             return self.exception_response(ex)
 
-    def initialize(self, loop):
-        self.web_app = web.Application(loop=loop, middlewares=[self.error_middleware])
+    def initialize(self):
+        self.web_app = web.Application(middlewares=[self.error_middleware])
 
         VaultResource(self.app).add_routes(self.web_app.router)
         BundleResource(self.app).add_routes(self.web_app.router)
@@ -341,40 +344,26 @@ class SyncryptAPI():
     async def dispatch_options(self, request):
         return JSONResponse({})
 
-    async def run(self):
-        async with trio_asyncio.open_loop() as loop:
+    async def start(self):
+        async with trio_asyncio.open_loop():
 
-            self.initialize(loop)
+            self.initialize()
 
-            self.handler = self.web_app.make_handler(access_log_class=AccessLogger)
             runner = web.AppRunner(self.web_app)
-            await trio_asyncio.run_asyncio(runner.setup)
+            await trio_asyncio.aio_as_trio(runner.setup)
             site = web.TCPSite(runner,
                 self.app.config.api['host'],
                 self.app.config.api['port']
             )
-            await trio_asyncio.run_asyncio(site.start)
+            await trio_asyncio.aio_as_trio(site.start)
             logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
                     .format(self.app.config))
-            try:
-                await trio.sleep(math.inf)
-            finally:
-                print("p")
-                #TODO await trio_asyncio.run_asyncio(site.stop)
-
-
-        #self.server = await loop.create_server(self.handler,
-        #        self.app.config.api['host'], self.app.config.api['port'])
-        #logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
-        #        .format(self.app.config))
-
-    #async def start(self):
-    #    nursery.
-    #    pass
+            self.ready.set()
+            await self.shutdown.wait()
+            await trio_asyncio.aio_as_trio(site.stop)
+        self.dead.set()
 
     async def stop(self):
-        if self.server:
-            logger.info("Shutting down REST API Server")
-            self.server.close()
-            await self.server.wait_closed()
-            await self.handler.shutdown(1.0)
+        logger.info("Shutting down REST API Server")
+        self.shutdown.set()
+        await self.dead.wait()

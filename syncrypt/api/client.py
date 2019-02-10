@@ -22,7 +22,8 @@ class APIClient:
         return self.get('/v1/auth/logout/')
 
     async def close(self):
-        await self._session.close()
+        #await self._session.close()
+        pass
 
     @property
     def session(self):
@@ -39,19 +40,16 @@ class APIClient:
             # Build URL
             url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
 
+            @trio_asyncio.aio_as_trio
             async def nested():
-                print("xx2")
-                ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
-                print("xx2", ctx)
-                return ctx
+                async with aiohttp.ClientSession() as session:
+                    async with getattr(session, http_method)(url, **kwargs) as response:
+                        if raise_for_status:
+                            response.raise_for_status()
+                        return await response.json()
 
-            print("xx")
-            ctx = await trio_asyncio.run_asyncio(nested)
-            print("xxy")
-            #ctx = await getattr(self.session, http_method)(url, *args, **kwargs)
-            if raise_for_status:
-                ctx.raise_for_status()
-            return ctx
+            return await nested()
+
         return api_call
 
     def ws_connect(self, request_uri, **kwargs):

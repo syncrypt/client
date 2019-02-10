@@ -22,17 +22,22 @@ login_data = {
     'password': 'test!password'
 }
 
+
+async def test_local_daemon_app(local_daemon_app):
+    assert len(local_daemon_app.vaults) == 0
+
+
+async def test_local_daemon_app_version(local_daemon_app, local_api_client):
+    client = local_api_client
+    r = await client.get('/v1/version/')
+
+
 async def test_api_login(local_daemon_app, local_api_client):
     'try to get a list of files via API'
     client = local_api_client
-    r = await client.login(**login_data)
-    await r.release()
-    assert r.status == 200
-    r = await client.get('/v1/auth/check/')
-    c = await r.json()
-    await r.release()
-    assert r.status == 200
-    assert c['connected'] == True
+    content = await client.get('/v1/auth/check/', raise_for_status=True)
+    assert content['connected'] == True
+
 
 """
 class APITests():

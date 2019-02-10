@@ -14,7 +14,7 @@ CURRENT_ENDPOINT = 'https://alpha.syncrypt.space/releases/current.json'
 async def retrieve_available_version(platform_id):
     sslcontext = ssl.create_default_context(cafile=certifi.where())
     conn = aiohttp.TCPConnector(ssl_context=sslcontext)
-    with aiohttp.ClientSession(connector=conn) as c:
+    async with aiohttp.ClientSession(connector=conn) as c:
         r = await c.get(CURRENT_ENDPOINT)
         content = await r.json()
         return content[platform_id]

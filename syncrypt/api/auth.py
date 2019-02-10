@@ -16,12 +16,12 @@ def generate_api_auth_token():
 
 
 def require_auth_token(f):
-    def inner(resource, request, *args, **kwargs):
+    async def inner(resource, request, *args, **kwargs):
         req_token = request.headers.get(AUTH_TOKEN_HEADER, '')
         auth_token = resource.app.config.get('api.auth_token')
 
         if not auth_token or (req_token == auth_token):
-            return f(resource, request, *args, **kwargs)
+            return await f(resource, request, *args, **kwargs)
         else:
             raise aiohttp.web.HTTPForbidden()
     return inner

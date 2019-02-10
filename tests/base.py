@@ -54,8 +54,8 @@ def working_dir():
 async def local_app(working_dir):
     app_config_file = os.path.join(working_dir, "test_config")
     app_config = TestAppConfig(app_config_file, remote = {
-            "type": "binary",
-            "host": "localhost",
+            "type": "local",
+            "folder": "teststore",
             })
     app = SyncryptApp(app_config, auth_provider=TestAuthenticationProvider())
     await app.initialize()
@@ -77,8 +77,8 @@ async def asyncio_loop():
 async def local_daemon_app(working_dir, asyncio_loop):
     app_config_file = os.path.join(working_dir, "test_config")
     app_config = TestAppConfig(app_config_file, remote = {
-            "type": "binary",
-            "host": "localhost",
+            "type": "local",
+            "folder": "teststore",
             })
 
     async with trio.open_nursery() as nursery:
@@ -144,5 +144,4 @@ async def local_vault(local_app, working_dir):
     shutil.copytree(folder, vault_folder)
     vault = Vault(vault_folder)
     await local_app.add_vault(vault)
-
     yield vault
