@@ -1,7 +1,6 @@
 import json
 
 import aiohttp
-import trio
 import trio_asyncio
 
 from .auth import AUTH_TOKEN_HEADER

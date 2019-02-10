@@ -1,3 +1,4 @@
+# pylint: disable=not-async-context-manager
 import asyncio
 import smokesignal
 import trio
@@ -19,10 +20,7 @@ from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWr
                             StdoutWriter)
 from syncrypt.utils.filesystem import is_empty
 from syncrypt.utils.format import format_fingerprint
-from syncrypt.utils.semaphores import JoinableSemaphore, JoinableSetSemaphore
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
-
-from .asynccontext import AsyncContext
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +39,7 @@ class SyncryptApp(object):
         self.concurrency = int(self.config.app['concurrency'])
 
         # These enforce global limits on various bundle actions
-        self.semaphores = {
+        self.limiters = {
             'update': trio.CapacityLimiter(8),
             'stat': trio.CapacityLimiter(8),
             'upload': trio.CapacityLimiter(8),
@@ -589,15 +587,15 @@ class SyncryptApp(object):
     async def push_bundle(self, bundle: Bundle):
         'update bundle and maybe upload'
 
-        async with self.semaphores['update']:
+        async with self.limiters['update']:
             await bundle.update()
 
-        async with self.semaphores['stat']:
+        async with self.limiters['stat']:
             await bundle.vault.backend.stat(bundle)
             self.stats['stats'] += 1
 
         if bundle.remote_hash_differs:
-            async with self.semaphores['upload']:
+            async with self.limiters['upload']:
                 while True:
                     try:
                         revision = await bundle.vault.backend.upload(bundle, self.identity)
@@ -676,7 +674,7 @@ class SyncryptApp(object):
         limit = trio.CapacityLimiter(3)
 
         try:
-            async with trio.open_nursery() as nursery:
+            async with trio.open_nursery():
                 bundles = await self.bundles.download_bundles_for_vault(vault)
 
                 for bundle in bundles:
@@ -691,10 +689,10 @@ class SyncryptApp(object):
 
     async def pull_bundle(self, bundle):
         'update, maybe download, and then decrypt'
-        async with self.semaphores['update']:
+        async with self.limiters['update']:
             await bundle.update()
 
-        async with self.semaphores['stat']:
+        async with self.limiters['stat']:
             await bundle.vault.backend.stat(bundle)
             self.stats['stats'] += 1
 
@@ -703,7 +701,7 @@ class SyncryptApp(object):
             return
 
         if bundle.remote_hash_differs:
-            async with self.semaphores['download']:
+            async with self.limiters['download']:
                 await bundle.vault.backend.download(bundle)
                 self.stats['downloads'] += 1
 

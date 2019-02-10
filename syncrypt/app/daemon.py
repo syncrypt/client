@@ -4,8 +4,6 @@ import logging
 import os.path
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
-import trio
-
 import syncrypt
 from syncrypt.api import SyncryptAPI
 from syncrypt.api.client import APIClient

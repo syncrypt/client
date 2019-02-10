@@ -1224,4 +1224,3 @@ class BinaryStorageBackend(base):  # type: ignore
         # in case we wanna reuse the slot later.
         logger.debug("ON CLOSE")
         pass
-

@@ -1,4 +1,3 @@
-import concurrent.futures
 import hashlib
 import logging
 import os
@@ -8,7 +7,6 @@ from enum import Enum
 from io import BytesIO
 
 import Cryptodome.Util.number
-import trio
 from Cryptodome.Hash import SHA256
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import pkcs1_15
@@ -128,13 +126,13 @@ class Identity(object):
 
         self.state = IdentityState.INITIALIZING
         # TODO
-        with concurrent.futures.ProcessPoolExecutor() as pool:
-            args = (
-                self.config.rsa_key_len,
-                self.id_rsa_pub_path,
-                self.id_rsa_path
-            )
-            rsa_generate(*args)
+        #with concurrent.futures.ProcessPoolExecutor() as pool:
+        args = (
+            self.config.rsa_key_len,
+            self.id_rsa_pub_path,
+            self.id_rsa_path
+        )
+        rsa_generate(*args)
             # async with trio_asyncio.open_loop() as loop:
             #    await trio_asyncio.run_asyncio(
             #            loop.run_in_executor, pool, rsa_generate, *args
