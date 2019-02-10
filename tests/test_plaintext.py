@@ -14,6 +14,7 @@ from syncrypt.crypt.plaintext import PlaintextEngine
 from syncrypt.exceptions import InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Revision, RevisionOp, Vault
+"""
 from tests.base import VaultLocalTestCase
 
 
@@ -221,3 +222,4 @@ class PlaintextTestCase(VaultLocalTestCase):
         await app.pull(full=True)
         files_in_vault = len(glob(os.path.join(self.vault.folder, "*")))
         self.assertEqual(files_in_vault, 8)
+"""

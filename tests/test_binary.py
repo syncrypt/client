@@ -12,6 +12,7 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import BinaryStorageBackend
 from syncrypt.backends.binary import get_manager_instance
 from syncrypt.models import Bundle, Vault
+"""
 from tests.base import VaultTestCase
 
 
@@ -205,3 +206,4 @@ if __name__ == '__main__':
     from syncrypt.utils.logging import setup_logging
     setup_logging(logging.DEBUG)
     unittest.main()
+"""

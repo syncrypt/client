@@ -14,7 +14,7 @@ from syncrypt.exceptions import AlreadyPresent, InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 
-from .base import local_vault, local_app, working_dir
+from .base import local_app, local_vault, working_dir
 
 
 def generate_fake_revision(vault):
@@ -277,7 +277,7 @@ async def test_add_user_with_a_key(local_app, local_vault, working_dir):
     if os.path.exists(key_pub):
         os.unlink(key_pub)
 
-    ericb_identity = Identity(key, key_pub, app_config)
+    ericb_identity = Identity(key, key_pub, local_app.config)
     await ericb_identity.init()
     await ericb_identity.generate_keys()
 
@@ -316,7 +316,7 @@ async def test_add_user_with_a_key(local_app, local_vault, working_dir):
     # 7. Fail while trying to modify metadata with ericb
     local_vault.config.vault["name"] = "Really Eric's Library"
 
-    with assertRaises(InvalidRevision):
+    with pytest.raises(InvalidRevision):
         revision = await local_vault.backend.set_vault_metadata(ericb_identity)
         await app.revisions.apply(revision, local_vault)
 
@@ -334,7 +334,7 @@ async def test_add_user_twice(local_app, local_vault):
     users = app.vault_users.list_for_vault(local_vault)
     assert len(users) == 2
 
-    with assertRaises(AlreadyPresent):
+    with pytest.raises(AlreadyPresent):
         await app.add_vault_user(local_vault, 'ericb@localhost')
 
     users = app.vault_users.list_for_vault(local_vault)

@@ -11,8 +11,6 @@ import pytest
 from syncrypt.pipes import (Buffered, BufferedFree, ChunkedURLWriter, Count, Hash, Once, Repeat,
                             StdoutWriter, URLReader, URLWriter)
 
-from .base import VaultTestCase
-
 
 class URLReaderTests(unittest.TestCase):
 

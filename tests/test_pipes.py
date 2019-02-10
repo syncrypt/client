@@ -7,8 +7,6 @@ import unittest
 from syncrypt.pipes import (Buffered, Count, FileReader, Limit, Once, Repeat, SnappyCompress,
                             SnappyDecompress, StreamReader)
 
-from .base import VaultTestCase
-
 __all__ = ("PipesTests",)
 
 

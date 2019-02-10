@@ -39,6 +39,19 @@ async def test_api_login(local_daemon_app, local_api_client):
     assert content['connected'] == True
 
 
+async def test_api_vault(local_daemon_app, local_api_client, local_daemon_vault):
+    'try to get a list of files via API'
+    client = local_api_client
+    assert len(local_daemon_app.vaults) == 1
+
+    content = await client.get('/v1/vault/')
+    assert len(content) == 1 # only one vault
+    vault_uri = content[0]['resource_uri']
+    vault_json = await client.get(vault_uri)
+    assert vault_json['resource_uri'] == vault_uri
+    assert vault_json['metadata']['name'] == 'My Vault'
+
+
 """
 class APITests():
     app_cls = SyncryptDaemonApp  # type: ignore

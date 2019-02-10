@@ -1043,7 +1043,7 @@ def get_manager_instance() -> BinaryStorageManager:
 
 @smokesignal.on("shutdown")
 def on_shutdown():
-    loop = asyncio.get_event_loop()
+    #loop = asyncio.get_event_loop()
     logger.debug("ON SHUTDOWN")
     #task = loop.create_task(get_manager_instance().close())
     #import ipdb; ipdb.set_trace()

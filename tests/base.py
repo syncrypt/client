@@ -145,3 +145,15 @@ async def local_vault(local_app, working_dir):
     vault = Vault(vault_folder)
     await local_app.add_vault(vault)
     yield vault
+
+
+@pytest.fixture
+async def local_daemon_vault(local_daemon_app, working_dir):
+    folder = 'tests/testlocalvault/'
+    vault_folder = os.path.join(working_dir, "testvault")
+    if os.path.exists(vault_folder):
+        shutil.rmtree(vault_folder)
+    shutil.copytree(folder, vault_folder)
+    vault = Vault(vault_folder)
+    await local_daemon_app.add_vault(vault)
+    yield vault
