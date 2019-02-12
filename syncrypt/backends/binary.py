@@ -1036,13 +1036,7 @@ def get_manager_instance() -> BinaryStorageManager:
 
 @smokesignal.on("shutdown")
 def on_shutdown():
-    #loop = asyncio.get_event_loop()
-    logger.debug("ON SHUTDOWN")
-    #task = loop.create_task(get_manager_instance().close())
-    #import ipdb; ipdb.set_trace()
-    #asyncio.get_event_loop().run_in_executor(None,
-    #    get_manager_instance().close()
-    #)
+    pass # TODO: remove
 
 
 class BinaryStorageBackend(StorageBackend):

@@ -9,6 +9,7 @@ from .base import Sink, Source
 
 logger = logging.getLogger(__name__)
 
+
 class StreamReader(Source):
     def __init__(self, reader):
         super(StreamReader, self).__init__()
@@ -17,6 +18,7 @@ class StreamReader(Source):
     async def close(self):
         # Do NOT close handle
         pass
+
 
 class FileReader(Source):
     def __init__(self, filename):
@@ -33,6 +35,7 @@ class FileReader(Source):
         if self.handle:
             await self.handle.aclose()
 
+
 class StreamWriter(Sink):
     def __init__(self, writer):
         self.writer = writer
@@ -46,6 +49,7 @@ class StreamWriter(Sink):
             await self.writer.drain()
             self.bytes_written += len(buf)
         return buf
+
 
 class StdoutWriter(StreamWriter):
     def __init__(self):
