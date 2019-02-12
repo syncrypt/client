@@ -6,8 +6,6 @@ from typing_extensions import Protocol
 
 from syncrypt.models import Bundle, Identity, Revision
 
-RevisionQueue = NewType("RevisionQueue", "asyncio.Queue[Union[Revision, None]]")
-
 
 class StorageBackend(Protocol):
 
@@ -42,7 +40,7 @@ class StorageBackend(Protocol):
         raise NotImplementedError()
 
     @abstractmethod
-    async def changes(self, since_rev, to_rev) -> RevisionQueue:
+    async def changes(self, since_rev, to_rev):
         raise NotImplementedError
 
     @abstractmethod

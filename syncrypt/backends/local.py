@@ -12,7 +12,7 @@ from syncrypt.exceptions import VaultNotInitialized
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
 from syncrypt.pipes import FileReader, FileWriter
 
-from .base import RevisionQueue, StorageBackend
+from .base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
@@ -199,14 +199,7 @@ class LocalStorageBackend(base):  # type: ignore
             "last_name": ""
         }
 
-    async def changes(self, since_rev, to_rev) -> RevisionQueue:
-        assert since_rev is None or isinstance(since_rev, str)
-
-        queue = cast(RevisionQueue, asyncio.Queue(8))
-        #TODO asyncio.get_event_loop().create_task(self._changes(since_rev, to_rev, queue))
-        return queue
-
-    async def _changes(self, since_rev, to_rev):
+    async def changes(self, since_rev, to_rev):
         logger.info("Reading signchain from %s", os.path.join(self.path, "txchain"))
         with open(os.path.join(self.path, "txchain"), "rb") as txchain:
             try:

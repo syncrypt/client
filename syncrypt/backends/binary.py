@@ -1,4 +1,6 @@
 import asyncio
+import trio
+from contextlib import asynccontextmanager
 import logging
 import math
 import ssl
@@ -23,11 +25,11 @@ from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, StreamW
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 
-from .base import RevisionQueue, StorageBackend
+from .base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
-BINARY_DEBUG = False
+BINARY_DEBUG = True
 
 NIL = Atom('nil')
 
@@ -79,13 +81,12 @@ class BinaryStorageConnection():
 
     def __init__(self, manager: 'BinaryStorageManager') -> None:
         self.manager = manager
-        self.writer = None
-        self.reader = None
+        self.stream = None # type: Optional[trio.Stream]
         self.logger = BinaryStorageConnectionLoggerAdapter(self, logger)
 
         # State
         self.vault = None # type: Optional[Vault]
-        self.available = asyncio.Event()
+        self.available = trio.Event()
         self.available.clear()
         self.connected = False
         self.connecting = False
@@ -110,7 +111,7 @@ class BinaryStorageConnection():
 
     async def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
-        pl_read = (await self.reader.read(4))
+        pl_read = (await self.stream.receive_some(4))
 
         if len(pl_read) != 4:
             raise ConnectionResetException()
@@ -121,7 +122,7 @@ class BinaryStorageConnection():
 
         packet = b''
         while len(packet) < packet_length:
-            buf = await self.reader.read(packet_length - len(packet))
+            buf = await self.stream.receive_some(packet_length - len(packet))
             if len(buf) == 0:
                 raise ConnectionResetException()
             packet += buf
@@ -158,9 +159,7 @@ class BinaryStorageConnection():
         assert packet_length > 0
         if BINARY_DEBUG:
             self.logger.debug('[WRITE] Serialized: %s', packet)
-        self.writer.write(struct.pack('!I', packet_length))
-        self.writer.write(packet)
-        await self.writer.drain()
+        await self.stream.send_all(struct.pack('!I', packet_length) + packet)
 
     async def connect(self):
 
@@ -177,9 +176,11 @@ class BinaryStorageConnection():
             self.logger.debug('Connecting to server %s:%d ssl=%s...', self.manager.host,
                     int(self.manager.port), bool(sc))
 
-            self.reader, self.writer = \
-                    await asyncio.open_connection(self.manager.host,
-                                                       int(self.manager.port), ssl=sc)
+            if sc:
+                self.stream = await trio.open_ssl_over_tcp_stream(self.manager.host,
+                        self.manager.port, ssl_context=sc)
+            else:
+                self.stream = await trio.open_tcp_stream(self.manager.host, self.manager.port)
 
             version_info = await self.read_term()
             self.server_version = version_info[1].decode()
@@ -303,19 +304,14 @@ class BinaryStorageConnection():
     async def disconnect(self):
         logger.debug('Disconnecting %s', self)
         try:
-            if self.writer:
+            if self.stream:
                 await self.write_term('disconnect')
         except ConnectionResetError:
             pass
         finally:
-            if self.writer:
-                self.writer.close()
-
-                # Add a little delay so that the connection socket is actually
-                # closed. This is not needed in Python 3.5+, but somehow in 3.4.
-                if sys.version_info < (3, 5): await asyncio.sleep(0.1)
-
-                self.writer = None
+            if self.stream:
+                await self.stream.aclose()
+                self.stream = None
             self._clear_connection()
 
     async def __aenter__(self):
@@ -342,9 +338,9 @@ class BinaryStorageConnection():
         return False
 
     def _clear_connection(self):
-        if self.writer:
-            self.writer.close()
-            self.writer = None
+        if self.stream:
+            self.stream.close()
+            self.stream = None
         self.connected = False
         self.connecting = False
         self.vault = None
@@ -450,7 +446,7 @@ class BinaryStorageConnection():
         else:
             self.logger.debug('Streaming upload requested.')
 
-            writer = reader >> StreamWriter(self.writer)
+            writer = reader >> StreamWriter(self.stream)
             await writer.consume()
 
             if writer.bytes_written != bundle.file_size_crypt:
@@ -566,7 +562,7 @@ class BinaryStorageConnection():
             user_fingerprint=user_fingerprint
         )
 
-    async def changes(self, since_rev, to_rev, queue: RevisionQueue, verbose=False):
+    async def changes(self, since_rev, to_rev):
 
         if self.vault is None:
             raise ValueError("Invalid argument")
@@ -576,10 +572,10 @@ class BinaryStorageConnection():
         self.logger.info('Getting a list of changes for %s (%s to %s)',
                 vault, since_rev or 'earliest', to_rev or 'latest')
 
-        if verbose:
-            await self.write_term('changes_with_email', since_rev, to_rev)
-        else:
-            await self.write_term('changes', since_rev, to_rev)
+        #if verbose:
+        #    await self.write_term('changes_with_email', since_rev, to_rev)
+        #else:
+        await self.write_term('changes', since_rev, to_rev)
 
         previous_id = since_rev
         response = await self.read_response()
@@ -592,16 +588,14 @@ class BinaryStorageConnection():
                 server_info = await self.read_term(assert_ok=False)
                 server_info = rewrite_atoms_dict(server_info)
                 revision = self.server_info_to_revision(server_info, vault, previous_id)
-                await queue.put(revision)
+                yield revision
                 previous_id = revision.revision_id
-            await queue.put(None)
         else:
             for server_info in response:
                 server_info = rewrite_atoms_dict(server_info)
                 revision = self.server_info_to_revision(server_info, vault, previous_id)
-                await queue.put(None)
+                yield revision
                 previous_id = revision.revision_id
-            await queue.put(None)
 
     async def list_vaults(self) -> List[Any]:
         self.logger.info('Getting a list of vaults')
@@ -757,7 +751,7 @@ class BinaryStorageConnection():
         if url:
             stream_source = URLReader(url)
         else:
-            stream_source = StreamReader(self.reader) >> Limit(file_size)
+            stream_source = StreamReader(self.stream) >> Limit(file_size)
 
         hash_ok = await vault.crypt_engine.write_encrypted_stream(
                 bundle,
@@ -902,7 +896,7 @@ class BinaryStorageManager():
 
     def __init__(self):
         self.host = None
-        self.port = None
+        self.port = None # type: Optional[int]
         self.ssl = None # type: Optional[bool]
         self.ssl_verify = None # type: Optional[bool]
 
@@ -915,18 +909,6 @@ class BinaryStorageManager():
         self._monitor_task = None
         self.slots = [] # type: List[BinaryStorageConnection]
         self.loop = None
-
-    def init(self):
-        if self.loop is not None and self.loop != asyncio.get_event_loop():
-            if self.loop.is_running():
-                raise ValueError('manager has been initialized with a differnt loop which is still running')
-            self.slots = []
-            self.loop = None
-        self.loop = asyncio.get_event_loop()
-        if not self.slots:
-            logger.debug('Registering %d connection slots for loop %s',
-                         self.concurrency, id(asyncio.get_event_loop()))
-            self.slots = [BinaryStorageConnection(self) for i in range(self.concurrency)]
 
     def get_stats(self):
         states = {'closed': 0}
@@ -979,14 +961,14 @@ class BinaryStorageManager():
                     await conn.disconnect()
                     break
 
-    @retry(retry=retry_if_exception_type() & retry_unless_exception_type(InvalidAuthentification),
-           stop=stop_after_attempt(3),
-           wait=wait_exponential(multiplier=1, max=10))
+    #@retry(retry=retry_if_exception_type() & retry_unless_exception_type(InvalidAuthentification),
+    #       stop=stop_after_attempt(3),
+    #       wait=wait_exponential(multiplier=1, max=10))
     async def acquire_connection(self, vault, skip_login=False):
         'return an available connection or block until one is free'
-        if self._monitor_task is None:
-            self._monitor_task = \
-                    asyncio.get_event_loop().create_task(self.monitor_connections())
+        #if self._monitor_task is None:
+        #    self._monitor_task = \
+        #            asyncio.get_event_loop().create_task(self.monitor_connections())
 
         # Prefer slots that have the same vault as we want
         prio_slots = sorted(self.slots, key=lambda c: c.vault == vault, reverse=True)
@@ -1027,9 +1009,20 @@ class BinaryStorageManager():
                     raise
                 break
 
+        if len(self.slots) < self.concurrency:
+            # spawn a new connection
+            conn = BinaryStorageConnection(self)
+            await conn.connect()
+            if not skip_login:
+                await conn.login(vault)
+            conn.available.clear()
+            self.slots.append(conn)
+            logger.debug("Created and using %s", conn)
+            return conn
+
         logger.debug("Wait for empty slot in: %s", self.slots)
 
-        await asyncio.sleep(1.0)
+        await trio.sleep(1.0)
 
         # if we haven't found one, try again
         return await self.acquire_connection(vault)
@@ -1072,7 +1065,7 @@ class BinaryStorageBackend(base):  # type: ignore
 
         # Global connection settings
         manager.host = host
-        manager.port = port
+        manager.port = int(port)
         manager.ssl = ssl
         manager.ssl_verify = ssl_verify
 
@@ -1080,8 +1073,6 @@ class BinaryStorageBackend(base):  # type: ignore
         if not manager.username: manager.username = username
         if not manager.password: manager.password = password
         manager.concurrency = int(concurrency)
-
-        manager.init()
 
         # Vault specific login information
         self.vault = vault
@@ -1105,8 +1096,9 @@ class BinaryStorageBackend(base):  # type: ignore
         manager.username = username
         manager.password = password
 
+    @asynccontextmanager
     async def _acquire_connection(self, ignore_vault=False, skip_login=False):
-        return await get_manager_instance().acquire_connection(
+        yield await get_manager_instance().acquire_connection(
             None if ignore_vault else self.vault,
             skip_login=skip_login
         )
@@ -1114,7 +1106,7 @@ class BinaryStorageBackend(base):  # type: ignore
     async def init(self, identity: Identity) -> Revision:
         self.auth = None
         try:
-            async with (await self._acquire_connection(ignore_vault=True)) as conn:
+            async with self._acquire_connection(ignore_vault=True) as conn:
                 conn.vault = self.vault
                 # after successful login, write back config
                 revision = await conn.create_vault(identity)
@@ -1130,90 +1122,84 @@ class BinaryStorageBackend(base):  # type: ignore
             raise VaultNotInitialized()
         stats = get_manager_instance().get_stats()
         if stats['closed'] == stats['total']:
-            async with (await self._acquire_connection()) as conn:
+            async with self._acquire_connection() as conn:
                 self.invalid_auth = False
                 version = await conn.version()
                 conn.logger.debug('Logged in to server (version %s)', version)
 
     async def vault_size(self, vault):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             size = await conn.vault_size(vault)
             conn.logger.debug('Vault size is: %s', format_size(size))
             return size
 
     async def stat(self, bundle):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             bundle.remote_crypt_hash = None
             stat_info = await conn.stat(bundle)
             if stat_info and 'content_hash' in stat_info:
                 bundle.remote_crypt_hash = stat_info['content_hash'].decode()
 
-    async def changes(self, since_rev, to_rev, verbose=False) -> RevisionQueue:
-        conn = await self._acquire_connection()
-        queue = cast(RevisionQueue, asyncio.Queue(8))
-        task = asyncio.get_event_loop().create_task(conn.changes(since_rev, to_rev, queue, verbose=verbose))
-
-        def free_conn(result):
-            conn.available.set()
-
-        task.add_done_callback(free_conn)
-        return queue
+    async def changes(self, since_rev, to_rev):
+        async with self._acquire_connection() as conn:
+            async for rev in conn.changes(since_rev, to_rev):
+                yield rev
 
     async def upload(self, bundle, identity):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return (await conn.upload(bundle, identity))
 
     async def download(self, bundle):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             try:
                 await conn.download(bundle)
             except UnsuccessfulResponse:
                 conn.logger.error('Could not download bundle: %s', str(bundle))
 
     async def signup(self, username, password, firstname, surname):
-        async with (await self._acquire_connection(skip_login=True)) as conn:
+        async with self._acquire_connection(skip_login=True) as conn:
             return await conn.signup(username, password, firstname, surname)
 
     async def remove_file(self, bundle: Bundle, identity: Identity) -> Revision:
         raise NotImplementedError()
 
     async def set_vault_metadata(self, identity: Identity) -> Revision:
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return await conn.set_vault_metadata(identity)
 
     async def upload_identity(self, identity: Identity, description: str="") -> Revision:
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return await conn.upload_identity(identity, description)
 
     async def add_user_vault_key(self, identity: Identity, user_id: str,
                                  user_identity: Identity, vault_key_package: bytes) -> Revision:
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return await conn.add_user_vault_key(identity, user_id, user_identity, vault_key_package)
 
     async def remove_user_vault_key(self, identity: Identity, user_id: str,
                                  user_identity: Identity) -> Revision:
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return await conn.remove_user_vault_key(identity, user_id, user_identity)
 
     async def list_vaults(self):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return (await conn.list_vaults())
 
     async def user_info(self):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return (await conn.user_info())
 
     async def add_vault_user(self, user_id: str, identity: Identity) -> Revision:
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return (await conn.add_vault_user(user_id, identity))
 
     async def list_vaults_for_identity(self, identity: Identity):
-        async with (await self._acquire_connection()) as conn:
+        async with self._acquire_connection() as conn:
             return (await conn.list_vaults_for_identity(identity))
 
     def __getattr__(self, name):
         async def myco(*args, **kwargs):
-            async with (await self._acquire_connection()) as conn:
+            async with self._acquire_connection() as conn:
                 result = await getattr(conn, name)(*args, **kwargs)
             return result
         return myco

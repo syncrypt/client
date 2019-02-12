@@ -645,16 +645,16 @@ class SyncryptApp(object):
             vault.reset_revision()
             assert vault.revision is None
 
-    @retry(retry=retry_if_exception_type(UnexpectedParentInRevision),
-           stop=stop_after_attempt(5),
-           wait=wait_exponential(multiplier=1, max=10))
+    #@retry(retry=retry_if_exception_type(UnexpectedParentInRevision),
+    #       stop=stop_after_attempt(5),
+    #       wait=wait_exponential(multiplier=1, max=10))
     async def sync_vault(self, vault, full=False):
 
         if full:
             await self.reset_vault_database(vault)
 
         await self.open_or_init(vault)
-        async for revision in vault.backend._changes(vault.revision, None):
+        async for revision in vault.backend.changes(vault.revision, None):
             await self.set_vault_state(vault, VaultState.SYNCING)
             await self.revisions.apply(revision, vault)
 
