@@ -10,11 +10,8 @@ from .base import CryptEngine
 
 logger = logging.getLogger(__name__)
 
-PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
-base = object if PYTHON_3_5 else CryptEngine
 
-
-class PlaintextEngine(base):  # type: ignore
+class PlaintextEngine(CryptEngine):
 
     def read_encrypted_stream(self, bundle: Bundle) -> Pipe:
         return FileReader(bundle.path)

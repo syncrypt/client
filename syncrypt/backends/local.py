@@ -34,10 +34,7 @@ def require_revision(f):
     return inner
 
 
-PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
-base = object if PYTHON_3_5 else StorageBackend
-
-class LocalStorageBackend(base):  # type: ignore
+class LocalStorageBackend(StorageBackend):
     global_auth = None # type: str
     # ^ deprecated
 

@@ -1045,10 +1045,7 @@ def on_shutdown():
     #)
 
 
-PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
-base = object if PYTHON_3_5 else StorageBackend
-
-class BinaryStorageBackend(base):  # type: ignore
+class BinaryStorageBackend(StorageBackend):
     '''
     Implements the actual backend for the vault. Each Vault will have its own BinaryStorageBackend
     object associated with it, but all will use the same manager.

@@ -11,11 +11,8 @@ from .base import CryptEngine
 
 logger = logging.getLogger(__name__)
 
-PYTHON_3_5 = sys.version_info.major == 3 and sys.version_info.minor == 5
-base = object if PYTHON_3_5 else CryptEngine
 
-
-class AESCBCEngine(base):  # type: ignore
+class AESCBCEngine(CryptEngine):
 
     def read_encrypted_stream(self, bundle: Bundle) -> Pipe:
         assert not bundle.key is None
