@@ -16,7 +16,7 @@ http://www.gnu.org/licenses/quick-guide-gplv3.html
 
 ## Installation
 
-Option 1: Install from PyPI (requires Python 3.5+)
+Option 1: Install from PyPI (requires Python 3.6+)
 
     pip install syncrypt
 
