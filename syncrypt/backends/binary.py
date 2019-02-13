@@ -3,7 +3,10 @@ import math
 import ssl
 import struct
 import sys
-from contextlib import asynccontextmanager
+try:
+    from contextlib import asynccontextmanager
+except ImportError: # on Python 3.6
+    from async_generator import asynccontextmanager
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi

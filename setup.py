@@ -152,6 +152,7 @@ setup(
         'erlastic',
         'trio==0.10.0',
         'trio-asyncio==0.10.0',
+        'async_generator', # for python 3.6
         'typing_extensions',
         'iso8601',
         'pycryptodomex==3.7.0', # 3.7.1 introduced mypy stubs, incompatible currently
