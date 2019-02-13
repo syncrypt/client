@@ -57,7 +57,7 @@ install: |
 
 before_script:
   - mypy syncrypt tests scripts/syncrypt_daemon
-  - pylint syncrypt scripts
+  #- pylint syncrypt scripts
   - |
     if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
       py.test -m 'not (requires_server or external_resources)'

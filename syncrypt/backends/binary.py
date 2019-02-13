@@ -4,9 +4,9 @@ import ssl
 import struct
 import sys
 try:
-    from contextlib import asynccontextmanager
+    from contextlib import asynccontextmanager # type: ignore
 except ImportError: # on Python 3.6
-    from async_generator import asynccontextmanager
+    from async_generator import asynccontextmanager # type: ignore
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
@@ -325,7 +325,7 @@ class BinaryStorageConnection():
         if ex_value:
             # When an exception happened, let's force a disconnect and clear
             # the slot
-            if isinstance(ex_value, trio.CancelledError):
+            if isinstance(ex_value, trio.Cancelled):
                 self.logger.debug('Task has been cancelled within context, clearing connection.')
             else:
                 self.logger.debug('Exception %s has been raised within context, clearing connection.',

@@ -1,16 +1,18 @@
 import hashlib
-import trio
 import logging
 import os
 import posixpath
+from typing import Optional
 
+import trio
 import umsgpack
 from sqlalchemy import Column, ForeignKey, Integer, LargeBinary, String, orm
 from sqlalchemy.orm import relationship
 
+from syncrypt.exceptions import InvalidBundleKey, InvalidBundleMetadata
 from syncrypt.pipes import FileWriter, Once
 from syncrypt.utils.filesystem import splitpath
-from syncrypt.exceptions import InvalidBundleKey, InvalidBundleMetadata
+
 from .base import Base, MetadataHolder
 
 logger = logging.getLogger(__name__)
@@ -38,14 +40,14 @@ class Bundle(MetadataHolder, Base):
     def __init__(self, *args, **kwargs):
         super(Bundle, self).__init__(*args, **kwargs)
         self.uptodate = False
-        self.local_hash = None
+        self.local_hash = None # type: Optional[str]
         self.bytes_written = 0
 
     @orm.reconstructor
     def init_on_load(self):
         self.uptodate = False
         self.bytes_written = 0
-        self.local_hash = None
+        self.local_hash = None # type: Optional[str]
         self.relpath = self.relpath.decode() # why is this binary?!
 
     def update_store_hash(self):

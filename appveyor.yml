@@ -106,7 +106,7 @@ install:
 
 before_build:
   - "mypy syncrypt tests scripts/syncrypt_daemon"
-  - "pylint syncrypt scripts"
+  #- "pylint syncrypt scripts"
   - "py.test -m \"not (requires_server or external_resources)\""
 
 build_script:

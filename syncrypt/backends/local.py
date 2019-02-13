@@ -123,6 +123,9 @@ class LocalStorageBackend(StorageBackend):
         metadata = await bundle.encrypted_metadata_reader().readall()
         len(metadata)
 
+        if bundle.local_hash is None:
+            raise ValueError("Please update bundle before upload.")
+
         await bundle.load_key()
         s = vault.crypt_engine.read_encrypted_stream(bundle) >> FileWriter(dest_path)
         await s.consume()
