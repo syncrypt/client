@@ -51,6 +51,15 @@ class StreamWriter(Sink):
         return buf
 
 
+class TrioStreamWriter(StreamWriter):
+    async def read(self, count=-1):
+        buf = await self.input.read(count)
+        if buf and len(buf) > 0:
+            await self.writer.send_all(buf)
+            self.bytes_written += len(buf)
+        return buf
+
+
 class StdoutWriter(StreamWriter):
     def __init__(self):
         self.handle = sys.stdout

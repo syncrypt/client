@@ -149,6 +149,7 @@ class RevisionManager:
         metadata = await bundle.decrypt_metadata(revision.revision_metadata)
         bundle.relpath = metadata["filename"]
         bundle.hash = metadata["hash"]
+        bundle.crypt_hash = revision.crypt_hash
         bundle.key = metadata["key"]
         return bundle
 

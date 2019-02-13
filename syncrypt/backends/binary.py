@@ -1,16 +1,15 @@
-import asyncio
-import trio
-from contextlib import asynccontextmanager
 import logging
 import math
 import ssl
 import struct
 import sys
+from contextlib import asynccontextmanager
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 import iso8601
 import smokesignal
+import trio
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
                       stop_after_attempt, wait_exponential)
@@ -20,8 +19,8 @@ from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentificati
                                  SyncRequired, UnexpectedResponseException, UnsuccessfulResponse,
                                  VaultNotInitialized)
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
-from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, StreamWriter, URLReader,
-                            URLWriter)
+from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, TrioStreamWriter,
+                            URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
 
@@ -29,7 +28,7 @@ from .base import StorageBackend
 
 logger = logging.getLogger(__name__)
 
-BINARY_DEBUG = True
+BINARY_DEBUG = False
 
 NIL = Atom('nil')
 
@@ -323,7 +322,7 @@ class BinaryStorageConnection():
         if ex_value:
             # When an exception happened, let's force a disconnect and clear
             # the slot
-            if isinstance(ex_value, asyncio.CancelledError):
+            if isinstance(ex_value, trio.CancelledError):
                 self.logger.debug('Task has been cancelled within context, clearing connection.')
             else:
                 self.logger.debug('Exception %s has been raised within context, clearing connection.',
@@ -345,21 +344,6 @@ class BinaryStorageConnection():
         self.connecting = False
         self.vault = None
         self.available.clear()
-
-    async def stat(self, bundle):
-        self.logger.debug('Stat %s (%s)', bundle, bundle.store_hash)
-
-        await self.write_term('stat', bundle.store_hash)
-
-        response = await self.read_term()
-
-        if isinstance(response[1], (tuple, list)) and response[1][0] == Atom('not_found'):
-            self.logger.debug('File not found: %s', bundle.store_hash)
-            return None
-
-        dct = rewrite_atoms_dict(response[1])
-        dct.update(**rewrite_atoms_dict(response[2]))
-        return dct
 
     async def upload(self, bundle, identity: Identity) -> Revision:
 
@@ -404,7 +388,7 @@ class BinaryStorageConnection():
                     isinstance(response[1], (list, tuple)) and \
                     response[1][0] == Atom('parent_revision_outdated'):
                 logger.info('Revision outdated')
-                await asyncio.sleep(10.0)
+                await trio.sleep(10.0)
                 continue
             else:
                 raise ServerError(response)
@@ -446,7 +430,7 @@ class BinaryStorageConnection():
         else:
             self.logger.debug('Streaming upload requested.')
 
-            writer = reader >> StreamWriter(self.stream)
+            writer = reader >> TrioStreamWriter(self.stream)
             await writer.consume()
 
             if writer.bytes_written != bundle.file_size_crypt:
@@ -939,7 +923,7 @@ class BinaryStorageManager():
         Monitor and close open and non-busy connections one-by-one.
         '''
         while True:
-            await asyncio.sleep(30.0)
+            await trio.sleep(30.0)
             def sign_for_state(state):
                 if state == 'idle':
                     return '*'
@@ -1123,13 +1107,6 @@ class BinaryStorageBackend(StorageBackend):
             size = await conn.vault_size(vault)
             conn.logger.debug('Vault size is: %s', format_size(size))
             return size
-
-    async def stat(self, bundle):
-        async with self._acquire_connection() as conn:
-            bundle.remote_crypt_hash = None
-            stat_info = await conn.stat(bundle)
-            if stat_info and 'content_hash' in stat_info:
-                bundle.remote_crypt_hash = stat_info['content_hash'].decode()
 
     async def changes(self, since_rev, to_rev):
         async with self._acquire_connection() as conn:

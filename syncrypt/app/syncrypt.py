@@ -49,7 +49,6 @@ class SyncryptApp(object):
         self.stats = {
             'uploads': 0,
             'downloads': 0,
-            'stats': 0
         }
 
         # A map from Bundle -> Future that contains all bundles scheduled for a push
@@ -590,10 +589,6 @@ class SyncryptApp(object):
         async with self.limiters['update']:
             await bundle.update()
 
-        async with self.limiters['stat']:
-            await bundle.vault.backend.stat(bundle)
-            self.stats['stats'] += 1
-
         if bundle.remote_hash_differs:
             async with self.limiters['upload']:
                 while True:
@@ -691,14 +686,6 @@ class SyncryptApp(object):
         'update, maybe download, and then decrypt'
         async with self.limiters['update']:
             await bundle.update()
-
-        async with self.limiters['stat']:
-            await bundle.vault.backend.stat(bundle)
-            self.stats['stats'] += 1
-
-        if bundle.remote_crypt_hash is None:
-            logger.warn('File not found: %s', bundle)
-            return
 
         if bundle.remote_hash_differs:
             async with self.limiters['download']:

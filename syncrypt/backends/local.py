@@ -158,15 +158,6 @@ class LocalStorageBackend(StorageBackend):
         finally:
             await stream.close()
 
-    async def stat(self, bundle):
-        logger.debug("Stat %s", bundle)
-        dest_path = os.path.join(self.path, bundle.store_hash)
-        if os.path.exists(dest_path + ".hash"):
-            metadata = open(dest_path + ".hash", "r")
-            content_hash = metadata.read()
-            bundle.remote_crypt_hash = content_hash
-            metadata.close()
-
     @require_vault
     @require_revision
     async def set_vault_metadata(self, identity: Identity) -> Revision:

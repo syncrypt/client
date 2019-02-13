@@ -273,7 +273,6 @@ class APITests(VaultTestCase):
             c = await r.json()
             self.assertEqual(c['stats']['downloads'], 0)
             self.assertEqual(c['stats']['uploads'], 8)
-            self.assertEqual(c['stats']['stats'], 8)
             await r.release()
 
             await app.push()
@@ -282,7 +281,6 @@ class APITests(VaultTestCase):
             c = await r.json()
             self.assertEqual(c['stats']['downloads'], 0)
             self.assertEqual(c['stats']['uploads'], 8)
-            self.assertEqual(c['stats']['stats'], 16)
             await r.release()
 
             r = await client.get('/v1/config')

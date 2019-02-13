@@ -20,6 +20,8 @@ class Bundle(MetadataHolder, Base):
     'A Bundle represents a file and some additional information'
     __tablename__ = 'bundle'
 
+    # TODO normally these fields should only be set when applying the revsion
+    # do we need an extra model to deal with local size/hash etc.?
     id = Column(Integer(), primary_key=True)
     vault_id = Column(String(128), ForeignKey("vault.id"))
     vault = relationship("Vault", foreign_keys=[vault_id], lazy='noload')
@@ -30,20 +32,20 @@ class Bundle(MetadataHolder, Base):
     key = Column(LargeBinary(512)) # AES key used
 
     #__slots__ = ('path', 'relpath', 'vault', 'file_size', 'file_size_crypt',
-    #        'store_hash', 'crypt_hash', 'remote_crypt_hash', 'uptodate',
+    #        'store_hash', 'crypt_hash', 'uptodate',
     #        'key', 'bytes_written')
 
     def __init__(self, *args, **kwargs):
         super(Bundle, self).__init__(*args, **kwargs)
         self.uptodate = False
-        self.remote_crypt_hash = None
+        self.local_hash = None
         self.bytes_written = 0
 
     @orm.reconstructor
     def init_on_load(self):
         self.uptodate = False
-        self.remote_crypt_hash = None
         self.bytes_written = 0
+        self.local_hash = None
         self.relpath = self.relpath.decode() # why is this binary?!
 
     def update_store_hash(self):
@@ -56,7 +58,8 @@ class Bundle(MetadataHolder, Base):
         return {
             'filename': self.encode_path(self.relpath),
             'key': self.key,
-            'hash': b'\0' * 32,
+            'hash': self.hash,
+            'file_size': self.file_size,
             'key_size': self.key_size
         }
 
@@ -83,8 +86,9 @@ class Bundle(MetadataHolder, Base):
 
     @property
     def remote_hash_differs(self):
-        return self.remote_crypt_hash is None or \
-                self.remote_crypt_hash != self.crypt_hash
+        logger.debug('Remote hash: %s', self.hash)
+        logger.debug('Local hash:  %s', self.local_hash)
+        return self.hash is None or self.hash != self.local_hash
 
     async def load_key(self):
         async with await trio.open_file(self.path_metadata, 'rb') as md_file:
@@ -135,11 +139,11 @@ class Bundle(MetadataHolder, Base):
         assert self.path is not None
 
         if os.path.exists(self.path):
-            self.crypt_hash, self.file_size_crypt = \
+            self.local_hash, self.file_size_crypt = \
                 await self.vault.crypt_engine.get_crypt_hash_and_size(self)
             self.uptodate = True
         else:
-            self.crypt_hash = None
+            self.local_hash = None
             self.file_size_crypt = None
             self.uptodate = True
 
