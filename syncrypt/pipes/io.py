@@ -21,9 +21,9 @@ class StreamReader(Source):
 
 
 class FileReader(Source):
-    def __init__(self, filename):
+    def __init__(self, filename: str) -> None:
         self.filename = filename
-        self.handle = None
+        self.handle = None # type: trio.abc.AsyncResource
         super(FileReader, self).__init__()
 
     async def read(self, count=-1):
@@ -34,6 +34,19 @@ class FileReader(Source):
     async def close(self):
         if self.handle:
             await self.handle.aclose()
+
+
+class TrioStreamReader(Source):
+    def __init__(self, stream: trio.abc.ReceiveStream) -> None:
+        self.stream = stream
+        super(TrioStreamReader, self).__init__()
+
+    async def read(self, count=-1):
+        return (await self.stream.receive_some(count))
+
+    async def close(self):
+        if self.stream:
+            await self.stream.aclose()
 
 
 class StreamWriter(Sink):
@@ -64,6 +77,7 @@ class StdoutWriter(StreamWriter):
     def __init__(self):
         self.handle = sys.stdout
         super(StdoutWriter, self).__init__(self.handle.buffer)
+
 
 class FileWriter(Sink):
     def __init__(self, filename, create_dirs=False, create_backup=False, store_temporary=False):

@@ -637,7 +637,9 @@ class SyncryptApp(object):
         if remove_vault:
             await self.db_vaults.delete(vault.id)
         else:
+            await self.db_vaults.reset(vault)
             vault.reset_revision()
+            assert vault.revision_count == 0
             assert vault.revision is None
 
     #@retry(retry=retry_if_exception_type(UnexpectedParentInRevision),

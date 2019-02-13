@@ -58,7 +58,7 @@ class Bundle(MetadataHolder, Base):
         return {
             'filename': self.encode_path(self.relpath),
             'key': self.key,
-            'hash': self.hash,
+            'hash': self.local_hash,
             'file_size': self.file_size,
             'key_size': self.key_size
         }

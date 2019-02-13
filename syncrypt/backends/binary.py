@@ -19,7 +19,7 @@ from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentificati
                                  SyncRequired, UnexpectedResponseException, UnsuccessfulResponse,
                                  VaultNotInitialized)
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
-from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, StreamReader, TrioStreamWriter,
+from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, TrioStreamReader, TrioStreamWriter,
                             URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
@@ -735,7 +735,7 @@ class BinaryStorageConnection():
         if url:
             stream_source = URLReader(url)
         else:
-            stream_source = StreamReader(self.stream) >> Limit(file_size)
+            stream_source = TrioStreamReader(self.stream) >> Limit(file_size)
 
         hash_ok = await vault.crypt_engine.write_encrypted_stream(
                 bundle,

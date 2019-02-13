@@ -129,7 +129,7 @@ class LocalStorageBackend(StorageBackend):
         # s = bundle.encrypted_metadata_reader() >> FileWriter(dest_path + ".metadata")
         # await s.consume()
         with open(dest_path + ".hash", "w") as hashfile:
-            hashfile.write(bundle.crypt_hash)
+            hashfile.write(bundle.local_hash)
 
         revision = Revision(operation=RevisionOp.Upload)
         revision.vault_id = vault.config.id
@@ -137,7 +137,7 @@ class LocalStorageBackend(StorageBackend):
         #revision.user_id = "user@localhost"
         revision.file_hash = bundle.store_hash
         revision.revision_metadata = metadata
-        revision.crypt_hash = bundle.crypt_hash
+        revision.crypt_hash = bundle.local_hash
         revision.file_size_crypt = bundle.file_size_crypt
         revision.sign(identity=identity)
 

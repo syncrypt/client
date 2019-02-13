@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import os.path
@@ -12,9 +11,9 @@ from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.exceptions import AlreadyPresent, InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
-from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault
+from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault, store
 
-from .base import local_app, local_vault, working_dir, assertSameFilesInFolder
+from .base import assertSameFilesInFolder, local_app, local_vault, working_dir
 
 
 def generate_fake_revision(vault):
@@ -42,12 +41,14 @@ async def test_upload(local_vault, local_app):
 
     for bundle in local_vault.walk_disk():
         await bundle.update()
-        await backend.stat(bundle)
         assert bundle.remote_hash_differs == True
-        await backend.stat(bundle)
-        assert bundle.remote_hash_differs == True
-        await backend.upload(bundle, app.identity)
-        await backend.stat(bundle)
+        prev_rev_count = local_vault.revision_count
+        rev = await backend.upload(bundle, app.identity)
+        await app.revisions.apply(rev, local_vault)
+        assert local_vault.revision_count == prev_rev_count + 1
+        bundle = await app.bundles.get_bundle(local_vault,
+                os.path.join(local_vault.folder, bundle.relpath))
+        await bundle.update()
         assert bundle.remote_hash_differs == False
 
 

@@ -27,12 +27,12 @@ class RevisionManager:
     def list_for_vault(self, vault: Vault) -> Sequence[Revision]:
         with store.session() as session:
             return (
-                session.query(Revision).filter(Revision.vault_id == vault.config.id).all()
+                session.query(Revision).filter(Revision.local_vault_id == vault.id).all()
             )
 
     async def delete_for_vault(self, vault: Vault) -> None:
         with store.session() as session:
-            session.query(Revision).filter(Revision.vault_id == vault.config.id).delete()
+            session.query(Revision).filter(Revision.local_vault_id == vault.id).delete()
 
     async def apply(self, revision: Revision, vault: Vault):
 
@@ -145,15 +145,6 @@ class RevisionManager:
         smokesignal.emit('post_apply_revision', vault=vault, revision=revision)
 
     async def create_bundle_from_revision(self, revision, vault):
-        bundle = Bundle(vault=vault, store_hash=revision.file_hash)
-        metadata = await bundle.decrypt_metadata(revision.revision_metadata)
-        bundle.relpath = metadata["filename"]
-        bundle.hash = metadata["hash"]
-        bundle.crypt_hash = revision.crypt_hash
-        bundle.key = metadata["key"]
-        return bundle
-
-    async def delete_bundle_from_revision(self, revision, vault):
         bundle = Bundle(vault=vault, store_hash=revision.file_hash)
         metadata = await bundle.decrypt_metadata(revision.revision_metadata)
         bundle.relpath = metadata["filename"]

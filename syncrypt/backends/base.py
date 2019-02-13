@@ -50,9 +50,6 @@ class StorageBackend(Protocol):
     async def download(self, bundle):
         raise NotImplementedError()
 
-    async def stat(self, bundle):
-        raise NotImplementedError()
-
     async def upload_identity(self, identity, description=""):
         raise NotImplementedError
 
