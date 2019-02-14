@@ -68,7 +68,8 @@ async def asyncio_loop():
     # When a ^C happens, trio send a Cancelled exception to each running
     # coroutine. We must protect this one to avoid deadlock if it is cancelled
     # before another coroutine that uses trio-asyncio.
-    with trio.open_cancel_scope(shield=True):
+    with trio.CancelScope() as cancel_scope:
+        cancel_scope.shield = True
         async with trio_asyncio.open_loop() as loop:
             yield loop
 
