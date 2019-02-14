@@ -150,7 +150,7 @@ setup(
         'certifi',
         'colorlog',
         'erlastic',
-        'trio==0.10.0',
+        'trio==0.11.0',
         'trio-asyncio==0.10.0',
         'async_generator', # for python 3.6
         'typing_extensions',
@@ -181,7 +181,7 @@ setup(
         'test': [
             'pytest-runner',
             'pytest>=2.8.0',
-            'pytest-trio',
+            'pytest-trio==0.5.2',
             'mypy',  # used for static type checking
             'pylint'  # used for static code analysis
         ],
