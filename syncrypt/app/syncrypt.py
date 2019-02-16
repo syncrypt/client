@@ -550,7 +550,6 @@ class SyncryptApp(object):
         "Push all registered vaults"
         async with trio.open_nursery() as nursery:
             for vault in self.vaults:
-
                 if not self.identity.is_initialized():
                     logger.error('Identity is not initialized yet')
                     await self.set_vault_state(vault, VaultState.UNINITIALIZED)
@@ -565,7 +564,7 @@ class SyncryptApp(object):
         self.identity.assert_initialized()
 
         await self.sync_vault(vault)
-        limit = trio.CapacityLimiter(3)
+        limit = trio.CapacityLimiter(1)
 
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
@@ -574,9 +573,10 @@ class SyncryptApp(object):
                 await vault.backend.open()
                 await self.update_vault_metadata(vault)
 
-                for bundle in vault.walk_disk():
+                async for bundle in self.bundles.upload_bundles_for_vault(vault):
                     async with limit:
-                        nursery.start_soon(self.push_bundle, bundle)
+                        await self.push_bundle(bundle)
+                        #nursery.start_soon(self.push_bundle, bundle)
 
                 await self.set_vault_state(vault, VaultState.READY)
         except Exception:
@@ -584,23 +584,19 @@ class SyncryptApp(object):
             await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def push_bundle(self, bundle: Bundle):
-        'update bundle and maybe upload'
+        'upload the bundle'
 
-        async with self.limiters['update']:
-            await bundle.update()
+        async with self.limiters['upload']:
+            while True:
+                try:
+                    revision = await bundle.vault.backend.upload(bundle, self.identity)
+                    await self.revisions.apply(revision, bundle.vault)
+                    break
+                except SyncRequired:
+                    asyncio.sleep(1)
+                    await self.sync_vault(bundle.vault)
 
-        if bundle.remote_hash_differs:
-            async with self.limiters['upload']:
-                while True:
-                    try:
-                        revision = await bundle.vault.backend.upload(bundle, self.identity)
-                        await self.revisions.apply(revision, bundle.vault)
-                        break
-                    except SyncRequired:
-                        asyncio.sleep(1)
-                        await self.sync_vault(bundle.vault)
-
-                self.stats['uploads'] += 1
+            self.stats['uploads'] += 1
 
     async def pull(self, full=False):
         "Pull all registered vaults"
@@ -668,13 +664,11 @@ class SyncryptApp(object):
         # Then, we will do a change detection for the local folder and download every bundle that
         # has changed.
         # TODO: do a change detection (.vault/metadata store vs filesystem)
-        limit = trio.CapacityLimiter(3)
+        limit = trio.CapacityLimiter(1)
 
         try:
             async with trio.open_nursery():
-                bundles = await self.bundles.download_bundles_for_vault(vault)
-
-                for bundle in bundles:
+                async for bundle in self.bundles.download_bundles_for_vault(vault):
                     async with limit:
                         await self.pull_bundle(bundle)
 
@@ -685,14 +679,10 @@ class SyncryptApp(object):
         await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_bundle(self, bundle):
-        'update, maybe download, and then decrypt'
-        async with self.limiters['update']:
-            await bundle.update()
-
-        if bundle.remote_hash_differs:
-            async with self.limiters['download']:
-                await bundle.vault.backend.download(bundle)
-                self.stats['downloads'] += 1
+        'download the bundle'
+        async with self.limiters['download']:
+            await bundle.vault.backend.download(bundle)
+            self.stats['downloads'] += 1
 
     async def remove_bundle(self, bundle: Bundle):
         vault = bundle.vault

@@ -1,6 +1,8 @@
 import logging
 import os.path
+from fnmatch import fnmatch
 
+from sqlalchemy import inspect
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.models import Bundle, Vault, store
@@ -15,12 +17,71 @@ class BundleManager:
         self.app = app
 
     async def download_bundles_for_vault(self, vault):
-        """return an iterator of all bundles in the vault that possible require download"""
+        """
+        return an iterator of all bundles in the vault that possible require download
+        """
         with store.session() as session:
             lst = list(session.query(Bundle).filter(Bundle.vault==vault).all())
             for bundle in lst:
                 bundle.vault = vault
-            return lst
+                await bundle.update()
+                if bundle.remote_hash_differs:
+                    yield bundle
+
+    def get_bundle_for_relpath(self, relpath, vault):
+        # check if path should be ignored
+        for filepart in relpath.split("/"):
+            if any(fnmatch(filepart, ig) for ig in vault.config.ignore_patterns):
+                return None
+
+        if os.path.isdir(os.path.join(vault.folder, relpath)):
+            return None
+
+        bundle = Bundle(relpath=relpath, vault=vault, vault_id=vault.id)
+        bundle.update_store_hash()
+        return bundle
+
+    async def upload_bundles_for_vault(self, vault):
+        """
+        return an iterator of all bundles in the vault that require upload
+        """
+        registered_paths = set()
+
+        if inspect(vault).session:
+            raise ValueError('Vault object is bound to a session')
+
+        # First, try to find changes from database to disk
+        with store.session() as session:
+            lst = list(session.query(Bundle).filter(Bundle.vault==vault).all())
+            for bundle in lst:
+                bundle.vault = vault
+                registered_paths.add(bundle.relpath)
+                await bundle.update()
+                if bundle.remote_hash_differs:
+                    session.expunge(bundle)
+                    yield bundle
+
+            # Next, we will walk the disk to find new bundles
+            async def walk_disk(subfolder=None):
+                folder = vault.folder
+                if subfolder:
+                    folder = os.path.join(folder, subfolder)
+                for file in os.listdir(folder):
+                    if any(fnmatch(file, ig) for ig in vault.config.ignore_patterns):
+                        continue
+                    abspath = os.path.join(folder, file)
+                    relpath = os.path.relpath(abspath, vault.folder)
+                    if relpath in registered_paths:
+                        continue
+                    if os.path.isdir(abspath):
+                        async for bundle in walk_disk(subfolder=relpath):
+                            yield bundle
+                    else:
+                        yield self.get_bundle_for_relpath(relpath, vault)
+
+            async for bundle in walk_disk():
+                await bundle.update()
+                yield bundle
 
     #def find_for_vault(self, vault: Vault):
     #    return self.download_bundles_for_vault(vault)
@@ -36,7 +97,7 @@ class BundleManager:
                         Bundle.store_hash==store_hash).one()
                 # vault is loaded lazily. We already have the vault
                 # object here, so just set it.
-                bundle.vault = vault
+                # bundle.vault = vault
                 return bundle
             except NoResultFound:
                 raise FileNotFoundError(

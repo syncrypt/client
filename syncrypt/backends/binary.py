@@ -366,7 +366,7 @@ class BinaryStorageConnection():
             revision = Revision(operation=RevisionOp.Upload)
             revision.vault_id = vault.config.id
             revision.parent_id = vault.revision
-            revision.crypt_hash = bundle.crypt_hash
+            revision.crypt_hash = bundle.local_hash
             revision.file_hash = bundle.store_hash
             revision.file_size_crypt = bundle.file_size_crypt
             revision.revision_metadata = metadata

@@ -1,4 +1,5 @@
 import logging
+from sqlalchemy import inspect
 from typing import Sequence
 
 import smokesignal
@@ -35,6 +36,8 @@ class RevisionManager:
             session.query(Revision).filter(Revision.local_vault_id == vault.id).delete()
 
     async def apply(self, revision: Revision, vault: Vault):
+        if inspect(vault).session:
+            raise ValueError('Vault object is bound to a session')
 
         revision.assert_valid()
 
@@ -46,7 +49,6 @@ class RevisionManager:
         smokesignal.emit('pre_apply_revision', vault=vault, revision=revision)
 
         with store.session() as session:
-
             # 2. Check if signing user's key is in the user vault key list
             if revision.operation != RevisionOp.CreateVault:
                 signer_key = self.app.user_vault_keys.find_key(
@@ -148,6 +150,6 @@ class RevisionManager:
         bundle = Bundle(vault=vault, store_hash=revision.file_hash)
         metadata = await bundle.decrypt_metadata(revision.revision_metadata)
         bundle.relpath = metadata["filename"]
-        bundle.hash = metadata["hash"]
+        bundle.hash = revision.crypt_hash
         bundle.key = metadata["key"]
         return bundle

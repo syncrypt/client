@@ -39,7 +39,7 @@ async def test_upload(local_vault, local_app):
 
     await backend.open()
 
-    for bundle in local_vault.walk_disk():
+    async for bundle in app.bundles.upload_bundles_for_vault(local_vault):
         await bundle.update()
         assert bundle.remote_hash_differs == True
         prev_rev_count = local_vault.revision_count

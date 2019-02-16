@@ -192,32 +192,6 @@ class Vault(MetadataHolder, Base):
     async def close(self):
         await self.backend.close()
 
-    def walk(self):
-        """
-        A generator of all registered bundles in this vault
-        """
-        for f in glob(os.path.join(self.bundle_metadata_path, "??/*")):
-            store_hash = os.path.relpath(f, self.bundle_metadata_path).replace("/", "")
-            if len(store_hash) == 64:
-                yield Bundle(None, vault=self, store_hash=store_hash)
-
-    def walk_disk(self, subfolder=None):
-        """
-        A generator of all bundles currently present on disk in this vault
-        """
-        folder = self.folder
-        if subfolder:
-            folder = os.path.join(folder, subfolder)
-        for file in os.listdir(folder):
-            if any(fnmatch(file, ig) for ig in self.config.ignore_patterns):
-                continue
-            abspath = os.path.join(folder, file)
-            relpath = os.path.relpath(abspath, self.folder)
-            if os.path.isdir(abspath):
-                yield from self.walk_disk(subfolder=relpath)
-            else:
-                yield self.bundle_for(relpath)
-
     def clear_bundle_cache(self):
         self._bundle_cache = {}
 
@@ -225,23 +199,6 @@ class Vault(MetadataHolder, Base):
         bundle = Bundle(None, vault=self, store_hash=store_hash)
         await bundle.write_encrypted_metadata(Once(metadata))
         return bundle
-
-    def bundle_for(self, relpath):
-        # check if path should be ignored
-        for filepart in relpath.split("/"):
-            if any(fnmatch(filepart, ig) for ig in self.config.ignore_patterns):
-                return None
-
-        if os.path.isdir(os.path.join(self.folder, relpath)):
-            return None
-
-        if not relpath in self._bundle_cache:
-            self._bundle_cache[relpath] = Bundle(
-                relpath=relpath, vault=self, vault_id=self.id
-            )
-            self._bundle_cache[relpath].update_store_hash()
-
-        return self._bundle_cache[relpath]
 
     def reset_revision(self) -> None:
         self.logger.debug('Reset vault revision')
