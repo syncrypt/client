@@ -1,14 +1,17 @@
 # pylint: disable=not-async-context-manager
 import asyncio
-import smokesignal
-import trio
 import logging
 import os.path
 import socket
 from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
+import smokesignal
+import trio
+from sqlalchemy import inspect
 from sqlalchemy.orm.exc import NoResultFound
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
 from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, InvalidAuthentification,
                                  InvalidVaultPackage, SyncRequired, SyncryptBaseException,
                                  UnexpectedParentInRevision, VaultAlreadyExists,
@@ -20,7 +23,6 @@ from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWr
                             StdoutWriter)
 from syncrypt.utils.filesystem import is_empty
 from syncrypt.utils.format import format_fingerprint
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -559,6 +561,7 @@ class SyncryptApp(object):
 
     async def push_vault(self, vault):
         "Push a single vault"
+
         logger.info('Pushing %s', vault)
 
         self.identity.assert_initialized()
@@ -568,7 +571,6 @@ class SyncryptApp(object):
 
         try:
             await self.set_vault_state(vault, VaultState.SYNCING)
-
             async with trio.open_nursery() as nursery:
                 await vault.backend.open()
                 await self.update_vault_metadata(vault)
@@ -585,6 +587,9 @@ class SyncryptApp(object):
 
     async def push_bundle(self, bundle: Bundle):
         'upload the bundle'
+
+        if inspect(bundle.vault).session:
+            raise ValueError('Vault object is bound to a session')
 
         async with self.limiters['upload']:
             while True:

@@ -26,6 +26,9 @@ class BundleManager:
                 bundle.vault = vault
                 await bundle.update()
                 if bundle.remote_hash_differs:
+                    session.expunge(bundle)
+                    if inspect(vault).session:
+                        session.expunge(vault)
                     yield bundle
 
     def get_bundle_for_relpath(self, relpath, vault):
@@ -59,7 +62,12 @@ class BundleManager:
                 await bundle.update()
                 if bundle.remote_hash_differs:
                     session.expunge(bundle)
+                    if inspect(vault).session:
+                        session.expunge(vault)
                     yield bundle
+
+            if inspect(vault).session:
+                session.expunge(vault)
 
             # Next, we will walk the disk to find new bundles
             async def walk_disk(subfolder=None):
