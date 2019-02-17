@@ -4,6 +4,7 @@ from typing import List  # pylint: disable=unused-import
 
 import aiohttp
 import certifi
+import trio_asyncio
 from aiohttp.http_exceptions import HttpProcessingError
 
 from .base import BufferedFree, Limit, Sink, Source
@@ -41,6 +42,7 @@ class URLReader(Source, AiohttpClientSessionMixin):
         self.response = None
         self.init_client(client)
 
+    @trio_asyncio.aio_as_trio
     async def read(self, count=-1):
         if self._eof:
             return b""
@@ -54,6 +56,7 @@ class URLReader(Source, AiohttpClientSessionMixin):
             await self.close()
         return buf
 
+    @trio_asyncio.aio_as_trio
     async def close(self):
         self._eof = True
         if not self.response is None:
@@ -74,6 +77,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
         self.etag = None
         self.init_client(client)
 
+    @trio_asyncio.aio_as_trio
     async def read(self, count=-1):
         if self._done:
             return b""
@@ -107,6 +111,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
             self.etag = self.response.headers["ETAG"][1:-1]
         return content
 
+    @trio_asyncio.aio_as_trio
     async def close(self):
         self._done = True
         if not self.response is None:
@@ -134,6 +139,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     def add_input(self, input):
         self.input = input >> BufferedFree()
 
+    @trio_asyncio.aio_as_trio
     async def read(self, count=-1):
         if self._url_idx >= len(self._urls):
             return b""
@@ -155,5 +161,6 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         self._url_idx += 1
         return result or b"<empty response>"
 
+    @trio_asyncio.aio_as_trio
     async def close(self):
         await self.close_client()
