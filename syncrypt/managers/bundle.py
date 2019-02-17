@@ -30,7 +30,7 @@ class BundleManager:
 
     def get_bundle_for_relpath(self, relpath, vault):
         # check if path should be ignored
-        for filepart in relpath.split("/"):
+        for filepart in relpath.split("/"): # TODO: use os.path.split to be windows compliant
             if any(fnmatch(filepart, ig) for ig in vault.config.ignore_patterns):
                 return None
 

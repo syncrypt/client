@@ -47,7 +47,7 @@ class TestAppConfig(AppConfig):
 
 @pytest.fixture
 def working_dir():
-    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests/"
+    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests"
 
 
 @pytest.fixture
@@ -112,7 +112,7 @@ def assertSameFilesInFolder(self, *folders):
 
 @pytest.fixture
 async def local_vault(local_app, working_dir):
-    folder = 'tests/testlocalvault/'
+    folder = os.path.join('tests', 'testlocalvault/')
     vault_folder = os.path.join(working_dir, "testvault")
     if os.path.exists(vault_folder):
         shutil.rmtree(vault_folder)
@@ -124,7 +124,7 @@ async def local_vault(local_app, working_dir):
 
 @pytest.fixture
 async def local_daemon_vault(local_daemon_app, working_dir):
-    folder = 'tests/testlocalvault/'
+    folder = os.path.join('tests', 'testlocalvault/')
     vault_folder = os.path.join(working_dir, "testvault")
     if os.path.exists(vault_folder):
         shutil.rmtree(vault_folder)
