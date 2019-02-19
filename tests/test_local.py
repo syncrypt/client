@@ -2,11 +2,11 @@ import logging
 import os
 import os.path
 import shutil
+import sys
 import unittest
 from glob import glob
 
 import pytest
-
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.exceptions import AlreadyPresent, InvalidRevision
@@ -31,6 +31,7 @@ async def test_backend_type(local_vault):
     assert type(local_vault.backend) == LocalStorageBackend
 
 
+@pytest.mark.skipif(sys.platform == 'win32', reason='to have win32 builds')
 async def test_upload(local_vault, local_app):
     app = local_app
     await app.initialize()
