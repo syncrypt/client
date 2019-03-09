@@ -15,17 +15,6 @@ from .base import asyncio_loop
 
 
 @pytest.mark.external_resources
-async def test_url_10mb(asyncio_loop):
-    url = 'http://ipv4.download.thinkbroadband.com:81/10MB.zip'
-    stream = URLReader(url) >> Count()
-    hashed = stream >> Hash('sha1')
-    await hashed.consume()
-
-    assert stream.count == 10485760
-    assert hashed.hash == 'f3b8eebe058415b752bec735652a30104fe666ba'
-
-
-@pytest.mark.external_resources
 async def test_url_1mb(asyncio_loop):
     url = 'http://speedtest.ftp.otenet.gr/files/test1Mb.db'
     stream = URLReader(url) >> Hash('sha256')

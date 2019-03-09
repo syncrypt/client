@@ -86,18 +86,21 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
             return b""
         if self.response is None:
 
-            @aiohttp.streamer
-            async def feed_http_upload(writer):
+            @trio_asyncio.trio_as_aio
+            async def read_from_input():
+                return (await self.input.read())
+
+            async def feed_http_upload():
                 while True:
-                    buf = await self.input.read()
+                    buf = await read_from_input()
                     if len(buf) == 0:
                         break
-                    await writer.write(buf)
+                    yield buf
                     self.bytes_written += len(buf)
 
             self.response = await self.client.put(
                 self.url,
-                data=feed_http_upload,
+                data=feed_http_upload(),
                 headers={} if self.size is None else {"Content-Length": str(self.size)},
             )
             self.response.raise_for_status()
