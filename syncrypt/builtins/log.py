@@ -147,7 +147,7 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
 def create_dispatch_log_list(app):
     async def dispatch_log_list(request):
         vault_id = request.match_info.get("vault_id", None)
-        limit = int(request.GET.get("limit", 100))
+        limit = int(request.query.get("limit", 100))
         with store.session() as session:
             return JSONResponse(
                 [logitem_to_json(logitem) for logitem in
@@ -160,7 +160,7 @@ def create_dispatch_log_list(app):
 def create_dispatch_stream_log(app):
     async def dispatch_stream_log(request):
         vault_id = request.match_info.get("vault_id", None)
-        limit = int(request.GET.get("limit", 100))
+        limit = int(request.query.get("limit", 100))
         ws = web.WebSocketResponse()
         logger.debug("WebSocket connection opened for %s", request.path)
         await ws_stream_log(request, ws, app, vault_id=vault_id, limit=limit)

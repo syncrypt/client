@@ -52,6 +52,7 @@ class SyncryptAPI():
                 self.app.config.set('api.auth_token', generate_api_auth_token())
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_stats(self, request):
         VaultResource(self.app)
         return JSONResponse({
@@ -62,6 +63,7 @@ class SyncryptAPI():
         })
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_push(self, request):
         task = asyncio.get_event_loop().create_task(self.app.push())
         def cb(_task):
@@ -71,6 +73,7 @@ class SyncryptAPI():
         return JSONResponse({})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_pull(self, request):
         task = asyncio.get_event_loop().create_task(self.app.pull())
         def cb(_task):
@@ -80,6 +83,7 @@ class SyncryptAPI():
         return JSONResponse({})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_config(self, request):
 
         cfg = self.app.config.as_dict()
@@ -92,6 +96,7 @@ class SyncryptAPI():
         return JSONResponse(cfg)
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def patch_config(self, request):
 
         content = await request.content.read()
@@ -113,6 +118,7 @@ class SyncryptAPI():
         return await self.get_config(request)
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def post_auth_login(self, request):
         content = await request.content.read()
         credentials = json.loads(content.decode())
@@ -129,6 +135,7 @@ class SyncryptAPI():
         })
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def post_auth_signup(self, request):
         content = await request.content.read()
         credentials = json.loads(content.decode())
@@ -140,6 +147,7 @@ class SyncryptAPI():
         })
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_auth_check(self, request):
         logger.info('Login check')
         cfg = self.app.config
@@ -157,6 +165,7 @@ class SyncryptAPI():
             })
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_auth_logout(self, request):
         '''
         Log out the user and remove global_auth information
@@ -171,6 +180,7 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_shutdown(self, request):
         '''
         Shut the daemon down
@@ -182,6 +192,7 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_restart(self, request):
         '''
         Restart the daemon
@@ -193,6 +204,7 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_version(self, request):
         if int(request.query.get('check_for_update', 0)):
             can_update, available = await is_update_available()
@@ -207,6 +219,7 @@ class SyncryptAPI():
             })
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_user_info(self, request):
         '''
         Return information about the currently logged in user (First name, Last name, ...)
@@ -217,6 +230,7 @@ class SyncryptAPI():
         return JSONResponse(user_info)
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def post_user_feedback(self, request):
         '''
         Send user feedback
@@ -231,12 +245,14 @@ class SyncryptAPI():
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def get_identity_generate(self, request):
         await self.app.identity.generate_keys()
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token
     @require_identity
+    @trio_asyncio.trio_as_aio
     async def post_identity_export(self, request):
         try:
             content = await request.content.read()

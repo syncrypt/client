@@ -172,7 +172,7 @@ class VaultResource(Resource):
         return self.find_vault_by_id(request.match_info['id'])
 
     async def delete_obj(self, request, obj):
-        if request.GET.get('wipe') == '1':
+        if request.query.get('wipe') == '1':
             logger.warn('Deleting/wiping vault: %s', obj)
             await self.app.unwatch_vault(obj)
             await self.app.delete_vault(obj)
@@ -205,7 +205,7 @@ class VaultResource(Resource):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
 
-        # limit = int(request.GET.get("limit", 100))
+        # limit = int(request.query.get("limit", 100))
         ws = web.WebSocketResponse()
         logger.debug("WebSocket connection opened for %s", request.path)
 
@@ -343,17 +343,13 @@ class FlyingVaultResource(Resource):
         return deh_obj
 
     async def get_obj_list(self, request):
-        # TODO: schedule update task at most once
-        asyncio.get_event_loop().create_task(
-            self.app.flying_vaults.update()
-        )
         return self.app.flying_vaults.all()
 
     async def get_obj(self, request):
         return self.app.flying_vaults.get(request.match_info['id'])
 
     async def delete_obj(self, request, obj):
-        if request.GET.get('wipe') == '1':
+        if request.query.get('wipe') == '1':
             vault_id = obj.id
             logger.warn('Deleting/wiping flying vault: %s', vault_id)
             backend = await self.app.open_backend()
