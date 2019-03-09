@@ -173,7 +173,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dist': [
-            'pyinstaller==3.3',
+            'pyinstaller==3.4',
             'six',
             'packaging'
         ],

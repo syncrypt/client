@@ -48,9 +48,6 @@ install: |
       pip install 'setuptools>=38.5'
       pip install -e '.[dist]'
       pip install -e '.[test]'
-      if [[ $TRAVIS_PYTHON_VERSION == '3.6' ]] || [[ $TRAVIS_PYTHON_VERSION == '3.7' ]]; then
-          pip install --upgrade 'pyinstaller==3.4'
-      fi
   fi
 
 before_script:
