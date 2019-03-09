@@ -5,7 +5,7 @@ import logging.config
 import sys
 
 import trio
-#import trio_asyncio
+import trio_asyncio
 
 from syncrypt import __version__
 from syncrypt.app import SyncryptCLIApp
@@ -477,6 +477,6 @@ if __name__ == '__main__':
         for c in COMMANDS:
             if c.command == args.command:
                 c.parse(sys.argv[2:])
-                trio.run(run_command, c)
+                trio_asyncio.run(run_command, c)
     else:
         global_parser.print_help()

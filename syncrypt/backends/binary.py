@@ -386,6 +386,7 @@ class BinaryStorageConnection():
             response = await self.read_term(assert_ok=False)
 
             if response[0] == Atom('ok'):
+                response = response[1]
                 break
             elif response[0] == Atom('error') and \
                     isinstance(response[1], (list, tuple)) and \

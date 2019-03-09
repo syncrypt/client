@@ -98,12 +98,14 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
                     yield buf
                     self.bytes_written += len(buf)
 
+            logger.debug('HTTP PUT %s', self.url)
+
             self.response = await self.client.put(
                 self.url,
                 data=feed_http_upload(),
+                raise_for_status=True,
                 headers={} if self.size is None else {"Content-Length": str(self.size)},
             )
-            self.response.raise_for_status()
         content = await self.response.read()
         await self.response.release()
         if not self.response.status in (200, 201, 202):
