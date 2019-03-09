@@ -180,7 +180,7 @@ setup(
         ],
         'test': [
             'pytest-runner',
-            'pytest>=2.8.0',
+            'pytest>=3.6.0',
             'pytest-trio==0.5.2',
             'mypy',  # used for static type checking
             'pylint'  # used for static code analysis
