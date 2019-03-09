@@ -53,16 +53,19 @@ class URLReader(Source, AiohttpClientSessionMixin):
             count = DEFAULT_CHUNK_SIZE
         buf = await self.response.content.read(count)
         if len(buf) == 0:
-            await self.close()
+            await self._close()
         return buf
 
-    @trio_asyncio.aio_as_trio
-    async def close(self):
+    async def _close(self):
         self._eof = True
         if not self.response is None:
             await self.response.release()
             self.response = None
         await self.close_client()
+
+    @trio_asyncio.aio_as_trio
+    async def close(self):
+        await self._close()
 
 
 class URLWriter(Sink, AiohttpClientSessionMixin):
