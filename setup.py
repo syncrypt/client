@@ -137,6 +137,8 @@ setup(
         'scripts/syncrypt_daemon',
     ],
 
+    python_requires='>=3.6',
+
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
     #   py_modules=["my_module"],
