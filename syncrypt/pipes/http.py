@@ -145,7 +145,6 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
     def add_input(self, input):
         self.input = input >> BufferedFree()
 
-    @trio_asyncio.aio_as_trio
     async def read(self, count=-1):
         if self._url_idx >= len(self._urls):
             return b""
