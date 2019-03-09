@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 class AiohttpClientSessionMixin:
 
     def init_client(self, client, headers={}):
-        sslcontext = ssl.create_default_context(cafile=certifi.where())
-        conn = aiohttp.TCPConnector(ssl_context=sslcontext)
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        conn = aiohttp.TCPConnector(ssl=ssl_context)
         if client:
             self.client_owned, self.client = False, client
         else:
