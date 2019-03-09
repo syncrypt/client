@@ -184,6 +184,7 @@ setup(
             'pytest-runner',
             'pytest>=3.6.0',
             'pytest-trio==0.5.2',
+            'attrs>=17.4.0',
             'mypy',  # used for static type checking
             'pylint'  # used for static code analysis
         ],
