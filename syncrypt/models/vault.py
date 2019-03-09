@@ -7,8 +7,6 @@ import shutil
 import zipfile
 from collections import OrderedDict
 from enum import Enum
-from fnmatch import fnmatch
-from glob import glob
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Dict  # pylint: disable=unused-import
 
