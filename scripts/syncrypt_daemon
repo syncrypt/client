@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import trio
+import trio_asyncio
+
 import argparse
 import asyncio
 import os.path
@@ -27,6 +29,8 @@ parser.add_argument('-d,--detach', action='store_true',
         dest='detach', help='Detach from console')
 parser.add_argument('-c,--config', action='store', type=str,
         dest='config', help='Config file')
+parser.add_argument('-I,--inspector', action='store_true',
+        dest='inspector', help='Run Trio Inspector')
 parser.add_argument('--no-initial-push', action='store_false',
         dest='initial_push', help='Do not push all vaults after daemon started')
 parser.add_argument('-l', metavar='LOGLEVEL', type=str, default='INFO',
@@ -44,6 +48,10 @@ setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.lo
 
 async def run_syncrypt():
     async with trio.open_nursery() as nursery:
+        if config.inspector:
+            from trio_inspector import TrioInspector
+            nursery.start_soon(TrioInspector().run)
+
         app = SyncryptDaemonApp(app_config,
                 nursery=nursery,
                 initial_push=config.initial_push
@@ -78,6 +86,6 @@ if config.detach:
     syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
     getattr(syncryptd, config.command)()
 else:
-    while trio.run(run_syncrypt):
+    while trio_asyncio.run(run_syncrypt):
         time.sleep(2)
 
