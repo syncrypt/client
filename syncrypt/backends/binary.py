@@ -386,7 +386,6 @@ class BinaryStorageConnection():
             response = await self.read_term(assert_ok=False)
 
             if response[0] == Atom('ok'):
-                response = response[1]
                 break
             elif response[0] == Atom('error') and \
                     isinstance(response[1], (list, tuple)) and \
@@ -404,6 +403,8 @@ class BinaryStorageConnection():
         upload_id = None
         urls = None
         reader = vault.crypt_engine.read_encrypted_stream(bundle)
+
+        response = response[1] if len(response) > 1 else None
 
         if isinstance(response, tuple) and len(response) > 0 and response[0] == Atom('url'):
             if isinstance(response[1], tuple) and response[1][0] == Atom('multi'):
