@@ -564,12 +564,13 @@ class SyncryptApp(object):
 
         logger.info('Pushing %s', vault)
 
-        self.identity.assert_initialized()
-
-        await self.sync_vault(vault)
-        limit = trio.CapacityLimiter(1)
-
         try:
+            self.identity.assert_initialized()
+
+            await self.sync_vault(vault)
+            limit = trio.CapacityLimiter(1)
+
+
             await self.set_vault_state(vault, VaultState.SYNCING)
             async with trio.open_nursery() as nursery:
                 await vault.backend.open()
@@ -582,7 +583,7 @@ class SyncryptApp(object):
 
                 await self.set_vault_state(vault, VaultState.READY)
         except Exception:
-            vault.logger.exception("Failure during vault initialization")
+            vault.logger.exception("Failure during vault push")
             await self.set_vault_state(vault, VaultState.FAILURE)
 
     async def push_bundle(self, bundle: Bundle):
