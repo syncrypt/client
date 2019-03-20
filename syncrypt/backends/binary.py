@@ -11,7 +11,6 @@ from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 import iso8601
-import smokesignal
 import trio
 from erlastic import Atom
 from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
@@ -1021,11 +1020,6 @@ def get_manager_instance() -> BinaryStorageManager:
     if not hasattr(get_manager_instance, '_manager'):
         get_manager_instance._manager = BinaryStorageManager() # type: ignore
     return get_manager_instance._manager # type: ignore
-
-
-@smokesignal.on("shutdown")
-def on_shutdown():
-    pass # TODO: remove
 
 
 class BinaryStorageBackend(StorageBackend):
