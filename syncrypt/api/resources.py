@@ -6,8 +6,8 @@ import logging
 import os.path
 
 import smokesignal
+import trio_asyncio
 from aiohttp import web
-
 from syncrypt.models import Identity, Revision, UserVaultKey, Vault
 from syncrypt.utils.format import datetime_format_iso8601
 
@@ -58,11 +58,13 @@ class Resource(object):
         raise NotImplementedError
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_list(self, request):
         objs = await self.get_obj_list(request)
         return JSONResponse([self.dehydrate(obj) for obj in objs])
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_get(self, request):
         obj = await self.get_obj(request)
         return JSONResponse(self.dehydrate(obj))
@@ -71,17 +73,20 @@ class Resource(object):
         return JSONResponse({})
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_delete(self, request):
         obj = await self.get_obj(request)
         await self.delete_obj(request, obj)
         return JSONResponse({}) # return 200 without data
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_put(self, request):
         obj = await self.put_obj(request)
         return JSONResponse(self.dehydrate(obj))
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_post(self, request):
         obj = await self.post_obj(request)
         return JSONResponse(self.dehydrate(obj))
@@ -182,15 +187,20 @@ class VaultResource(Resource):
             await self.app.remove_vault(obj)
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_list(self, request):
         return await super(VaultResource, self).dispatch_list(request)
 
+    @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_fingerprints(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
         user_vault_keys = self.app.user_vault_keys.list_for_vault(vault)
         return JSONResponse([key.fingerprint for key in user_vault_keys])
 
+    @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_history(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
@@ -201,6 +211,8 @@ class VaultResource(Resource):
 
         return JSONResponse({'items': log_items})
 
+    @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_history_stream(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
@@ -248,6 +260,8 @@ class VaultResource(Resource):
         logger.debug("WebSocket connection closed for %s", request.path)
         return ws
 
+    @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_export(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
