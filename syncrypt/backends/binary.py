@@ -3,19 +3,12 @@ import math
 import ssl
 import struct
 import sys
-try:
-    from contextlib import asynccontextmanager # type: ignore
-except ImportError: # on Python 3.6
-    from async_generator import asynccontextmanager # type: ignore
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
 import iso8601
 import trio
 from erlastic import Atom
-from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
-                      stop_after_attempt, wait_exponential)
-
 from syncrypt import __project__, __version__
 from syncrypt.exceptions import (ConnectionResetException, InvalidAuthentification, ServerError,
                                  SyncRequired, UnexpectedResponseException, UnsuccessfulResponse,
@@ -25,8 +18,18 @@ from syncrypt.pipes import (ChunkedURLWriter, Limit, Once, TrioStreamReader, Tri
                             URLReader, URLWriter)
 from syncrypt.utils.format import format_size
 from syncrypt.vendor import bert
+from tenacity import (retry, retry_if_exception_type, retry_unless_exception_type,
+                      stop_after_attempt, wait_exponential)
 
 from .base import StorageBackend
+
+try:
+    from contextlib import asynccontextmanager # type: ignore
+except ImportError: # on Python 3.6
+    from async_generator import asynccontextmanager # type: ignore
+
+
+
 
 logger = logging.getLogger(__name__)
 
