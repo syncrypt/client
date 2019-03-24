@@ -377,6 +377,7 @@ class SyncryptAPI():
             self.ready.set()
             await self.shutdown.wait()
             await trio_asyncio.aio_as_trio(site.stop)
+
         self.dead.set()
 
     async def stop(self):

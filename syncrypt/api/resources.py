@@ -188,11 +188,6 @@ class VaultResource(Resource):
 
     @require_auth_token
     @trio_asyncio.trio_as_aio
-    async def dispatch_list(self, request):
-        return await super(VaultResource, self).dispatch_list(request)
-
-    @require_auth_token
-    @trio_asyncio.trio_as_aio
     async def dispatch_fingerprints(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)

@@ -52,6 +52,41 @@ async def test_api_vault(local_daemon_app, local_api_client, local_daemon_vault)
     assert vault_json['metadata']['name'] == 'My Vault'
 
 
+async def test_api_metadata(local_daemon_app, local_api_client, local_daemon_vault):
+    client = local_api_client
+
+    await local_daemon_app.pull()
+
+    content = await client.get('/v1/vault/')
+    assert len(content) == 1 # only one vault
+
+    vault_uri = content[0]['resource_uri']
+
+    c = await client.get(vault_uri)
+    assert c['metadata'].get('name') == 'testvault'
+
+    patch_data = json.dumps({
+        'metadata': dict(c['metadata'], name='newname')
+    })
+    content = await client.put(vault_uri, data=patch_data)
+    vault_con = await client.get(vault_uri)
+    revision_count = vault_con['revision_count']
+
+    assert vault_con['metadata'].get('name') == 'newname'
+    assert vault_con['user_count'] == 1
+    assert vault_con['file_count'] == 0
+
+    vault_con = await client.put(vault_uri, data=patch_data)
+    vault_con = await client.get(vault_uri)
+
+    assert vault_con['metadata'].get('name') == 'newname'
+    assert vault_con['user_count'] == 1
+    assert vault_con['file_count'] == 0
+
+    # revision count should not change with the repeated patch with same name
+    assert vault_con['revision_count'] == revision_count
+
+
 """
 class APITests():
     app_cls = SyncryptDaemonApp  # type: ignore
