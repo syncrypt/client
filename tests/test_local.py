@@ -7,13 +7,14 @@ import unittest
 from glob import glob
 
 import pytest
+
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
 from syncrypt.exceptions import AlreadyPresent, InvalidRevision
 from syncrypt.managers import UserVaultKeyManager
 from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault, store
 
-from .base import assertSameFilesInFolder, local_app, local_vault, working_dir
+from .base import assertSameFilesInFolder, local_app, local_vault, test_vault, working_dir
 
 
 def generate_fake_revision(vault):

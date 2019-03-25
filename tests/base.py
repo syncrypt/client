@@ -52,7 +52,10 @@ def working_dir():
 
 @pytest.fixture
 async def local_app(working_dir):
+
     app_config_file = os.path.join(working_dir, "test_config")
+    if os.path.exists(app_config_file):
+        os.remove(app_config_file)
     app_config = TestAppConfig(app_config_file, remote = {
             "type": "local",
             "folder": "teststore",
@@ -77,6 +80,8 @@ async def asyncio_loop():
 @pytest.fixture
 async def local_daemon_app(working_dir, asyncio_loop):
     app_config_file = os.path.join(working_dir, "test_config")
+    if os.path.exists(app_config_file):
+        os.remove(app_config_file)
     app_config = TestAppConfig(app_config_file, remote = {
             "type": "local",
             "folder": "teststore",
@@ -111,24 +116,40 @@ def assertSameFilesInFolder(self, *folders):
 
 
 @pytest.fixture
-async def local_vault(local_app, working_dir):
+async def test_vault(working_dir):
+    "Return a vault that is a clone of the test vault"
+
     folder = os.path.join('tests', 'testlocalvault/')
     vault_folder = os.path.join(working_dir, "testvault")
     if os.path.exists(vault_folder):
         shutil.rmtree(vault_folder)
     shutil.copytree(folder, vault_folder)
-    vault = Vault(vault_folder)
-    await local_app.add_vault(vault)
-    yield vault
+    return Vault(vault_folder)
 
 
 @pytest.fixture
-async def local_daemon_vault(local_daemon_app, working_dir):
+async def empty_vault(working_dir):
+    "Return an uninitialized, empty vault"
+
     folder = os.path.join('tests', 'testlocalvault/')
     vault_folder = os.path.join(working_dir, "testvault")
     if os.path.exists(vault_folder):
         shutil.rmtree(vault_folder)
-    shutil.copytree(folder, vault_folder)
-    vault = Vault(vault_folder)
-    await local_daemon_app.add_vault(vault)
-    yield vault
+    os.makedirs(vault_folder)
+    return Vault(vault_folder)
+
+
+@pytest.fixture
+async def local_vault(local_app, test_vault):
+    "Return a vault that is a clone of the test vault AND is already added to the local app"
+
+    await local_app.add_vault(test_vault)
+    yield test_vault
+
+
+@pytest.fixture
+async def local_daemon_vault(local_daemon_app, working_dir, test_vault):
+    "Return a vault that is a clone of the test vault AND is already added to the daemon app"
+
+    await local_daemon_app.add_vault(test_vault)
+    yield test_vault

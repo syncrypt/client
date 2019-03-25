@@ -87,6 +87,77 @@ async def test_api_metadata(local_daemon_app, local_api_client, local_daemon_vau
     assert vault_con['revision_count'] == revision_count
 
 
+async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_vault):
+    client = local_api_client
+    app = local_daemon_app
+    test_vault = empty_vault
+
+    assert len(app.vaults) == 0
+
+    resp = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': test_vault.folder }))
+    assert resp['resource_uri'] != '/v1/vault/None/'
+    assert len(resp['resource_uri']) > 20
+
+    vault_uri = resp['resource_uri']
+
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.2)
+
+    resp = await client.get('/v1/vault/')
+    assert len(resp) == 1 # one vault
+    assert resp[0]['state'] == 'ready'
+
+    c = resp[0] # first vault
+
+    patch_data = json.dumps({
+        'metadata': dict(c['metadata'], name='newname')
+    })
+    await client.put(vault_uri, data=patch_data)
+
+    c = await client.get(vault_uri + 'history/')
+    assert len(c['items']) == 2
+    assert c['items'][0]['created_at'] is not None
+    assert not c['items'][0]['created_at'].endswith(':')
+    assert c['items'][0]['revision_id'] is not None
+    assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
+    assert c['items'][1]['operation'] == "OP_SET_METADATA"
+
+    with open(os.path.join(test_vault.folder, "test.txt"), "w") as f:
+        f.write('hello')
+
+    await app.push()
+    """
+    TODO
+
+    c = await client.get(vault_uri + 'history/')
+    assert len(c['items']) > 2
+    assert c['items'][-1]['operation'] == "OP_UPLOAD"
+    assert c['items'][-1]['path'] == "test.txt"
+
+    await app.sync_vault(self.app.vaults[0], full=True)
+
+    r = await client.get(vault_uri + 'history/')
+    c = await r.json()
+    assert len(c['items']) == 4
+    assert c['items'][0]['created_at'] is not None
+    assert not c['items'][0]['created_at'].endswith(':')
+    assert c['items'][0]['revision_id'] is not None
+    assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
+    assert c['items'][1]['operation'] == "OP_SET_METADATA"
+    assert c['items'][-1]['operation'] == "OP_UPLOAD"
+    assert c['items'][-1]['path'] == "test.txt"
+
+    r = await client.get(vault_uri)
+    c = await r.json()
+    await r.release()
+    assert c['file_count'] == 1
+    assert c['revision_count'] == 4
+    assert c['user_count'] == 1
+    """
+
+
 """
 class APITests():
     app_cls = SyncryptDaemonApp  # type: ignore
