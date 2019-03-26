@@ -47,7 +47,7 @@ class TestAppConfig(AppConfig):
 
 @pytest.fixture
 def working_dir():
-    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else "tests"
+    return "/dev/shm" if os.access("/dev/shm", os.W_OK) else os.path.dirname(__file__)
 
 
 @pytest.fixture
@@ -119,11 +119,11 @@ def assertSameFilesInFolder(self, *folders):
 async def test_vault(working_dir):
     "Return a vault that is a clone of the test vault"
 
-    folder = os.path.join('tests', 'testlocalvault/')
+    source_folder = os.path.join('tests', 'testlocalvault/')
     vault_folder = os.path.join(working_dir, "testvault")
     if os.path.exists(vault_folder):
         shutil.rmtree(vault_folder)
-    shutil.copytree(folder, vault_folder)
+    shutil.copytree(source_folder, vault_folder)
     return Vault(vault_folder)
 
 
@@ -131,7 +131,6 @@ async def test_vault(working_dir):
 async def empty_vault(working_dir):
     "Return an uninitialized, empty vault"
 
-    folder = os.path.join('tests', 'testlocalvault/')
     vault_folder = os.path.join(working_dir, "testvault")
     if os.path.exists(vault_folder):
         shutil.rmtree(vault_folder)
