@@ -58,7 +58,7 @@ async def local_app(working_dir):
         os.remove(app_config_file)
     app_config = TestAppConfig(app_config_file, remote = {
             "type": "local",
-            "folder": "teststore",
+            "folder": os.path.join(working_dir, "teststore")
             })
     app = SyncryptApp(app_config, auth_provider=TestAuthenticationProvider())
     await app.initialize()
@@ -84,7 +84,7 @@ async def local_daemon_app(working_dir, asyncio_loop):
         os.remove(app_config_file)
     app_config = TestAppConfig(app_config_file, remote = {
             "type": "local",
-            "folder": "teststore",
+            "folder": os.path.join(working_dir, "teststore")
             })
 
     async with trio.open_nursery() as nursery:

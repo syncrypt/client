@@ -93,6 +93,7 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
     test_vault = empty_vault
 
     assert len(app.vaults) == 0
+    assert len(glob(os.path.join(test_vault.folder, '*.*'))) == 0
 
     resp = await client.post('/v1/vault/',
             data=json.dumps({ 'folder': test_vault.folder }))
@@ -128,19 +129,16 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
         f.write('hello')
 
     await app.push()
-    """
-    TODO
 
     c = await client.get(vault_uri + 'history/')
-    assert len(c['items']) > 2
+    assert len(c['items']) == 3
     assert c['items'][-1]['operation'] == "OP_UPLOAD"
     assert c['items'][-1]['path'] == "test.txt"
 
-    await app.sync_vault(self.app.vaults[0], full=True)
+    await app.sync_vault(app.vaults[0], full=True)
 
-    r = await client.get(vault_uri + 'history/')
-    c = await r.json()
-    assert len(c['items']) == 4
+    c = await client.get(vault_uri + 'history/')
+    assert len(c['items']) == 3
     assert c['items'][0]['created_at'] is not None
     assert not c['items'][0]['created_at'].endswith(':')
     assert c['items'][0]['revision_id'] is not None
@@ -149,14 +147,54 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
     assert c['items'][-1]['operation'] == "OP_UPLOAD"
     assert c['items'][-1]['path'] == "test.txt"
 
-    r = await client.get(vault_uri)
-    c = await r.json()
-    await r.release()
+    c = await client.get(vault_uri)
     assert c['file_count'] == 1
-    assert c['revision_count'] == 4
+    assert c['revision_count'] == 3
     assert c['user_count'] == 1
-    """
 
+
+async def test_api_init_vault_remove_from_sync_and_re_add(local_daemon_app, local_api_client, empty_vault):
+    client = local_api_client
+    app = local_daemon_app
+    test_vault = empty_vault
+
+    resp = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': test_vault.folder }))
+    assert resp['resource_uri'] != '/v1/vault/None/'
+    assert len(resp['resource_uri']) > 20
+
+    vault_uri = resp['resource_uri']
+
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.2)
+
+    resp = await client.get('/v1/vault/')
+    assert len(resp) == 1 # one vault
+    assert resp[0]['state'] == 'ready'
+
+    c = resp[0] # first vault
+
+    await client.delete(vault_uri)
+    assert len(app.vaults) == 0 # no vault
+
+    shutil.rmtree(test_vault.folder)
+    os.makedirs(test_vault.folder)
+
+    resp = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': test_vault.folder }))
+    assert resp['resource_uri'] != '/v1/vault/None/'
+    assert len(resp['resource_uri']) > 20
+
+    vault_uri = resp['resource_uri']
+
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.2)
+
+    resp = await client.get('/v1/vault/')
+    assert len(resp) == 1 # one vault
+    assert resp[0]['state'] == 'ready'
 
 """
 class APITests():
@@ -205,8 +243,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
@@ -312,8 +350,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
@@ -340,9 +378,9 @@ class APITests():
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
             assert len(c['items']) == 3
-            self.assertIsNotNone(c['items'][0]['created_at'])
-            self.assertFalse(c['items'][0]['created_at'].endswith(':'))
-            self.assertIsNotNone(c['items'][0]['revision_id'])
+            assert c['items'][0]['created_at'] is not None
+            assert not c['items'][0]['created_at'].endswith(':')
+            assert c['items'][0]['revision_id'] is not None
             assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
             assert c['items'][1]['operation'] == "OP_SET_METADATA"
 
@@ -362,9 +400,9 @@ class APITests():
             r = await client.get(vault_uri + 'history/')
             c = await r.json()
             assert len(c['items']) == 4
-            self.assertIsNotNone(c['items'][0]['created_at'])
-            self.assertFalse(c['items'][0]['created_at'].endswith(':'))
-            self.assertIsNotNone(c['items'][0]['revision_id'])
+            assert c['items'][0]['created_at'] is not None
+            assert not c['items'][0]['created_at'].endswith(':')
+            assert c['items'][0]['revision_id'] is not None
             assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
             assert c['items'][1]['operation'] == "OP_SET_METADATA"
             assert c['items'][-1]['operation'] == "OP_UPLOAD"
@@ -400,8 +438,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
@@ -458,8 +496,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
@@ -486,16 +524,16 @@ class APITests():
             r = await client.get(vault_uri + 'users/')
             users = await r.json()
             assert len(users) == 1
-            self.assertIsNotNone(users[0]['resource_uri'])
-            self.assertIsNotNone(users[0]['email'])
+            assert users[0]['resource_uri'] is not None
+            assert users[0]['email'] is not None
 
             await self.app.sync_vault(self.vault, full=True)
 
             r = await client.get(vault_uri + 'users/')
             c = await r.json()
             assert len(users) == 1
-            self.assertIsNotNone(users[0]['resource_uri'])
-            self.assertIsNotNone(users[0]['email'])
+            assert users[0]['resource_uri'] is not None
+            assert users[0]['email'] is not None
 
         finally:
             await client.close()
@@ -520,8 +558,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
@@ -549,8 +587,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
@@ -588,8 +626,8 @@ class APITests():
             r = await client.post('/v1/vault/',
                     data=json.dumps({ 'folder': new_vault_folder }))
             c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
+            assert c['resource_uri'] != '/v1/vault/None/'
+            assert len(c['resource_uri']) > 20
             await r.release()
 
             vault_uri = c['resource_uri']
