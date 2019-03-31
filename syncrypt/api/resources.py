@@ -279,7 +279,6 @@ class VaultResource(Resource):
         return JSONResponse({'status': 'ok', 'filename': path})
 
     async def post_obj(self, request):
-
         async def pull_and_watch(vault):
             await self.app.pull_vault(vault)
             # TODO No wait here!
@@ -294,18 +293,20 @@ class VaultResource(Resource):
         request_dict = json.loads(content.decode())
 
         if 'id' in request_dict:
-            vault = await self.app.clone(request_dict['id'], request_dict['folder'])
-            self.app.save_vault_dir_in_config(vault)
-            asyncio.get_event_loop().create_task(pull_and_watch(vault))
+            raise NotImplementedError()
+            #vault = await self.app.clone(request_dict['id'], request_dict['folder'])
+            #self.app.save_vault_dir_in_config(vault)
+            #asyncio.get_event_loop().create_task(pull_and_watch(vault))
         elif 'import_package' in request_dict:
-            vault = await self.app.import_package(
-                    request_dict['import_package'], request_dict['folder'])
-            self.app.save_vault_dir_in_config(vault)
-            asyncio.get_event_loop().create_task(pull_and_watch(vault))
+            raise NotImplementedError()
+            #vault = await self.app.import_package(
+            #        request_dict['import_package'], request_dict['folder'])
+            #self.app.save_vault_dir_in_config(vault)
+            #asyncio.get_event_loop().create_task(pull_and_watch(vault))
         else:
-            vault = await self.app.add_vault(Vault(request_dict['folder']))
-            self.app.save_vault_dir_in_config(vault)
-            asyncio.get_event_loop().create_task(init_and_push(vault))
+            vault = await self.app.add_vault(Vault(request_dict['folder']),
+                        async_init=True,
+                        async_push=True)
         return vault
 
     async def put_obj(self, request):

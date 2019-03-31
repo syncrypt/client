@@ -104,7 +104,7 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
 
     assert len(app.vaults) == 1 # one vault
     while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
-        await trio.sleep(0.2)
+        await trio.sleep(0.1)
 
     resp = await client.get('/v1/vault/')
     assert len(resp) == 1 # one vault
@@ -118,7 +118,7 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
     await client.put(vault_uri, data=patch_data)
 
     c = await client.get(vault_uri + 'history/')
-    assert len(c['items']) == 2
+    assert len(c['items']) >= 2
     assert c['items'][0]['created_at'] is not None
     assert not c['items'][0]['created_at'].endswith(':')
     assert c['items'][0]['revision_id'] is not None
@@ -131,14 +131,14 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
     await app.push()
 
     c = await client.get(vault_uri + 'history/')
-    assert len(c['items']) == 3
+    assert len(c['items']) >= 3
     assert c['items'][-1]['operation'] == "OP_UPLOAD"
     assert c['items'][-1]['path'] == "test.txt"
 
     await app.sync_vault(app.vaults[0], full=True)
 
     c = await client.get(vault_uri + 'history/')
-    assert len(c['items']) == 3
+    assert len(c['items']) >= 3
     assert c['items'][0]['created_at'] is not None
     assert not c['items'][0]['created_at'].endswith(':')
     assert c['items'][0]['revision_id'] is not None
@@ -149,7 +149,7 @@ async def test_api_init_vault_history(local_daemon_app, local_api_client, empty_
 
     c = await client.get(vault_uri)
     assert c['file_count'] == 1
-    assert c['revision_count'] == 3
+    assert c['revision_count'] >= 3
     assert c['user_count'] == 1
 
 
@@ -199,7 +199,6 @@ async def test_api_init_vault_remove_from_sync_and_re_add(local_daemon_app, loca
     assert resp[0]['remote_id'] != vault_id # make sure this is a new vault
 
 
-@pytest.mark.skip
 async def test_api_init_vault_remove_from_sync_and_re_add_same(local_daemon_app, local_api_client, empty_vault):
     client = local_api_client
     app = local_daemon_app
@@ -226,8 +225,6 @@ async def test_api_init_vault_remove_from_sync_and_re_add_same(local_daemon_app,
     await client.delete(vault_uri)
     assert len(app.vaults) == 0 # no vault
 
-    #import ipdb; ipdb.set_trace()
-
     resp = await client.post('/v1/vault/',
             data=json.dumps({ 'folder': test_vault.folder }))
     assert resp['resource_uri'] != '/v1/vault/None/'
@@ -237,7 +234,6 @@ async def test_api_init_vault_remove_from_sync_and_re_add_same(local_daemon_app,
 
     assert len(app.vaults) == 1 # one vault
     while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
-        print(app.vaults[0].state)
         await trio.sleep(0.2)
 
     resp = await client.get('/v1/vault/')
