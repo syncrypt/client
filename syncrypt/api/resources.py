@@ -121,6 +121,9 @@ class VaultResource(Resource):
                 '/{version}/{name}/{{id}}/fingerprints/'.format(**opts),
                 self.dispatch_fingerprints)
         router.add_route('GET',
+                '/{version}/{name}/{{id}}/resync/'.format(**opts),
+                self.dispatch_resync)
+        router.add_route('GET',
                 '/{version}/{name}/{{id}}/history/'.format(**opts),
                 self.dispatch_history)
         router.add_route('GET',
@@ -193,6 +196,14 @@ class VaultResource(Resource):
         vault = self.find_vault_by_id(vault_id)
         user_vault_keys = self.app.user_vault_keys.list_for_vault(vault)
         return JSONResponse([key.fingerprint for key in user_vault_keys])
+
+    @require_auth_token
+    @trio_asyncio.trio_as_aio
+    async def dispatch_resync(self, request):
+        vault_id = request.match_info['id']
+        vault = self.find_vault_by_id(vault_id)
+        await self.app.resync_vault(vault)
+        return JSONResponse({})
 
     @require_auth_token
     @trio_asyncio.trio_as_aio

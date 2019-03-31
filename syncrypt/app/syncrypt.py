@@ -3,6 +3,7 @@ import asyncio
 import logging
 import os.path
 import socket
+from functools import partial
 from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
@@ -397,6 +398,11 @@ class SyncryptApp(object):
 
     async def check_vault(self, vault: Vault):
         await vault.backend.open()
+
+    async def resync_vault(self, vault: Vault):
+        nursery = self.vault_nurseries.get(vault.id)
+        assert nursery is not None
+        nursery.start_soon(partial(self.sync_vault, vault, full=True))
 
     async def open_backend(self, always_ask_for_creds=False, auth_provider=None, num_tries=3):
         'open a backend connection that will be independent from any vault'

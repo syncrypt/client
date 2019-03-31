@@ -149,6 +149,29 @@ paths:
             $ref: '#/definitions/ApiErrorResponse'
       security:
         - api_key: []
+  '/vault/{vaultId}/resync/':
+    get:
+      tags:
+        - vault
+      summary: Trigger a full sync of the given Vault
+      description: ''
+      produces:
+        - application/json
+      parameters:
+        - name: vaultId
+          in: path
+          description: Vault ID
+          required: true
+          type: string
+      responses:
+        '200':
+          description: successful operation
+        '400': # 4XX
+          description: An error occurred during operation
+          schema:
+            $ref: '#/definitions/ApiErrorResponse'
+      security:
+        - api_key: []
   /flying-vault/:
     get:
       tags:
