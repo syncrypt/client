@@ -60,10 +60,12 @@ async def local_app(working_dir):
             "type": "local",
             "folder": os.path.join(working_dir, "teststore")
             })
-    app = SyncryptApp(app_config, auth_provider=TestAuthenticationProvider())
-    await app.initialize()
-    yield app
-    await app.close()
+    async with trio.open_nursery() as nursery:
+        app = SyncryptApp(app_config, nursery=nursery,
+                auth_provider=TestAuthenticationProvider())
+        await app.initialize()
+        yield app
+        await app.close()
 
 
 @pytest.fixture

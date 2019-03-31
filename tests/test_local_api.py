@@ -172,6 +172,7 @@ async def test_api_init_vault_remove_from_sync_and_re_add(local_daemon_app, loca
     resp = await client.get('/v1/vault/')
     assert len(resp) == 1 # one vault
     assert resp[0]['state'] == 'ready'
+    vault_id = resp[0]['remote_id']
 
     c = resp[0] # first vault
 
@@ -195,6 +196,54 @@ async def test_api_init_vault_remove_from_sync_and_re_add(local_daemon_app, loca
     resp = await client.get('/v1/vault/')
     assert len(resp) == 1 # one vault
     assert resp[0]['state'] == 'ready'
+    assert resp[0]['remote_id'] != vault_id # make sure this is a new vault
+
+
+@pytest.mark.skip
+async def test_api_init_vault_remove_from_sync_and_re_add_same(local_daemon_app, local_api_client, empty_vault):
+    client = local_api_client
+    app = local_daemon_app
+    test_vault = empty_vault
+
+    resp = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': test_vault.folder }))
+    assert resp['resource_uri'] != '/v1/vault/None/'
+    assert len(resp['resource_uri']) > 20
+
+    vault_uri = resp['resource_uri']
+
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.2)
+
+    resp = await client.get('/v1/vault/')
+    assert len(resp) == 1 # one vault
+    assert resp[0]['state'] == 'ready'
+    vault_id = resp[0]['remote_id']
+
+    c = resp[0] # first vault
+
+    await client.delete(vault_uri)
+    assert len(app.vaults) == 0 # no vault
+
+    #import ipdb; ipdb.set_trace()
+
+    resp = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': test_vault.folder }))
+    assert resp['resource_uri'] != '/v1/vault/None/'
+    assert len(resp['resource_uri']) > 20
+
+    vault_uri = resp['resource_uri']
+
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        print(app.vaults[0].state)
+        await trio.sleep(0.2)
+
+    resp = await client.get('/v1/vault/')
+    assert len(resp) == 1 # one vault
+    assert resp[0]['state'] == 'ready'
+    assert resp[0]['remote_id'] == vault_id # make sure this is the same vault
 
 """
 class APITests():
