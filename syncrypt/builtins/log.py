@@ -110,7 +110,7 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
     await ws.prepare(request)
     with store.session() as session:
         for logitem in recent_log_items(app, vault_id, 100, session):
-            ws.send_str(JSONResponse.encode_body(logitem_to_json(logitem)).decode('utf-8'))
+            await ws.send_str(JSONResponse.encode_body(logitem_to_json(logitem)).decode('utf-8'))
         root_logger = logging.getLogger()
         queue = asyncio.Queue(maxsize=MAX_ITEMS_LOGGING_QUEUE)  # type: asyncio.Queue
         handler = QueueHandler(queue, JSONFormatter(app))
@@ -127,7 +127,7 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
                     # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
                     # queue before draining the connection
                     for _ in range(MAX_ITEMS_BEFORE_DRAIN):
-                        ws.send_str(str(item))
+                        await ws.send_str(str(item))
                         item = queue.get_nowait()
                 except asyncio.QueueEmpty:
                     pass
