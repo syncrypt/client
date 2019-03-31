@@ -95,7 +95,7 @@ class SyncryptDaemonApp(SyncryptApp):
         self.shutdown_event.set()
 
     async def restart(self):
-        logger.warn('Restart requested, shutting down...')
+        logger.warning('Restart requested, shutting down...')
         self.restart_flag = True
         await self.shutdown()
 

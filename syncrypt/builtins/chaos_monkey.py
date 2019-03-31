@@ -30,7 +30,7 @@ def chaos_trace(frame, event, arg):
         for (function_names, probability, exc) in CHAOS_TABLE:
             if tb.function in function_names:
                 if random.random() < probability:
-                    logger.warn(
+                    logger.warning(
                         "Chaos monkey triggered for %s @ %s:%s",
                         tb.function,
                         tb.filename,

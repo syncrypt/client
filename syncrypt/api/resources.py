@@ -178,11 +178,11 @@ class VaultResource(Resource):
 
     async def delete_obj(self, request, obj):
         if request.query.get('wipe') == '1':
-            logger.warn('Deleting/wiping vault: %s', obj)
+            logger.warning('Deleting/wiping vault: %s', obj)
             await self.app.unwatch_vault(obj)
             await self.app.delete_vault(obj)
         else:
-            logger.warn('Removing vault: %s', obj)
+            logger.warning('Removing vault: %s', obj)
             await self.app.unwatch_vault(obj)
             await self.app.remove_vault(obj)
 
@@ -206,8 +206,6 @@ class VaultResource(Resource):
 
         return JSONResponse({'items': log_items})
 
-    @require_auth_token
-    @trio_asyncio.trio_as_aio
     async def dispatch_history_stream(self, request):
         vault_id = request.match_info['id']
         vault = self.find_vault_by_id(vault_id)
@@ -221,7 +219,6 @@ class VaultResource(Resource):
         MAX_ITEMS_LOGGING_QUEUE = 4096
 
         queue = asyncio.Queue(maxsize=MAX_ITEMS_LOGGING_QUEUE)  # type: asyncio.Queue
-
         async def writer():
             while not ws.closed:
                 item = await queue.get()
@@ -361,7 +358,7 @@ class FlyingVaultResource(Resource):
     async def delete_obj(self, request, obj):
         if request.query.get('wipe') == '1':
             vault_id = obj.id
-            logger.warn('Deleting/wiping flying vault: %s', vault_id)
+            logger.warning('Deleting/wiping flying vault: %s', vault_id)
             backend = await self.app.open_backend()
             await backend.delete_vault(vault_id=vault_id)
         else:

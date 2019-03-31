@@ -173,7 +173,7 @@ class BinaryStorageConnection():
             if self.manager.ssl:
                 sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
                 if not self.manager.ssl_verify or self.manager.host in ('127.0.0.1', 'localhost'):
-                    self.logger.warn('Continuing without verifying SSL cert')
+                    self.logger.warning('Continuing without verifying SSL cert')
                     sc.check_hostname = False
                     sc.verify_mode = ssl.CERT_NONE
 
