@@ -1,26 +1,14 @@
-import asyncio
 import json
 import os
 import os.path
 import shutil
-import time
-import unittest
 from glob import glob
 
 import aiohttp
 import pytest
-
-import syncrypt
-from syncrypt.api import APIClient
-from syncrypt.app import SyncryptDaemonApp
-from syncrypt.models import Vault, VaultState
 from tests.base import *
 
-
-login_data = {
-    'email': 'test@syncrypt.space',
-    'password': 'test!password'
-}
+from syncrypt.models import VaultState
 
 
 async def test_local_daemon_app(local_daemon_app):
@@ -256,7 +244,7 @@ async def test_api_init_vault_fingerprints(local_daemon_app, local_api_client, e
 
     assert len(app.vaults) == 1 # one vault
     while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
-        await asyncio.sleep(0.2)
+        await trio.sleep(0.2)
 
     c = await client.get('/v1/vault/')
     assert len(c) == 1 # one vault

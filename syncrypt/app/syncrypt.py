@@ -688,6 +688,8 @@ class SyncryptApp(object):
         await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_vault(self, vault, full=False):
+        assert vault.state != VaultState.SYNCING
+
         vault.logger.info('Pulling %s', vault)
 
         # First, we will iterate through the changes, validate the chain and build up the state of
@@ -701,6 +703,7 @@ class SyncryptApp(object):
         limit = trio.CapacityLimiter(1)
 
         try:
+            # here we should use trimeter too allow for parallel processing
             async with trio.open_nursery():
                 async for bundle in self.bundles.download_bundles_for_vault(vault):
                     async with limit:

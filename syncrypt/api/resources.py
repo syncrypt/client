@@ -226,7 +226,7 @@ class VaultResource(Resource):
                     # Send the item and also try to get up to MAX_ITEMS_BEFORE_DRAIN items from the
                     # queue before draining the connection
                     for _ in range(MAX_ITEMS_BEFORE_DRAIN):
-                        ws.send_str(
+                        await ws.send_str(
                             JSONResponse.encode_body(rev_to_json(item)).decode('utf-8')
                         )
                         item = queue.get_nowait()
@@ -241,7 +241,7 @@ class VaultResource(Resource):
         @smokesignal.on("post_apply_revision")
         def handler(*args, **kwargs):
             revision = kwargs['revision']
-            revision_vault  = kwargs['vault']
+            revision_vault = kwargs['vault']
             if revision_vault.id == vault.id:
                 queue.put_nowait(revision)
 

@@ -1,97 +1,55 @@
-import asyncio
 import json
 import os
 import os.path
 import shutil
-import time
-import unittest
 from glob import glob
 
 import aiohttp
 import pytest
-from async_timeout import timeout
+from tests.base import *
 
-import syncrypt
-from syncrypt.api import APIClient
-from syncrypt.app import SyncryptDaemonApp
-from syncrypt.models import Vault, VaultState
-"""
-from tests.base import VaultLocalTestCase
+from trio_websocket import open_websocket_url
+from syncrypt.models import VaultState
 
 
-class APIWebsocketTests(VaultLocalTestCase):
-    app_cls = SyncryptDaemonApp  # type: ignore
-    login_data = {
-        'email': 'test@syncrypt.space',
-        'password': 'test!password'
-    }
+async def test_api_local_websockets_stream(local_daemon_app, empty_vault, local_api_client):
+    app = local_daemon_app
+    client = local_api_client
 
-    async def test_api_local_websockets_stream(self):
-        app = self.app
-        client = APIClient(self.app_config)
+    c = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': empty_vault.folder }))
+    assert c['resource_uri'] != '/v1/vault/None/'
+    assert len(c['resource_uri']) > 20
 
-        new_vault_folder = os.path.join(self.working_dir, 'newvault')
-        if os.path.exists(new_vault_folder):
-            shutil.rmtree(new_vault_folder)
-        os.makedirs(new_vault_folder)
+    vault_uri = c['resource_uri']
 
-        await app.start()
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.2)
+    assert len(app.vaults) == 1 # one vault
 
-        try:
-            r = await client.login(**self.login_data)
-            await r.release()
-            self.assertEqual(r.status, 200)
+    c = await client.get(vault_uri)
+    assert c['state'] == 'ready'
 
-            r = await client.post('/v1/vault/',
-                    data=json.dumps({ 'folder': new_vault_folder }))
-            c = await r.json()
-            self.assertNotEqual(c['resource_uri'], '/v1/vault/None/')
-            self.assertGreater(len(c['resource_uri']), 20)
-            await r.release()
+    ws_url = "ws://127.0.0.1:28081" + vault_uri + "historystream/"
+    async with open_websocket_url(ws_url) as ws:
+        assert not ws.closed
+        assert ws.is_client
 
-            vault_uri = c['resource_uri']
+        with trio.move_on_after(0.5):
+            message = await ws.get_message()
+            assert False, "should not receive a message"
 
-            r = await client.get(vault_uri)
-            c = await r.json()
-            self.assertIn(c['state'], ('uninitialized', 'initializing'))
-            await r.release()
+        patch_data = json.dumps({
+            'metadata': dict(c['metadata'], name='newname')
+        })
+        c = await client.put(vault_uri, data=patch_data)
 
-            self.assertEqual(len(app.vaults), 1) # one vault
-            while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
-                await asyncio.sleep(0.2)
-            self.assertEqual(len(app.vaults), 1) # one vault
+        msg = None
+        with trio.move_on_after(0.5):
+            msg = await ws.get_message()
 
-            r = await client.get(vault_uri)
-            c = await r.json()
-            self.assertEqual(c['state'], 'ready')
-            await r.release()
-
-            async with client.ws_connect(vault_uri + 'historystream/') as ws:
-
-                self.assertEqual(ws.closed, False)
-
-                try:
-                    em = await asyncio.wait_for(ws.receive(), timeout=1.0)
-                    #raise Exception(em)
-                except asyncio.TimeoutError:
-                    pass
-
-                patch_data = json.dumps({
-                    'metadata': dict(c['metadata'], name='newname')
-                })
-                r = await client.put(vault_uri, data=patch_data)
-                self.assertEqual(r.status, 200)
-                await r.release()
-
-                msg = await asyncio.wait_for(ws.receive(), timeout=2.0)
-                self.assertEqual(msg.type, aiohttp.WSMsgType.TEXT)
-                rev = json.loads(msg.data)
-                self.assertEqual(rev['verified'], True)
-                self.assertEqual(rev['operation'], "OP_SET_METADATA")
-
-                await ws.close()
-
-        finally:
-            await client.close()
-            await app.stop()
-"""
+        assert msg is not None
+        rev = json.loads(msg)
+        assert rev['verified'] == True
+        assert rev['operation'] == "OP_SET_METADATA"
