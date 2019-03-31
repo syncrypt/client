@@ -316,32 +316,9 @@ class BinaryStorageConnection():
             if self.stream:
                 await self.stream.aclose()
                 self.stream = None
-            self._clear_connection()
+            self.clear_connection()
 
-    async def __aenter__(self):
-        # This enables the connection to be used as a context manager. When the context is closed,
-        # the connection is automatically set to "idle" (available).
-        return self
-
-    async def __aexit__(self, ex_type, ex_value, ex_st):
-        if ex_value:
-            # When an exception happened, let's force a disconnect and clear
-            # the slot
-            if isinstance(ex_value, trio.Cancelled):
-                self.logger.debug('Task has been cancelled within context, clearing connection.')
-            else:
-                self.logger.debug('Exception %s has been raised within context, clearing connection.',
-                    ex_value)
-            self._clear_connection()
-        else:
-            # Let's assume there was no problem
-            self.available.set()
-
-        # Explicitely return False to signal that exception should be processed
-        # normally
-        return False
-
-    def _clear_connection(self):
+    def clear_connection(self):
         if self.stream:
             self.stream.close()
             self.stream = None
@@ -975,7 +952,7 @@ class BinaryStorageManager():
                         if not skip_login:
                             await conn.login(vault)
                     except:
-                        conn._clear_connection()
+                        conn.clear_connection()
                         raise
                 elif vault:
                     logger.debug('Found an available connection for %s', vault)
@@ -996,7 +973,7 @@ class BinaryStorageManager():
                     logger.debug("Choosing %s", conn)
                     return conn
                 except:
-                    conn._clear_connection()
+                    conn.clear_connection()
                     raise
                 break
 
@@ -1075,10 +1052,21 @@ class BinaryStorageBackend(StorageBackend):
 
     @asynccontextmanager
     async def _acquire_connection(self, ignore_vault=False, skip_login=False):
-        yield await get_manager_instance().acquire_connection(
+        conn = await get_manager_instance().acquire_connection(
             None if ignore_vault else self.vault,
             skip_login=skip_login
         )
+        try:
+            yield conn
+        except trio.Cancelled:
+            logger.debug('Task has been cancelled within context, clearing connection.')
+            conn.clear_connection()
+        except:
+            logger.exception('Exception in connection')
+            conn.clear_connection()
+            raise
+        finally:
+            conn.available.set()
 
     async def init(self, identity: Identity) -> Revision:
         self.auth = None
