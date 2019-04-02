@@ -3,7 +3,6 @@ import asyncio
 import logging
 import os.path
 import socket
-from functools import partial
 from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 from zipfile import ZipFile
 
@@ -12,6 +11,7 @@ import trio
 from sqlalchemy import inspect
 from sqlalchemy.orm.exc import NoResultFound
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from trio_typing import Nursery
 
 from syncrypt.exceptions import (AlreadyPresent, FolderExistsAndIsNotEmpty, InvalidAuthentification,
                                  InvalidVaultPackage, SyncRequired, SyncryptBaseException,
@@ -24,6 +24,8 @@ from syncrypt.pipes import (DecryptRSA_PKCS1_OAEP, EncryptRSA_PKCS1_OAEP, FileWr
                             StdoutWriter)
 from syncrypt.utils.filesystem import is_empty
 from syncrypt.utils.format import format_fingerprint
+
+from .vault import VaultController
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +41,8 @@ class SyncryptApp(object):
         self.vaults = [] # type: List[Vault]
         self.vault_dirs = vault_dirs
         self.config = config
-        self.nursery = nursery # type: trio.Nursery
-        self.vault_nurseries = {} # type: Dict[Vault, trio.Nursery]
+        self.nursery = nursery # type: Nursery
+        self.vault_controllers = {} # type: Dict[str, VaultController]
         self.concurrency = int(self.config.app['concurrency'])
 
         # These enforce global limits on various bundle actions
@@ -113,35 +115,26 @@ class SyncryptApp(object):
         backend = self.config.backend_cls(**self.config.backend_kwargs)
         await backend.signup(username, password, firstname, surname)
 
-    async def vault_task(self, vault, do_init, do_push):
-        assert self.vault_nurseries.get(vault.id) is None
-        async with trio.open_nursery() as nursery:
-            logger.debug("Opened nursery for %s", vault)
-            self.vault_nurseries[vault.id] = nursery
-
-            try:
-                vault.check_existence()
-                self.identity.assert_initialized()
-            except SyncryptBaseException:
-                logger.exception("Failure during vault initialization")
-                await self.set_vault_state(vault, VaultState.FAILURE)
-
-            if do_init:
-                await self.init_vault(vault)
-
-            if do_push:
-                await self.pull_vault(vault, full=do_init)
-                await self.push_vault(vault)
-
-            logger.debug("Sleeping forever")
-            await trio.sleep_forever()
-        logger.debug("Closed nursery for %s", vault)
-        del self.vault_nurseries[vault.id]
-
     async def start_vault(self, vault, async_init=False, async_push=False):
         logger.info("Registering vault %s", vault)
+        assert vault.id not in self.vault_controllers
         self.vaults.append(vault)
-        self.nursery.start_soon(self.vault_task, vault, async_init, async_push)
+        vault_controller = VaultController(self, vault)
+        self.vault_controllers[vault.id] = vault_controller
+        self.nursery.start_soon(vault_controller.run, async_init, async_push)
+
+    async def stop_vault(self, vault):
+        assert vault.id in self.vault_controllers
+        self.vaults.remove(vault)
+        await self.vault_controllers[vault.id].cancel()
+        del self.vault_controllers[vault.id]
+
+    async def remove_vault(self, vault):
+        logger.info("Removing vault %s", vault)
+        with self.config.update_context():
+            self.config.remove_vault_dir(os.path.abspath(vault.folder))
+        await self.reset_vault_database(vault, remove_vault=True)
+        await self.stop_vault(vault)
 
     async def add_vault(self, vault, async_init=False, async_push=False):
         for v in self.vaults:
@@ -165,14 +158,6 @@ class SyncryptApp(object):
         if os.path.exists(vault.config_path):
             return vault
         return None
-
-    async def remove_vault(self, vault):
-        logger.info("Removing vault %s", vault)
-        with self.config.update_context():
-            self.config.remove_vault_dir(os.path.abspath(vault.folder))
-        await self.reset_vault_database(vault, remove_vault=True)
-        self.vaults.remove(vault)
-        self.vault_nurseries[vault.id].cancel_scope.cancel()
 
     async def delete_vault(self, vault):
         await vault.backend.open()
@@ -400,9 +385,7 @@ class SyncryptApp(object):
         await vault.backend.open()
 
     async def resync_vault(self, vault: Vault):
-        nursery = self.vault_nurseries.get(vault.id)
-        assert nursery is not None
-        nursery.start_soon(partial(self.sync_vault, vault, full=True))
+        await self.vault_controllers.get(vault.id).resync()
 
     async def open_backend(self, always_ask_for_creds=False, auth_provider=None, num_tries=3):
         'open a backend connection that will be independent from any vault'
@@ -760,7 +743,7 @@ class SyncryptApp(object):
 
     async def close(self):
         await self.wait()
-        for vault in self.vaults:
-            self.vault_nurseries[vault.id].cancel_scope.cancel()
+        for vault in list(self.vaults):
             await self.set_vault_state(vault, VaultState.SHUTDOWN)
+            await self.stop_vault(vault)
         smokesignal.emit('shutdown')
