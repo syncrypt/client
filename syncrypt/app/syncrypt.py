@@ -385,7 +385,10 @@ class SyncryptApp(object):
         await vault.backend.open()
 
     async def resync_vault(self, vault: Vault):
-        await self.vault_controllers.get(vault.id).resync()
+        controller = self.vault_controllers.get(vault.id)
+        if controller is None:
+            raise VaultNotFound(vault.id)
+        await controller.resync()
 
     async def open_backend(self, always_ask_for_creds=False, auth_provider=None, num_tries=3):
         'open a backend connection that will be independent from any vault'
