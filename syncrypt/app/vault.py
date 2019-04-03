@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+from typing import Tuple
 
 import trio
 from trio_typing import Nursery
@@ -28,6 +29,9 @@ class VaultController:
         self.vault = vault
         self.nursery = None # type: Nursery
         self.logger = VaultLoggerAdapter(self.vault, logging.getLogger(__name__))
+        send_channel, receive_channel = trio.open_memory_channel(128) # type: Tuple[trio.abc.SendChannel, trio.abc.ReceiveChannel]
+        self.file_changes_send_channel = send_channel # type: trio.abc.SendChannel
+        self.file_changes_receive_channel = receive_channel # type: trio.abc.ReceiveChannel
 
     async def resync(self):
         assert self.nursery is not None

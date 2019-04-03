@@ -94,7 +94,7 @@ class Bundle(MetadataHolder, Base):
 
     async def load_key(self):
         async with await trio.open_file(self.path_metadata, 'rb') as md_file:
-            metadata_contents = await md_file.read()
+            metadata_contents = await md_file.read() # type: ignore
         metadata = umsgpack.loads(metadata_contents)
 
         if not isinstance(metadata, dict):

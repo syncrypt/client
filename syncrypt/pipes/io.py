@@ -2,6 +2,7 @@ import logging
 import os.path
 import shutil
 import sys
+from typing import Optional
 
 import trio
 
@@ -23,7 +24,7 @@ class StreamReader(Source):
 class FileReader(Source):
     def __init__(self, filename: str) -> None:
         self.filename = filename
-        self.handle = None # type: trio.abc.AsyncResource
+        self.handle = None # type: Optional[trio.abc.AsyncResource]
         super(FileReader, self).__init__()
 
     async def read(self, count=-1):

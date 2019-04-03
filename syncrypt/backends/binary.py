@@ -85,7 +85,7 @@ class BinaryStorageConnection():
 
     def __init__(self, manager: 'BinaryStorageManager') -> None:
         self.manager = manager
-        self.stream = None # type: Optional[trio.Stream]
+        self.stream = None # type: Optional[trio.abc.Stream]
         self.logger = BinaryStorageConnectionLoggerAdapter(self, logger)
 
         # State
