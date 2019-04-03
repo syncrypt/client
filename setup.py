@@ -156,7 +156,7 @@ setup(
         'trio-asyncio==0.10.0',
         'trio-typing',
         'async_generator', # for python 3.6
-        'typing_extensions',
+        'typing_extensions>=3.7.2',
         'iso8601',
         'pycryptodomex==3.7.0', # 3.7.1 introduced mypy stubs, incompatible currently
         'python-snappy',
