@@ -154,6 +154,7 @@ setup(
         'erlastic',
         'trio==0.11.0',
         'trio-asyncio==0.10.0',
+        'trio-typing',
         'async_generator', # for python 3.6
         'typing_extensions',
         'iso8601',
