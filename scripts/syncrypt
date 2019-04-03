@@ -129,11 +129,9 @@ class Clone(NoVaultCmd):
             vault_name = self.config.vault_id
 
         if vault_id:
-            vault = self.loop.run_until_complete(self.app.clone(vault_id,
-                    self.config.directory or vault_id))
+            vault = await self.app.clone(vault_id, self.config.directory or vault_id)
         else:
-            vault = self.loop.run_until_complete(self.app.clone_by_name(vault_name,
-                    self.config.directory or vault_name))
+            vault = await self.app.clone_by_name(vault_name, self.config.directory or vault_name)
 
         if vault:
             await self.app.pull_vault(vault)
@@ -355,10 +353,7 @@ class ImportVault(SingleVaultCmd):
         parser.add_argument(dest='target', help='vault folder to create')
 
     async def run(self):
-        self.loop.run_until_complete(
-                self.app.import_package(
-                    self.config.filename,
-                    self.config.target))
+        await self.app.import_package(self.config.filename, self.config.target)
 
 
 class CheckUpdate(NoVaultCmd):
