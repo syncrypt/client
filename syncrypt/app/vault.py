@@ -51,7 +51,7 @@ class VaultController:
             try:
                 await trio.sleep_forever()
             finally:
-                watchdog.stop()
+                await watchdog.stop()
 
     async def respond_to_file_changes(self):
         self.logger.debug("respond_to_file_changes started")

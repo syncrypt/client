@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 
 import trio.abc
 from watchdog.observers import Observer
@@ -16,6 +17,7 @@ class MemoryChannelEventHandler:
     def __init__(self, channel: trio.abc.SendChannel):
         self.channel = channel
         self.portal = trio.BlockingTrioPortal()
+        self.lock = threading.Lock()
         super(MemoryChannelEventHandler, self).__init__()
 
     def dispatch(self, event):
@@ -24,7 +26,13 @@ class MemoryChannelEventHandler:
         thread. We need to use a BlockingTrioPortal to communicate with
         our trio program.
         '''
-        self.portal.run(self.handle_event, event)
+        with self.lock:
+            try:
+                self.portal.run(self.handle_event, event)
+            except (trio.RunFinishedError, trio.Cancelled):
+                pass
+            except Exception as e:
+                logger.exception('Unknown exception during portal.run')
 
     async def handle_event(self, event):
         '''
@@ -37,12 +45,15 @@ class Watchdog(object):
 
     def __init__(self, path='.', recursive=True, event_handler=None):
         self._observer = Observer()
-        evh = event_handler
-        self._observer.schedule(evh, path, recursive)
+        self.event_handler = event_handler
+        self._observer.schedule(self.event_handler, path, recursive)
 
     def start(self):
         self._observer.start()
 
-    def stop(self):
-        self._observer.stop()
-        self._observer.join()
+    async def stop(self):
+        while self.event_handler.lock.locked():
+            await trio.sleep(1)
+        with self.event_handler.lock:
+            self._observer.stop()
+            self._observer.join()
