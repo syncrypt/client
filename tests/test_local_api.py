@@ -264,3 +264,53 @@ async def test_api_init_vault_fingerprints(local_daemon_app, local_api_client, e
 
     c = await client.get(vault_uri + 'fingerprints/')
     assert len(c) == 1
+
+
+async def test_api_watchdog(local_daemon_app, local_api_client, empty_vault):
+    client = local_api_client
+    app = local_daemon_app
+    test_vault = empty_vault
+
+    assert len(app.vaults) == 0
+    assert len(glob(os.path.join(test_vault.folder, '*.*'))) == 0
+
+    resp = await client.post('/v1/vault/',
+            data=json.dumps({ 'folder': test_vault.folder }))
+    assert resp['resource_uri'] != '/v1/vault/None/'
+    assert len(resp['resource_uri']) > 20
+
+    vault_uri = resp['resource_uri']
+
+    assert len(app.vaults) == 1 # one vault
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.1)
+
+    resp = await client.get('/v1/vault/')
+    assert len(resp) == 1 # one vault
+    assert resp[0]['state'] == 'ready'
+
+    c = resp[0] # first vault
+
+    patch_data = json.dumps({
+        'metadata': dict(c['metadata'], name='newname')
+    })
+    await client.put(vault_uri, data=patch_data)
+
+    c = await client.get(vault_uri + 'history/')
+    assert len(c['items']) >= 2
+    assert c['items'][0]['created_at'] is not None
+    assert not c['items'][0]['created_at'].endswith(':')
+    assert c['items'][0]['revision_id'] is not None
+    assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
+    assert c['items'][1]['operation'] == "OP_SET_METADATA"
+
+    with open(os.path.join(test_vault.folder, "test.txt"), "w") as f:
+        f.write('hello')
+
+    # TODO
+    await trio.sleep(10.0)
+
+    c = await client.get(vault_uri + 'history/')
+    assert len(c['items']) >= 3
+    assert c['items'][-1]['operation'] == "OP_UPLOAD"
+    assert c['items'][-1]['path'] == "test.txt"

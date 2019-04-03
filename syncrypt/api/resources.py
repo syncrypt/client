@@ -182,11 +182,9 @@ class VaultResource(Resource):
     async def delete_obj(self, request, obj):
         if request.query.get('wipe') == '1':
             logger.warning('Deleting/wiping vault: %s', obj)
-            await self.app.unwatch_vault(obj)
             await self.app.delete_vault(obj)
         else:
             logger.warning('Removing vault: %s', obj)
-            await self.app.unwatch_vault(obj)
             await self.app.remove_vault(obj)
 
     @require_auth_token

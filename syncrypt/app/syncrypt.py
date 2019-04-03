@@ -180,15 +180,16 @@ class SyncryptApp(object):
 
     def schedule_push(self, bundle):
         self.cancel_push(bundle)
-        loop = asyncio.get_event_loop()
         logger.debug('Scheduling update for %s', bundle)
+        controller = self.vault_controllers[bundle.vault.id]
 
-        def push_scheduled(bundle):
+        async def push_scheduled(bundle):
+            await trio.sleep(1)
             del self._scheduled_pushes[bundle]
             logger.debug('Scheduled update is executing for %s', bundle)
-            asyncio.ensure_future(self.push_bundle(bundle))
+            controller.nursery.start_soon(self.maybe_push_bundle, bundle)
 
-        self._scheduled_pushes[bundle] = loop.call_later(1.0, push_scheduled, bundle)
+        self._scheduled_pushes[bundle] = controller.nursery.start_soon(push_scheduled, bundle)
 
     async def init_vault(self, vault, remote=None, upload_vault_key=True, upload_identity=True):
         self.identity.assert_initialized()
@@ -605,6 +606,12 @@ class SyncryptApp(object):
         except Exception:
             vault.logger.exception("Failure during vault push")
             await self.set_vault_state(vault, VaultState.FAILURE)
+
+    async def maybe_push_bundle(self, bundle: Bundle):
+        await bundle.update()
+
+        if bundle.remote_hash_differs:
+            await self.push_bundle(bundle)
 
     async def push_bundle(self, bundle: Bundle):
         'upload the bundle'

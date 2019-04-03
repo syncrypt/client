@@ -1,4 +1,5 @@
 import logging
+import os.path
 from functools import partial
 from typing import Tuple
 
@@ -7,6 +8,8 @@ from trio_typing import Nursery
 
 from syncrypt.exceptions import SyncryptBaseException
 from syncrypt.models import Vault, VaultState
+
+from .events import MemoryChannelEventHandler, Watchdog
 
 
 class VaultLoggerAdapter(logging.LoggerAdapter):
@@ -37,6 +40,35 @@ class VaultController:
         assert self.nursery is not None
         self.nursery.start_soon(partial(self.app.sync_vault, self.vault, full=True))
 
+    async def watchdog_task(self):
+        self.logger.debug("watchdog_task started")
+
+        async with trio.open_nursery() as nursery:
+            watchdog = Watchdog(self.vault.folder,
+                event_handler=MemoryChannelEventHandler(self.file_changes_send_channel)
+            )
+            watchdog.start()
+            try:
+                await trio.sleep_forever()
+            finally:
+                watchdog.stop()
+
+    async def respond_to_file_changes(self):
+        self.logger.debug("respond_to_file_changes started")
+        async for filechange in self.file_changes_receive_channel:
+            # print(filechange)
+            if filechange.event_type == 'modified':
+                bundle = self.app.bundles.get_bundle_for_relpath(
+                        os.path.relpath(filechange.src_path, self.vault.folder),
+                        self.vault)
+                if bundle is None:
+                    self.logger.debug('Ignoring file change in %s', filechange.src_path)
+                    continue
+
+                self.app.schedule_push(bundle)
+
+        await trio.sleep_forever()
+
     async def cancel(self):
         self.nursery.cancel_scope.cancel()
 
@@ -60,6 +92,8 @@ class VaultController:
                 await self.app.pull_vault(self.vault, full=do_init)
                 await self.app.push_vault(self.vault)
 
+            self.nursery.start_soon(self.respond_to_file_changes)
+            self.nursery.start_soon(self.watchdog_task)
             self.logger.debug("Sleeping forever")
             await trio.sleep_forever()
         self.logger.debug("Closed nursery")

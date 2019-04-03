@@ -1,8 +1,9 @@
 import asyncio
-import trio
 import logging
 import os.path
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+
+import trio
 
 import syncrypt
 from syncrypt.api import SyncryptAPI
@@ -10,7 +11,6 @@ from syncrypt.api.client import APIClient
 from syncrypt.exceptions import InvalidAuthentification, VaultFolderDoesNotExist
 from syncrypt.models import VaultState
 
-from .events import create_watchdog
 from .syncrypt import SyncryptApp
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,6 @@ class SyncryptDaemonApp(SyncryptApp):
         if self.refresh_vault_info_task:
             self.refresh_vault_info_task.cancel()
         for vault in self.vaults:
-            await self.unwatch_vault(vault)
             await self.unautopull_vault(vault)
         await self.api.stop()
 
@@ -109,23 +108,13 @@ class SyncryptDaemonApp(SyncryptApp):
         new_state = vault.state
 
         if new_state in (VaultState.READY,):
-            await self.watch_vault(vault)
             await self.autopull_vault(vault)
         else:
             if old_state in (VaultState.READY,):
-                await self.unwatch_vault(vault)
                 await self.unautopull_vault(vault)
 
         if new_state == VaultState.SHUTDOWN:
             await vault.close()
-
-    async def watch_vault(self, vault):
-        'Install a watchdog for the given vault'
-        vault.check_existence()
-        folder = os.path.abspath(vault.folder)
-        logger.info('Watching %s', folder)
-        self._watchdogs[folder] = create_watchdog(self, vault)
-        self._watchdogs[folder].start()
 
     async def autopull_vault(self, vault):
         'Install a regular autopull for the given vault'
@@ -142,14 +131,6 @@ class SyncryptDaemonApp(SyncryptApp):
             except:
                 logger.exception('Exception while refreshing vaults')
             await asyncio.sleep(30.0)
-
-    async def unwatch_vault(self, vault):
-        'Remove watchdog and auto-pulls'
-        folder = os.path.abspath(vault.folder)
-        if folder in self._watchdogs:
-            logger.info('Unwatching %s', os.path.abspath(folder))
-            self._watchdogs[folder].stop()
-            del self._watchdogs[folder]
 
     async def unautopull_vault(self, vault):
         folder = os.path.abspath(vault.folder)
