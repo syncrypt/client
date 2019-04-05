@@ -131,7 +131,6 @@ async def ws_stream_log(request, ws, app, vault_id=None, limit=None, filters=Non
                         item = queue.get_nowait()
                 except asyncio.QueueEmpty:
                     pass
-                await ws.drain()
 
         async def reader():
             while not ws.closed:

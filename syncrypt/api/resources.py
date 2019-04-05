@@ -241,7 +241,6 @@ class VaultResource(Resource):
                         item = queue.get_nowait()
                 except asyncio.QueueEmpty:
                     pass
-                await ws.drain()
 
         async def reader():
             while not ws.closed:
