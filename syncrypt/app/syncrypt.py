@@ -121,7 +121,7 @@ class SyncryptApp(object):
         self.vaults.append(vault)
         vault_controller = VaultController(self, vault)
         self.vault_controllers[vault.id] = vault_controller
-        self.nursery.start_soon(vault_controller.run, async_init, async_push)
+        await self.nursery.start(vault_controller.run, async_init, async_push)
 
     async def stop_vault(self, vault):
         assert vault.id in self.vault_controllers

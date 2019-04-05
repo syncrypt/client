@@ -72,7 +72,7 @@ class VaultController:
     async def cancel(self):
         self.nursery.cancel_scope.cancel()
 
-    async def run(self, do_init, do_push):
+    async def run(self, do_init, do_push, task_status=trio.TASK_STATUS_IGNORED):
         assert self.nursery is None
         async with trio.open_nursery() as nursery:
             self.logger.debug("Opened nursery")
@@ -84,6 +84,8 @@ class VaultController:
             except SyncryptBaseException:
                 self.logger.exception("Failure during vault initialization")
                 await self.app.set_vault_state(self.vault, VaultState.FAILURE)
+
+            task_status.started()
 
             if do_init:
                 await self.app.init_vault(self.vault)
