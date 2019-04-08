@@ -313,14 +313,11 @@ class BinaryStorageConnection():
         except ConnectionResetError:
             pass
         finally:
-            if self.stream:
-                await self.stream.aclose()
-                self.stream = None
-            self.clear_connection()
+            await self.clear_connection()
 
-    def clear_connection(self):
+    async def clear_connection(self):
         if self.stream:
-            self.stream.close()
+            await self.stream.aclose()
             self.stream = None
         self.connected = False
         self.connecting = False
@@ -952,7 +949,7 @@ class BinaryStorageManager():
                         if not skip_login:
                             await conn.login(vault)
                     except:
-                        conn.clear_connection()
+                        await conn.clear_connection()
                         raise
                 elif vault:
                     logger.debug('Found an available connection for %s', vault)
@@ -973,7 +970,7 @@ class BinaryStorageManager():
                     logger.debug("Choosing %s", conn)
                     return conn
                 except:
-                    conn.clear_connection()
+                    await conn.clear_connection()
                     raise
                 break
 
@@ -1060,10 +1057,10 @@ class BinaryStorageBackend(StorageBackend):
             yield conn
         except trio.Cancelled:
             logger.debug('Task has been cancelled within context, clearing connection.')
-            conn.clear_connection()
+            await conn.clear_connection()
         except:
             logger.exception('Exception in connection')
-            conn.clear_connection()
+            await conn.clear_connection()
             raise
         finally:
             conn.available.set()
