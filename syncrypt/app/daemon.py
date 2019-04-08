@@ -107,21 +107,8 @@ class SyncryptDaemonApp(SyncryptApp):
                      vault.state)
         new_state = vault.state
 
-        if new_state in (VaultState.READY,):
-            await self.autopull_vault(vault)
-        else:
-            if old_state in (VaultState.READY,):
-                await self.unautopull_vault(vault)
-
         if new_state == VaultState.SHUTDOWN:
             await vault.close()
-
-    async def autopull_vault(self, vault):
-        'Install a regular autopull for the given vault'
-        vault.check_existence()
-        folder = os.path.abspath(vault.folder)
-        logger.info('Auto-pulling %s every %d seconds', folder, int(vault.config.get('vault.pull_interval')))
-        self._autopull_tasks[folder] = asyncio.Task(self.pull_vault_periodically(vault))
 
     async def refresh_vault_info_periodically(self):
         while True:
@@ -132,9 +119,3 @@ class SyncryptDaemonApp(SyncryptApp):
                 logger.exception('Exception while refreshing vaults')
             await asyncio.sleep(30.0)
 
-    async def unautopull_vault(self, vault):
-        folder = os.path.abspath(vault.folder)
-        logger.info('Disable auto-pull on %s', os.path.abspath(folder))
-        if folder in self._autopull_tasks:
-            self._autopull_tasks[folder].cancel()
-            del self._autopull_tasks[folder]

@@ -40,6 +40,17 @@ class VaultController:
         assert self.nursery is not None
         self.nursery.start_soon(partial(self.app.sync_vault, self.vault, full=True))
 
+    async def autopull_vault_task(self):
+        'Install a regular autopull for the given vault'
+        folder = os.path.abspath(self.vault.folder)
+        interval = int(self.vault.config.get('vault.pull_interval')) / 30
+        self.logger.info('Auto-pulling %s every %d seconds', folder, interval)
+
+        while True:
+            await trio.sleep(interval)
+            if self.vault.state == VaultState.READY:
+                self.nursery.start_soon(self.app.pull_vault, self.vault)
+
     async def watchdog_task(self):
         self.logger.debug("watchdog_task started")
 
@@ -96,6 +107,7 @@ class VaultController:
 
             self.nursery.start_soon(self.respond_to_file_changes)
             self.nursery.start_soon(self.watchdog_task)
+            self.nursery.start_soon(self.autopull_vault_task)
             self.logger.debug("Sleeping forever")
             await trio.sleep_forever()
         self.logger.debug("Closed nursery")

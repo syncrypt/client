@@ -652,12 +652,6 @@ class SyncryptApp(object):
 
                 nursery.start_soon(self.pull_vault, vault, full)
 
-    async def pull_vault_periodically(self, vault):
-        while True:
-            await asyncio.sleep(int(vault.config.get('vault.pull_interval')))
-            if vault.state != VaultState.SYNCING:
-                asyncio.get_event_loop().create_task(self.pull_vault(vault))
-
     async def reset_vault_database(self, vault, remove_vault=False):
         await self.revisions.delete_for_vault(vault)
         await self.user_vault_keys.delete_for_vault(vault)
