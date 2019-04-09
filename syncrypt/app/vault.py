@@ -61,8 +61,12 @@ class VaultController:
             watchdog.start()
             try:
                 await trio.sleep_forever()
-            finally:
-                await watchdog.stop()
+            finally:                
+                self.logger.debug('watchdog_task stop_attempt')
+                with trio.move_on_after(10) as cleanup_scope:
+                    cleanup_scope.shield = True
+                    await watchdog.stop()
+                self.logger.debug("watchdog_task stopped")
 
     async def respond_to_file_changes(self):
         self.logger.debug("respond_to_file_changes started")
