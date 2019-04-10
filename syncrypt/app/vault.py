@@ -27,10 +27,11 @@ class VaultController:
     each Vault. It handles higher level vault functionality like sheduling
     pushes etc. It also reacts to state transitions.
     """
-    def __init__(self, app, vault):
+    def __init__(self, app, vault, update_on_idle=False):
         self.app = app
         self.vault = vault
         self.nursery = None # type: Nursery
+        self.update_on_idle = update_on_idle
         self.logger = VaultLoggerAdapter(self.vault, logging.getLogger(__name__))
         send_channel, receive_channel = trio.open_memory_channel(128) # type: Tuple[trio.abc.SendChannel, trio.abc.ReceiveChannel]
         self.file_changes_send_channel = send_channel # type: trio.abc.SendChannel
@@ -109,9 +110,10 @@ class VaultController:
                 await self.app.pull_vault(self.vault, full=do_init)
                 await self.app.push_vault(self.vault)
 
-            self.nursery.start_soon(self.respond_to_file_changes)
-            self.nursery.start_soon(self.watchdog_task)
-            self.nursery.start_soon(self.autopull_vault_task)
+            if self.update_on_idle:
+                self.nursery.start_soon(self.respond_to_file_changes)
+                self.nursery.start_soon(self.watchdog_task)
+                self.nursery.start_soon(self.autopull_vault_task)
             self.logger.debug("Sleeping forever")
             await trio.sleep_forever()
         self.logger.debug("Closed nursery")

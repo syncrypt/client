@@ -115,11 +115,14 @@ class SyncryptApp(object):
         backend = self.config.backend_cls(**self.config.backend_kwargs)
         await backend.signup(username, password, firstname, surname)
 
+    def vault_controller(self, vault):
+        return VaultController(self, vault)
+
     async def start_vault(self, vault, async_init=False, async_push=False):
         logger.info("Registering vault %s", vault)
         assert vault.id not in self.vault_controllers
         self.vaults.append(vault)
-        vault_controller = VaultController(self, vault)
+        vault_controller = self.vault_controller(vault)
         self.vault_controllers[vault.id] = vault_controller
         await self.nursery.start(vault_controller.run, async_init, async_push)
 

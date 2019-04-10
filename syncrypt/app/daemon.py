@@ -12,6 +12,7 @@ from syncrypt.exceptions import InvalidAuthentification, VaultFolderDoesNotExist
 from syncrypt.models import VaultState
 
 from .syncrypt import SyncryptApp
+from .vault import VaultController
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,9 @@ class SyncryptDaemonApp(SyncryptApp):
         super(SyncryptDaemonApp, self).__init__(config, **kwargs)
 
         self.api = SyncryptAPI(self)
+
+    def vault_controller(self, vault):
+        return VaultController(self, vault, update_on_idle=True)
 
     async def start(self):
         try:
