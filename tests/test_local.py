@@ -168,6 +168,7 @@ async def test_local_metadata(local_app, local_vault, working_dir):
 
     assert local_vault.config.get("vault.name") == other_vault.config.get("vault.name")
 
+
 async def test_remove_file(local_app, local_vault, working_dir):
     other_vault_path = os.path.join(working_dir, "othervault")
 
