@@ -304,11 +304,17 @@ async def test_api_watchdog(local_daemon_app, local_api_client, empty_vault):
     assert c['items'][0]['operation'] == "OP_CREATE_VAULT"
     assert c['items'][1]['operation'] == "OP_SET_METADATA"
 
-    with open(os.path.join(test_vault.folder, "test.txt"), "w") as f:
-        f.write('hello')
+    while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
+        await trio.sleep(0.1)
+
+    # Create a new file and do three changes to it
+    for i in range(3):
+        with open(os.path.join(test_vault.folder, "test.txt"), "a") as f:
+            f.write('hello')
+        await trio.sleep(0.2)
 
     # TODO
-    await trio.sleep(10.0)
+    await trio.sleep(8.0)
 
     c = await client.get(vault_uri + 'history/')
     assert len(c['items']) >= 3

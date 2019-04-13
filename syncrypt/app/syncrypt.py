@@ -173,13 +173,15 @@ class SyncryptApp(object):
             await self.delete_vault(vault)
 
     def cancel_push(self, bundle):
-        if bundle in self._scheduled_pushes:
-            self._scheduled_pushes[bundle].cancel()
-            del self._scheduled_pushes[bundle]
+        id = "{0}:{1}".format(bundle.vault.id, bundle.relpath)
+        if id in self._scheduled_pushes:
+            logger.debug('Cancel shedule for %s', id)
+            self._scheduled_pushes[id].cancel()
+            del self._scheduled_pushes[id]
         if bundle in self._running_pushes:
             logger.warning('Update/upload for %s is running, aborting it now.', bundle)
-            self._running_pushes[bundle].cancel()
-            del self._running_pushes[bundle]
+            self._running_pushes[id].cancel()
+            del self._running_pushes[id]
 
     def schedule_push(self, bundle):
         self.cancel_push(bundle)
@@ -187,12 +189,17 @@ class SyncryptApp(object):
         controller = self.vault_controllers[bundle.vault.id]
 
         async def push_scheduled(bundle):
-            await trio.sleep(1)
-            del self._scheduled_pushes[bundle]
-            logger.debug('Scheduled update is executing for %s', bundle)
-            controller.nursery.start_soon(self.maybe_push_bundle, bundle)
+            with trio.CancelScope() as cancel_scope:
+                id = "{0}:{1}".format(bundle.vault.id, bundle.relpath)
+                if id in self._scheduled_pushes:
+                    return
+                self._scheduled_pushes[id] = cancel_scope
+                await trio.sleep(1)
+                del self._scheduled_pushes[id]
+                logger.debug('Scheduled update is executing for %s', bundle)
+                controller.nursery.start_soon(self.maybe_push_bundle, bundle)
 
-        self._scheduled_pushes[bundle] = controller.nursery.start_soon(push_scheduled, bundle)
+        controller.nursery.start_soon(push_scheduled, bundle)
 
     async def init_vault(self, vault, remote=None, upload_vault_key=True, upload_identity=True):
         self.identity.assert_initialized()

@@ -62,7 +62,7 @@ class VaultController:
             watchdog.start()
             try:
                 await trio.sleep_forever()
-            finally:                
+            finally:
                 self.logger.debug('watchdog_task stop_attempt')
                 with trio.move_on_after(10) as cleanup_scope:
                     cleanup_scope.shield = True
@@ -73,7 +73,7 @@ class VaultController:
         self.logger.debug("respond_to_file_changes started")
         async for filechange in self.file_changes_receive_channel:
             # print(filechange)
-            if filechange.event_type == 'modified':
+            if filechange.event_type == 'modified' or filechange.event_type == 'created':
                 bundle = self.app.bundles.get_bundle_for_relpath(
                         os.path.relpath(filechange.src_path, self.vault.folder),
                         self.vault)
