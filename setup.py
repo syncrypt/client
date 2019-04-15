@@ -164,7 +164,7 @@ setup(
         'sqlalchemy>=1.2.13',
         'tenacity',
         'tzlocal',
-        'u-msgpack-python==2.5.0',
+        'u-msgpack-python==2.5.1',
         'watchdog>=0.9.0'
     ],
 
