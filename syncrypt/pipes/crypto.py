@@ -148,8 +148,8 @@ class EncryptRSA(Buffered):
         logger.debug('Encrypting block size: %d bytes', self.block_size)
         super(EncryptRSA, self).__init__(self.block_size)
 
-    def get_block_size(self):
-        return Cryptodome.Util.number.size(self.public_key.n) // 8 - 2 * 20 - 2
+    def get_block_size(self) -> int:
+        return Cryptodome.Util.number.size(self.public_key.n) // 8 - 2 * 20 - 2 # type: ignore
 
     async def read(self, count=-1):
         data = await super(EncryptRSA, self).read(-1)
@@ -175,8 +175,8 @@ class DecryptRSA(Buffered):
         logger.debug('Decrypting block size: %d bytes', self.block_size)
         super(DecryptRSA, self).__init__(self.block_size)
 
-    def get_block_size(self):
-        return Cryptodome.Util.number.size(self.private_key.n) // 8
+    def get_block_size(self) -> int:
+        return Cryptodome.Util.number.size(self.private_key.n) // 8 # type: ignore
 
     async def read(self, count=-1):
         data = await super(DecryptRSA, self).read(-1)

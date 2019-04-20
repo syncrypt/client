@@ -157,12 +157,12 @@ class Identity(object):
     def sign(self, message: bytes) -> bytes:
         self.assert_initialized()
         h = SHA256.new(message)
-        return pkcs1_15.new(self.private_key).sign(h)
+        return pkcs1_15.new(self.private_key).sign(h) # type: ignore
 
     def verify(self, message: bytes, signature: bytes) -> bool:
         h = SHA256.new(message)
         try:
-            pkcs1_15.new(self.public_key).verify(h, signature)
+            pkcs1_15.new(self.public_key).verify(h, signature) # type: ignore
             return True
         except (ValueError, TypeError):
             return False

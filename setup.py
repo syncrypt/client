@@ -158,7 +158,7 @@ setup(
         'async_generator', # for python 3.6
         'typing_extensions>=3.7.2',
         'iso8601',
-        'pycryptodomex==3.7.0', # 3.7.1 introduced mypy stubs, incompatible currently
+        'pycryptodomex==3.8.1',
         'python-snappy',
         'smokesignal',
         'sqlalchemy>=1.2.13',
