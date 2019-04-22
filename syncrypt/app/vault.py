@@ -6,7 +6,7 @@ from typing import Tuple
 import trio
 from trio_typing import Nursery
 
-from syncrypt.exceptions import SyncryptBaseException
+from syncrypt.exceptions import SyncryptBaseException, IdentityNotInitialized
 from syncrypt.models import Vault, VaultState
 
 from .events import MemoryChannelEventHandler, Watchdog
@@ -100,7 +100,7 @@ class VaultController:
                 self.vault.identity.assert_initialized()
             except IdentityNotInitialized:
                 self.logger.info("Identity not yet initialized.")
-                await self.app.set_vault_state(self.vault, VaultState.FAILURE)
+                await self.app.set_vault_state(self.vault, VaultState.UNINITIALIZED)
             except SyncryptBaseException:
                 self.logger.exception("Failure during vault initialization")
                 await self.app.set_vault_state(self.vault, VaultState.FAILURE)
