@@ -129,7 +129,6 @@ class SyncryptCLIApp(SyncryptApp):
             print()
             fingerprint = None
             try:
-                vault.identity.read()
                 fingerprint = vault.identity.get_fingerprint()
                 print(draw_art(None, '1', fingerprint))
             except IdentityNotInitialized:

@@ -96,11 +96,16 @@ class VaultController:
 
             try:
                 self.vault.check_existence()
-                self.app.identity.assert_initialized()
+                self.vault.identity.read()
+                self.vault.identity.assert_initialized()
+            except IdentityNotInitialized:
+                self.logger.info("Identity not yet initialized.")
+                await self.app.set_vault_state(self.vault, VaultState.FAILURE)
             except SyncryptBaseException:
                 self.logger.exception("Failure during vault initialization")
                 await self.app.set_vault_state(self.vault, VaultState.FAILURE)
 
+            self.logger.debug("Finished vault initialization successfully.")
             task_status.started()
 
             if do_init:
@@ -114,7 +119,6 @@ class VaultController:
                 self.nursery.start_soon(self.respond_to_file_changes)
                 self.nursery.start_soon(self.watchdog_task)
                 self.nursery.start_soon(self.autopull_vault_task)
-            self.logger.debug("Sleeping forever")
             await trio.sleep_forever()
         self.logger.debug("Closed nursery")
         self.nursery = None
