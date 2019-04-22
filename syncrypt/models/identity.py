@@ -152,7 +152,7 @@ class Identity(object):
         assert self.public_key
         pk_hash = hashlib.new(self.config.hash_algo)
         pk_hash.update(self.public_key.exportKey("DER"))
-        return pk_hash.hexdigest()[: self.config.fingerprint_length]
+        return pk_hash.hexdigest()[:self.config.fingerprint_length]
 
     def sign(self, message: bytes) -> bytes:
         self.assert_initialized()
