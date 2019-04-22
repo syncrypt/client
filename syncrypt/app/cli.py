@@ -127,13 +127,22 @@ class SyncryptCLIApp(SyncryptApp):
             print("="*78, end='\n\n')
             print("Vault {0}".format(index + 1))
             print()
-            print(draw_art(None, '1', vault.identity.get_fingerprint()))
+            fingerprint = None
+            try:
+                vault.identity.read()
+                fingerprint = vault.identity.get_fingerprint()
+                print(draw_art(None, '1', fingerprint))
+            except IdentityNotInitialized:
+                print("Vault identity not available.")
             print()
             print("Vault name:       \t{0}".format(vault.config.vault.get('name', 'Unnamed')))
             print("Vault ID:         \t{0}".format(vault.config.id))
             print("Vault revision:   \t{0}".format(vault.revision or '?'))
-            print("Vault fingerprint:\t{0}".format(format_fingerprint(
-                    vault.identity.get_fingerprint())))
+            if fingerprint:
+                print("Vault fingerprint:\t{0}".format(format_fingerprint(
+                        vault.identity.get_fingerprint())))
+            else:
+                print("Vault fingerprint:\t-")
             print("Local directory:  \t{0}".format(os.path.abspath(vault.folder)))
             print("Local size:       \t{0} (includes metadata)".format(format_size(
                     vault.get_local_size())))
