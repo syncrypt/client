@@ -70,6 +70,9 @@ class Revision(Base):
                 "Invalid user_fingerprint: {0}".format(self.user_fingerprint)
             )
 
+        if self.revision_id == self.parent_id:
+            raise InvalidRevision("parent_id equals revision id")
+
         if self.operation == RevisionOp.CreateVault:
             if self.parent_id is not None:
                 raise InvalidRevision("Revision is not allowed to have a parent_id")
