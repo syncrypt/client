@@ -249,7 +249,7 @@ class SyncryptApp(object):
         if upload_vault_key:
             await self.upload_vault_key(vault)
 
-    async def init(self, host: Optional[str] = None, upload_vault_key: bool = False):
+    async def init(self, host: Optional[str] = None, upload_vault_key: bool = True):
         for vault in self.vaults:
             remote = None # type: Optional[Dict[str, Any]]
             if host:
@@ -543,16 +543,13 @@ class SyncryptApp(object):
         await self.revisions.apply(revision, vault)
 
     async def upload_vault_key(self, vault=None):
-        # TODO TBH I'm not so sure about the semantics of this function, needs another name.
-        # Converted into a NOOP for now
         self.identity.assert_initialized()
         if vault is None:
             vault = self.vaults[0]
         await vault.backend.open()
-        #user_info = await vault.backend.user_info()
-        #email = user_info['email']
-        #await self.add_user_vault_key(vault, email, self.identity)
-        #see above
+        user_info = await vault.backend.user_info()
+        email = user_info['email']
+        await self.add_user_vault_key(vault, email, self.identity)
 
     async def get_remote_size_for_vault(self, vault):
         await vault.backend.open()
