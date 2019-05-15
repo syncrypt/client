@@ -548,9 +548,9 @@ class BinaryStorageConnection():
 
         # response is either list or stream
         if len(response) > 0 and response[0] == Atom('stream_response'):
-            (_, file_count) = response
-            assert isinstance(file_count, int)
-            for _ in range(file_count):
+            (_, rev_count) = response
+            assert isinstance(rev_count, int)
+            for _ in range(rev_count):
                 server_info = await self.read_term(assert_ok=False)
                 server_info = rewrite_atoms_dict(server_info)
                 revision = self.server_info_to_revision(server_info, vault, previous_id)
