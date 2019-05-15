@@ -265,7 +265,8 @@ class BinaryStorageConnection():
         revision = Revision(operation=RevisionOp.CreateVault)
         revision.vault_public_key = vault.identity.public_key.exportKey("DER")
         revision.user_public_key = identity.public_key.exportKey("DER")
-        revision.user_id = 'test@syncrypt.space' # TBD
+        user_info = await self.user_info()
+        revision.user_id = user_info['email']
         revision.sign(identity=identity)
 
         await self.write_term('create_vault',
@@ -480,7 +481,7 @@ class BinaryStorageConnection():
         elif operation == 'create_vault':
             operation = RevisionOp.CreateVault
             vault_public_key = vault.identity.export_public_key()
-            user_id = 'test@syncrypt.space' # TBD
+            user_id = server_info['metadata'].decode()
         elif operation == 'set_metadata':
             operation = RevisionOp.SetMetadata
             vault_public_key = vault.identity.export_public_key()
