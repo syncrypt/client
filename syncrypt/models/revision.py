@@ -152,6 +152,7 @@ class Revision(Base):
             raise InvalidRevision("Revision is not signed")
         message = self._message()
         logger.debug('Verifying message with identity %s: %s', identity.get_fingerprint(), message)
+        logger.debug('Signature: %s', self.signature)
         if not identity.verify(message, self.signature):
             raise InvalidRevision(
                 "Signature verification failed with key {0}".format(
