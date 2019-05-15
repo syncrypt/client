@@ -381,6 +381,7 @@ class UserResource(Resource):
         router.add_route('GET', '/{version}/{name}/{{id}}/keys/'.format(**opts), self.dispatch_keys)
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_keys(self, request):
         email = request.match_info['id']
         backend = await self.app.open_backend()
@@ -439,6 +440,7 @@ class VaultUserResource(Resource):
         }
 
     @require_auth_token
+    @trio_asyncio.trio_as_aio
     async def dispatch_keys(self, request):
         vault = self.get_vault(request)
         email = request.match_info['email']
