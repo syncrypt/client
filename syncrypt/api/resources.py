@@ -429,13 +429,13 @@ class VaultUserResource(Resource):
         }
 
     def get_id(self, obj: UserVaultKey):
-        return obj.user_id
+        return obj.user_id if hasattr(obj, 'user_id') else obj['email']
 
     def dehydrate(self, obj: UserVaultKey):
         return {
-            'email': obj.user_id,
-            'first_name': obj.user_id, # TBD
-            'last_name': obj.user_id, # TBD
+            'email': self.get_id(obj),
+            'first_name': self.get_id(obj), # TBD
+            'last_name': self.get_id(obj), # TBD
             'resource_uri': self.get_resource_uri(obj)
         }
 
@@ -467,9 +467,8 @@ class VaultUserResource(Resource):
         content = await request.content.read()
         data = json.loads(content.decode())
         email = data['email']
-        await vault.backend.open()
         logger.info('Adding user "%s" to %s', email, vault)
-        await vault.backend.add_vault_user(email)
+        await self.app.add_vault_user(vault, email)
         if 'fingerprints' in data:
             key_list = await vault.backend.list_keys(email)
             key_list = [key for key in key_list if key['fingerprint'] in data['fingerprints']]
@@ -480,7 +479,6 @@ class VaultUserResource(Resource):
                 identity = Identity.from_key(public_key, vault.config)
                 assert identity.get_fingerprint() == fingerprint
                 await self.app.add_user_vault_key(vault, email, identity)
-
         return {'email': email}
 
 
