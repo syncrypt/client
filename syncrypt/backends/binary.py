@@ -428,6 +428,36 @@ class BinaryStorageConnection():
         revision.created_at = ret_revision.created_at
         return revision
 
+    async def remove_file(self, bundle, identity: Identity) -> Revision:
+
+        vault = self.vault
+
+        if vault is None:
+            raise ValueError("Invalid argument")
+
+        self.logger.info('Removing %s', bundle)
+
+        revision = Revision(operation=RevisionOp.RemoveFile)
+        revision.vault_id = vault.config.id
+        revision.parent_id = vault.revision
+        revision.file_hash = bundle.store_hash
+        revision.sign(identity=identity)
+
+        # upload key and file
+        await self.write_term('remove_file',
+            revision.file_hash,
+            revision.user_fingerprint,
+            revision.signature,
+            revision.parent_id
+        )
+
+        # assert :ok
+        response = await self.read_response()
+        ret_revision = self.server_info_to_revision(rewrite_atoms_dict(response), vault)
+        revision.revision_id = ret_revision.revision_id
+        revision.created_at = ret_revision.created_at
+        return revision
+
     async def user_info(self):
         self.logger.debug('Retrieving user information from server')
         await self.write_term('user_info')
@@ -1117,7 +1147,8 @@ class BinaryStorageBackend(StorageBackend):
             return await conn.signup(username, password, firstname, surname)
 
     async def remove_file(self, bundle: Bundle, identity: Identity) -> Revision:
-        raise NotImplementedError()
+        async with self._acquire_connection() as conn:
+            return await conn.remove_file(bundle, identity)
 
     async def set_vault_metadata(self, identity: Identity) -> Revision:
         async with self._acquire_connection() as conn:
