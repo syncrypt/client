@@ -434,8 +434,8 @@ class VaultUserResource(Resource):
     def dehydrate(self, obj: UserVaultKey):
         return {
             'email': self.get_id(obj),
-            'first_name': self.get_id(obj), # TBD
-            'last_name': self.get_id(obj), # TBD
+            'first_name': '', # TBD
+            'last_name': '', # TBD
             'resource_uri': self.get_resource_uri(obj)
         }
 
