@@ -13,8 +13,18 @@ class UserVaultKeyManager:
 
     def add(self, vault: Vault, user_id: str, identity: Identity):
         with store.session() as session:
-            session.add(self.model(vault_id=vault.id, fingerprint=identity.get_fingerprint(),
-                user_id=user_id, public_key=identity.public_key.export_key('DER')))
+            fingerprint = identity.get_fingerprint()
+            public_key = identity.public_key.export_key('DER')
+            user_vault_key = session.query(UserVaultKey)\
+                .filter(self.model.vault_id == vault.id)\
+                .filter(self.model.fingerprint == fingerprint)\
+                .first()
+            if not user_vault_key:
+                session.add(self.model(vault_id=vault.id, fingerprint=fingerprint,
+                    user_id=user_id, public_key=public_key))
+            else:
+                if user_vault_key.user_id != user_id or user_vault_key.public_key != public_key:
+                    raise ValueError("Attempted to another UserVaultKey with existing fingerprint")
 
     def list_for_vault(self, vault):
         with store.session() as session:
