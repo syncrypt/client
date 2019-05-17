@@ -306,7 +306,7 @@ async def test_add_user_with_a_key(local_app, local_vault, working_dir):
     await app.pull(full=True)
 
     revisions = app.revisions.list_for_vault(local_vault)
-    assert len(revisions) == 6
+    assert len(revisions) == 7
 
     user_keys = app.user_vault_keys.list_for_vault(local_vault)
     assert len(user_keys) == 2
