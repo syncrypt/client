@@ -10,6 +10,7 @@ import trio_asyncio
 from aiohttp import web
 from syncrypt.models import Identity, Revision, UserVaultKey, Vault
 from syncrypt.utils.format import datetime_format_iso8601
+from syncrypt.exceptions import VaultException
 
 from .auth import require_auth_token
 from .responses import JSONResponse
@@ -138,13 +139,31 @@ class VaultResource(Resource):
 
     def dehydrate(self, v):
         dct = super(VaultResource, self).dehydrate(v)
+        try:
+            remote_id = v.config.id
+            ignore_paths = v.config.get('vault.ignore').split(',')
+            aes_key_len = v.config.aes_key_len
+            rsa_key_len = v.config.rsa_key_len
+            hash_algo = v.config.hash_algo
+            metadata = v._metadata
+            fingerprint = v.identity.get_fingerprint() \
+                    if v.identity and v.identity.is_initialized() else None
+
+        except VaultException:
+            remote_id = None
+            ignore_paths = []
+            aes_key_len = 0
+            rsa_key_len = 0
+            hash_algo = ''
+            fingerprint = None
+            metadata = {}
 
         dct.update(
              folder=v.folder,
              state=v.state,
-             remote_id=v.config.id,
-             metadata=v._metadata,
-             ignore_paths=v.config.get('vault.ignore').split(',')
+             remote_id=remote_id,
+             metadata=metadata,
+             ignore_paths=ignore_paths
         )
 
         # Annotate each obj with vault information from the model
@@ -158,13 +177,12 @@ class VaultResource(Resource):
 
         # Compile some information about the underlying crypto system(s)
         crypt_info = {
-            'aes_key_len': v.config.aes_key_len,
-            'rsa_key_len': v.config.rsa_key_len,
+            'aes_key_len': aes_key_len,
+            'rsa_key_len': rsa_key_len,
             'key_algo': 'rsa',
             'transfer_algo': 'aes',
-            'hash_algo': v.config.hash_algo,
-            'fingerprint': v.identity.get_fingerprint() \
-                    if v.identity and v.identity.is_initialized() else None
+            'hash_algo': hash_algo,
+            'fingerprint': fingerprint
         }
         dct.update(crypt_info=crypt_info)
         return dct
