@@ -162,7 +162,7 @@ setup(
         'python-snappy',
         'smokesignal',
         'sqlalchemy>=1.2.13',
-        'tenacity',
+        'tenacity>=5.0.4',
         'tzlocal',
         'u-msgpack-python==2.5.1',
         'watchdog>=0.9.0'
