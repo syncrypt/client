@@ -6,7 +6,7 @@ from typing import Tuple
 import trio
 from trio_typing import Nursery
 
-from syncrypt.exceptions import SyncryptBaseException, IdentityNotInitialized
+from syncrypt.exceptions import IdentityNotInitialized, SyncryptBaseException
 from syncrypt.models import Vault, VaultState
 
 from .events import MemoryChannelEventHandler, Watchdog
@@ -43,6 +43,12 @@ class VaultController:
 
     async def autopull_vault_task(self):
         'Install a regular autopull for the given vault'
+
+        while True:
+            await trio.sleep(10)
+            if self.vault.state == VaultState.READY:
+                break
+
         folder = os.path.abspath(self.vault.folder)
         interval = int(self.vault.config.get('vault.pull_interval')) / 30
         self.logger.info('Auto-pulling %s every %d seconds', folder, interval)
@@ -54,6 +60,11 @@ class VaultController:
 
     async def watchdog_task(self):
         self.logger.debug("watchdog_task started")
+
+        while True:
+            await trio.sleep(10)
+            if self.vault.state == VaultState.READY:
+                break
 
         async with trio.open_nursery() as nursery:
             watchdog = Watchdog(self.vault.folder,
@@ -86,39 +97,64 @@ class VaultController:
         await trio.sleep_forever()
 
     async def cancel(self):
-        self.nursery.cancel_scope.cancel()
+        if self.nursery:
+            self.nursery.cancel_scope.cancel()
 
     async def run(self, do_init, do_push, task_status=trio.TASK_STATUS_IGNORED):
         assert self.nursery is None
-        async with trio.open_nursery() as nursery:
-            self.logger.debug("Opened nursery")
-            self.nursery = nursery
 
+        try:
+            self.vault.check_existence()
+            self.vault.identity.read()
+            self.vault.identity.assert_initialized()
+        except IdentityNotInitialized:
+            self.logger.info("Identity not yet initialized.")
+            await self.app.set_vault_state(self.vault, VaultState.UNINITIALIZED)
+        except SyncryptBaseException:
+            self.logger.exception("Failure during vault initialization")
+            await self.app.set_vault_state(self.vault, VaultState.FAILURE)
+
+        self.logger.debug("Finished vault initialization successfully.")
+
+        self.task_status = task_status
+        self.do_init = do_init
+        self.do_push = do_push
+
+        if self.task_status:
+            self.task_status.started()
+            self.task_status = None
+
+        await self.loop()
+
+    async def loop(self):
+        assert self.nursery is None
+        while True:
             try:
-                self.vault.check_existence()
-                self.vault.identity.read()
-                self.vault.identity.assert_initialized()
-            except IdentityNotInitialized:
-                self.logger.info("Identity not yet initialized.")
-                await self.app.set_vault_state(self.vault, VaultState.UNINITIALIZED)
-            except SyncryptBaseException:
-                self.logger.exception("Failure during vault initialization")
+                async with trio.open_nursery() as nursery:
+                    self.logger.debug("Opened nursery")
+                    self.nursery = nursery
+
+                    full_pull = self.do_init
+                    if self.do_init:
+                        await self.app.init_vault(self.vault)
+                        self.do_init = None
+
+                    if self.do_push:
+                        await self.app.pull_vault(self.vault, full=full_pull)
+                        await self.app.push_vault(self.vault)
+                        self.do_push = None
+                    else:
+                        await self.app.pull_vault(self.vault)
+
+                    if self.update_on_idle:
+                        self.nursery.start_soon(self.respond_to_file_changes)
+                        self.nursery.start_soon(self.watchdog_task)
+                        self.nursery.start_soon(self.autopull_vault_task)
+                    await trio.sleep_forever()
+            except Exception as e:
+                self.logger.exception("Failure during vault operation")
                 await self.app.set_vault_state(self.vault, VaultState.FAILURE)
-
-            self.logger.debug("Finished vault initialization successfully.")
-            task_status.started()
-
-            if do_init:
-                await self.app.init_vault(self.vault)
-
-            if do_push:
-                await self.app.pull_vault(self.vault, full=do_init)
-                await self.app.push_vault(self.vault)
-
-            if self.update_on_idle:
-                self.nursery.start_soon(self.respond_to_file_changes)
-                self.nursery.start_soon(self.watchdog_task)
-                self.nursery.start_soon(self.autopull_vault_task)
-            await trio.sleep_forever()
-        self.logger.debug("Closed nursery")
-        self.nursery = None
+            finally:
+                self.logger.debug("Closed nursery")
+                self.nursery = None
+            await trio.sleep(10)

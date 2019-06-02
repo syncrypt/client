@@ -66,12 +66,8 @@ async def run_syncrypt():
 
         nursery.start_soon(app.post_setup)
 
-        await trio.sleep(100)
-
-        #try:
-        #    loop.run_until_complete(app.wait_for_shutdown())
-        #except KeyboardInterrupt:
-        #    pass
+        # Ideally, we would wait to shutdown flag here
+        await trio.sleep_forever()
 
         smokesignal.emit('shutdown', app=app)
 

@@ -67,24 +67,7 @@ class SyncryptDaemonApp(SyncryptApp):
                 return
 
     async def post_setup(self):
-
-        for vault in list(self.vaults):
-            try:
-                await self.check_vault(vault)
-                await self.set_vault_state(vault, VaultState.READY)
-            except VaultFolderDoesNotExist:
-                logger.error('%s does not exist, removing vault from list.' % vault)
-                await self.remove_vault(vault)
-            except InvalidAuthentification:
-                logger.exception("Failure during vault initialization")
-                await self.set_vault_state(vault, VaultState.FAILURE)
-            except Exception:
-                logger.exception("General failure during vault initialization")
-
-        #self.refresh_vault_info_task = asyncio.Task(self.refresh_vault_info_periodically())
-
-        if self.initial_push:
-            await self.push()
+        pass
 
     async def stop(self):
         if self.refresh_vault_info_task:
