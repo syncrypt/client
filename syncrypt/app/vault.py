@@ -36,6 +36,7 @@ class VaultController:
         send_channel, receive_channel = trio.open_memory_channel(128) # type: Tuple[trio.abc.SendChannel, trio.abc.ReceiveChannel]
         self.file_changes_send_channel = send_channel # type: trio.abc.SendChannel
         self.file_changes_receive_channel = receive_channel # type: trio.abc.ReceiveChannel
+        self.cancel_scope = trio.CancelScope()
 
     async def resync(self):
         assert self.nursery is not None
@@ -45,9 +46,9 @@ class VaultController:
         'Install a regular autopull for the given vault'
 
         while True:
-            await trio.sleep(10)
             if self.vault.state == VaultState.READY:
                 break
+            await trio.sleep(1)
 
         folder = os.path.abspath(self.vault.folder)
         interval = int(self.vault.config.get('vault.pull_interval')) / 30
@@ -62,9 +63,9 @@ class VaultController:
         self.logger.debug("watchdog_task started")
 
         while True:
-            await trio.sleep(10)
             if self.vault.state == VaultState.READY:
                 break
+            await trio.sleep(1)
 
         async with trio.open_nursery() as nursery:
             watchdog = Watchdog(self.vault.folder,
@@ -99,32 +100,34 @@ class VaultController:
     async def cancel(self):
         if self.nursery:
             self.nursery.cancel_scope.cancel()
+        self.cancel_scope.cancel()
 
     async def run(self, do_init, do_push, task_status=trio.TASK_STATUS_IGNORED):
         assert self.nursery is None
+        with self.cancel_scope:
 
-        try:
-            self.vault.check_existence()
-            self.vault.identity.read()
-            self.vault.identity.assert_initialized()
-        except IdentityNotInitialized:
-            self.logger.info("Identity not yet initialized.")
-            await self.app.set_vault_state(self.vault, VaultState.UNINITIALIZED)
-        except SyncryptBaseException:
-            self.logger.exception("Failure during vault initialization")
-            await self.app.set_vault_state(self.vault, VaultState.FAILURE)
+            try:
+                self.vault.check_existence()
+                self.vault.identity.read()
+                self.vault.identity.assert_initialized()
+            except IdentityNotInitialized:
+                self.logger.info("Identity not yet initialized.")
+                await self.app.set_vault_state(self.vault, VaultState.UNINITIALIZED)
+            except SyncryptBaseException:
+                self.logger.exception("Failure during vault initialization")
+                await self.app.set_vault_state(self.vault, VaultState.FAILURE)
 
-        self.logger.debug("Finished vault initialization successfully.")
+            self.logger.debug("Finished vault initialization successfully.")
 
-        self.task_status = task_status
-        self.do_init = do_init
-        self.do_push = do_push
+            self.task_status = task_status
+            self.do_init = do_init
+            self.do_push = do_push
 
-        if self.task_status:
-            self.task_status.started()
-            self.task_status = None
+            if self.task_status:
+                self.task_status.started()
+                self.task_status = None
 
-        await self.loop()
+            await self.loop()
 
     async def loop(self):
         assert self.nursery is None
