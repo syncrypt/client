@@ -11,6 +11,8 @@ from .identity import Identity
 
 logger = logging.getLogger(__name__)
 
+VERBOSE_DEBUG = False
+
 
 class RevisionOp(enum.Enum):
     CreateVault = "OP_CREATE_VAULT"
@@ -145,7 +147,10 @@ class Revision(Base):
         self.user_fingerprint = identity.get_fingerprint()
         self.assert_valid()
         message = self._message()
-        logger.debug('Signing messages with identity %s: %s', self.user_fingerprint, message)
+        if VERBOSE_DEBUG:
+            logger.debug('Signing messages with identity %s: %s', self.user_fingerprint, message)
+        else:
+            logger.debug('Signing messages with identity %s', self.user_fingerprint)
         self.signature = identity.sign(message)
 
     def verify(self, identity: Identity) -> None:
@@ -154,8 +159,13 @@ class Revision(Base):
         if self.signature is None:
             raise InvalidRevision("Revision is not signed")
         message = self._message()
-        logger.debug('Verifying message with identity %s: %s', identity.get_fingerprint(), message)
-        logger.debug('Signature: %s', self.signature)
+
+        if VERBOSE_DEBUG:
+            logger.debug('Verifying message with identity %s: %s', identity.get_fingerprint(), message)
+            logger.debug('Signature: %s', self.signature)
+        else:
+            logger.debug('Verifying message with identity %s', identity.get_fingerprint())
+
         if not identity.verify(message, self.signature):
             raise InvalidRevision(
                 "Signature verification failed with key {0}".format(
