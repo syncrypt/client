@@ -299,10 +299,8 @@ class SyncryptApp(object):
         if vault.state != new_state:
             old_state = vault.state
             vault.state = new_state
-            await self.handle_state_transition(vault, old_state)
-
-    async def handle_state_transition(self, vault, old_state):
-        pass
+            controller = self.vault_controllers.get(vault.id)
+            await controller.handle_state_transition(new_state, old_state)
 
     async def clone_local(self, clone_target):
         import shutil

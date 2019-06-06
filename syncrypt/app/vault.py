@@ -30,6 +30,7 @@ class VaultController:
     def __init__(self, app, vault, update_on_idle=False):
         self.app = app
         self.vault = vault
+        self.ready = trio.Event()
         self.nursery = None # type: Nursery
         self.update_on_idle = update_on_idle
         self.logger = VaultLoggerAdapter(self.vault, logging.getLogger(__name__))
@@ -42,13 +43,21 @@ class VaultController:
         assert self.nursery is not None
         self.nursery.start_soon(partial(self.app.sync_vault, self.vault, full=True))
 
+    async def handle_state_transition(self, new_state, old_state):
+        self.logger.debug('State transition: %s -> %s', old_state, new_state)
+
+        if new_state == VaultState.READY:
+            self.ready.set()
+        else:
+            self.ready.clear()
+
+        if new_state == VaultState.SHUTDOWN:
+            await self.vault.close()
+
     async def autopull_vault_task(self):
         'Install a regular autopull for the given vault'
 
-        while True:
-            if self.vault.state == VaultState.READY:
-                break
-            await trio.sleep(1)
+        await self.ready.wait()
 
         folder = os.path.abspath(self.vault.folder)
         interval = int(self.vault.config.get('vault.pull_interval')) / 30
@@ -62,10 +71,7 @@ class VaultController:
     async def watchdog_task(self):
         self.logger.debug("watchdog_task started")
 
-        while True:
-            if self.vault.state == VaultState.READY:
-                break
-            await trio.sleep(1)
+        await self.ready.wait()
 
         async with trio.open_nursery() as nursery:
             watchdog = Watchdog(self.vault.folder,

@@ -89,14 +89,6 @@ class SyncryptDaemonApp(SyncryptApp):
         if not self.shutdown_event.is_set():
             await self.shutdown_event.wait()
 
-    async def handle_state_transition(self, vault, old_state):
-        logger.debug('State transition of %s: %s -> %s', vault, old_state,
-                     vault.state)
-        new_state = vault.state
-
-        if new_state == VaultState.SHUTDOWN:
-            await vault.close()
-
     async def refresh_vault_info_periodically(self):
         while True:
             try:
