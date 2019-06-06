@@ -688,7 +688,9 @@ class SyncryptApp(object):
         await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_vault(self, vault, full=False):
-        assert vault.state != VaultState.SYNCING
+        with trio.fail_after(5*60):
+            while vault.state == VaultState.SYNCING:
+                await trio.sleep(0.5)
 
         vault.logger.info('Pulling %s', vault)
 

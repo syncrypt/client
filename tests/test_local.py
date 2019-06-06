@@ -7,6 +7,7 @@ import unittest
 from glob import glob
 
 import pytest
+import trio
 
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
@@ -132,6 +133,8 @@ async def test_local_metadata(local_app, local_vault, working_dir):
     app = local_app
     await app.initialize()
     await app.open_or_init(local_vault)
+    await trio.sleep(1)
+    assert local_vault.revision_count == 3
 
     # now we will clone the initialized vault by copying the vault config
     shutil.copytree(
@@ -146,7 +149,7 @@ async def test_local_metadata(local_app, local_vault, working_dir):
     await app.add_vault(other_vault)
 
     await app.pull_vault(other_vault)
-    assert other_vault.revision_count > 0
+    assert other_vault.revision_count == 3
 
     files_in_new_vault = len(glob(os.path.join(other_vault_path, "*")))
     assert files_in_new_vault == 0

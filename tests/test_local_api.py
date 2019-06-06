@@ -37,7 +37,7 @@ async def test_api_vault(local_daemon_app, local_api_client, local_daemon_vault)
     vault_uri = content[0]['resource_uri']
     vault_json = await client.get(vault_uri)
     assert vault_json['resource_uri'] == vault_uri
-    assert vault_json['metadata']['name'] == 'My Vault'
+    assert vault_json['metadata']['name'] == 'testvault'
 
 
 async def test_api_metadata(local_daemon_app, local_api_client, local_daemon_vault):
