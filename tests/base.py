@@ -95,8 +95,7 @@ async def local_daemon_app(working_dir, asyncio_loop):
         await app.initialize()
         await app.start()
         yield app
-        await app.close()
-        await app.stop()
+        await app.shutdown()
 
 
 @pytest.fixture
