@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os.path
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
@@ -23,7 +22,6 @@ class SyncryptDaemonApp(SyncryptApp):
 
         self.shutdown_event = trio.Event()
         self.restart_flag = False
-        self.refresh_vault_info_task = None
         self.initial_push = kwargs.pop('initial_push', True)
 
         super(SyncryptDaemonApp, self).__init__(config, **kwargs)
@@ -52,32 +50,26 @@ class SyncryptDaemonApp(SyncryptApp):
                         other_version, our_version)
                 r = await client.get('/v1/shutdown/')
                 await r.release()
-                await asyncio.sleep(5.0)
+                await trio.sleep(5.0)
                 try:
                     await self.api.start()
                 except OSError:
                     logger.error('After 5s, port is still blocked, giving up...')
-                    self.shutdown_event.set()
+                    await self.shutdown()
                     return
             else:
                 logger.info('Other version (%s) is higher or same as ours (%s), let\'s leave it alone...',
                         other_version, our_version)
 
-                self.shutdown_event.set()
+                await self.shutdown()
                 return
 
     async def post_setup(self):
         pass
 
-    async def stop(self):
-        if self.refresh_vault_info_task:
-            self.refresh_vault_info_task.cancel()
-        for vault in self.vaults:
-            await self.unautopull_vault(vault)
-        await self.api.stop()
-
     async def shutdown(self):
-        await self.stop()
+        await self.api.stop()
+        await self.close()
         self.shutdown_event.set()
 
     async def restart(self):
@@ -96,5 +88,5 @@ class SyncryptDaemonApp(SyncryptApp):
                     await self.refresh_vault_info()
             except:
                 logger.exception('Exception while refreshing vaults')
-            await asyncio.sleep(30.0)
+            await trio.sleep(30.0)
 
