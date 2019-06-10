@@ -65,7 +65,7 @@ class SyncryptDaemonApp(SyncryptApp):
                 return
 
     async def post_setup(self):
-        pass
+        self.nursery.start_soon(self.refresh_vault_info_periodically)
 
     async def shutdown(self):
         await self.api.stop()
@@ -88,5 +88,5 @@ class SyncryptDaemonApp(SyncryptApp):
                     await self.refresh_vault_info()
             except:
                 logger.exception('Exception while refreshing vaults')
-            await trio.sleep(30.0)
+            await trio.sleep(15.0)
 

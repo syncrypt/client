@@ -563,14 +563,15 @@ class SyncryptApp(object):
                 remote_id = v_info['id'].decode()
 
                 for v in self.vaults:
-                    if v.config.id == remote_id:
-                        v.byte_size = int(v_info.get('byte_size', 0))
-                        #v.file_count = int(v_info.get('file_count', 0))
-                        #v.user_count = int(v_info.get('user_count', 0))
-                        #v.revision_count = int(v_info.get('revision_count', 0))
-                        #modification_date = v_info.get('modification_date') or b''
-                        #v.modification_date = modification_date.decode()
-                        session.add(v)
+                    try:
+                        if v.config.id == remote_id:
+                            byte_size = int(v_info.get('byte_size', 0))
+                            if byte_size != v.byte_size:
+                                logger.debug('Updating byte size for vault %s to %d', remote_id, byte_size)
+                                v.byte_size = byte_size
+                                session.add(v)
+                    except SyncryptBaseException:
+                        pass
 
         await backend.close()
 
