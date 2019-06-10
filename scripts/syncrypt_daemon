@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import logging
 import trio
 import trio_asyncio
 
@@ -41,47 +42,61 @@ config = parser.parse_args()
 app_config = AppConfig(config.config)
 
 # setup logging
+logger = logging.getLogger('syncrypt')
 log_dir = os.path.join(app_config.config_dir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
+return_val = False
 
 async def run_syncrypt():
-    async with trio.open_nursery() as nursery:
-        if config.inspector:
-            from trio_inspector import TrioInspector
-            nursery.start_soon(TrioInspector().run)
+    global return_val
+    try:
+        async with trio.open_nursery() as nursery:
+            if config.inspector:
+                from trio_inspector import TrioInspector
+                nursery.start_soon(TrioInspector().run)
 
-        app = SyncryptDaemonApp(app_config,
-                nursery=nursery,
-                initial_push=config.initial_push
-        )
+            app = SyncryptDaemonApp(app_config,
+                    nursery=nursery,
+                    initial_push=config.initial_push
+            )
 
-        smokesignal.emit('pre_setup', app=app)
+            smokesignal.emit('pre_setup', app=app)
 
-        await app.start()
-        await app.initialize()
+            await app.start()
+            await app.initialize()
 
-        smokesignal.emit('post_setup', app=app)
+            smokesignal.emit('post_setup', app=app)
 
-        nursery.start_soon(app.post_setup)
+            nursery.start_soon(app.post_setup)
 
-        # Ideally, we would wait to shutdown flag here
-        await trio.sleep_forever()
+            # Ideally, we would wait to shutdown flag here
+            await trio.sleep_forever()
 
-        smokesignal.emit('shutdown', app=app)
-
-        return app.restart_flag
-
+            smokesignal.emit('shutdown', app=app)
+            return_val = app.restart_flag
+    except Exception:
+        logger.exception("Uncaught exception, restarting daemon...")
+        return_val = True
+        return
+    return_val = False
 
 if config.detach:
     class SyncryptDaemon(Daemon):
         def run(self):
-            while trio.run(run_syncrypt):
-                time.sleep(2)
+            while True:
+                return_val = False
+                trio_asyncio.run(run_syncrypt)
+                if not return_val:
+                    break
     syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
     getattr(syncryptd, config.command)()
 else:
-    while trio_asyncio.run(run_syncrypt):
+    while True:
+        return_val = False
+        trio_asyncio.run(run_syncrypt)
+        if not return_val:
+            break
         time.sleep(2)
 
