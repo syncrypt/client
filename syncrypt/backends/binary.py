@@ -1195,5 +1195,4 @@ class BinaryStorageBackend(StorageBackend):
         # Closing a binary connection is a no-op, because unused connections
         # automatically close and we wanna keep the connection to the server
         # in case we wanna reuse the slot later.
-        logger.debug("ON CLOSE")
         pass
