@@ -35,6 +35,7 @@ class APIClient:
 
             # Add auth token to headers
             kwargs['headers'] = dict(kwargs.get('headers', {}), **{AUTH_TOKEN_HEADER: self.auth_token})
+            kwargs['timeout'] = aiohttp.ClientTimeout(total=15*60)
 
             # Build URL
             url = 'http://{host}:{port}{uri}'.format(host=self.host, port=self.port, uri=request_uri)
