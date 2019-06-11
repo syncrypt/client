@@ -47,10 +47,12 @@ log_dir = os.path.join(app_config.config_dir, 'logs')
 os.makedirs(log_dir, exist_ok=True)
 setup_logging(config.loglevel, logfile=os.path.join(log_dir, 'syncrypt_daemon.log'))
 
-return_val = False
+will_restart = False
 
 async def run_syncrypt():
-    global return_val
+    global will_restart
+    # global is currently required because trio_asyncio.run does not return
+    # any value (see https://github.com/python-trio/trio-asyncio/issues/57)
     try:
         async with trio.open_nursery() as nursery:
             if config.inspector:
@@ -75,28 +77,31 @@ async def run_syncrypt():
             await trio.sleep_forever()
 
             smokesignal.emit('shutdown', app=app)
-            return_val = app.restart_flag
+            will_restart = app.restart_flag
     except Exception:
         logger.exception("Uncaught exception, restarting daemon...")
-        return_val = True
+        will_restart = True
         return
-    return_val = False
+    will_restart = False
+
+
+def main():
+    while True:
+        will_restart = True
+        try:
+            trio_asyncio.run(run_syncrypt)
+            if not will_restart:
+                break
+        except Exception:
+            logger.exception("Uncaught trio exception, restarting daemon...")
+        time.sleep(2)
+
 
 if config.detach:
     class SyncryptDaemon(Daemon):
         def run(self):
-            while True:
-                return_val = False
-                trio_asyncio.run(run_syncrypt)
-                if not return_val:
-                    break
+            main()
     syncryptd = SyncryptDaemon('/tmp/syncrypt.pid')
     getattr(syncryptd, config.command)()
 else:
-    while True:
-        return_val = False
-        trio_asyncio.run(run_syncrypt)
-        if not return_val:
-            break
-        time.sleep(2)
-
+    main()

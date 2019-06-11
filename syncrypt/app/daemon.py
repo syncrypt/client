@@ -21,7 +21,7 @@ class SyncryptDaemonApp(SyncryptApp):
     def __init__(self, config, **kwargs):
 
         self.shutdown_event = trio.Event()
-        self.restart_flag = False
+        self.restart_flag = True
         self.initial_push = kwargs.pop('initial_push', True)
 
         super(SyncryptDaemonApp, self).__init__(config, **kwargs)
@@ -68,6 +68,7 @@ class SyncryptDaemonApp(SyncryptApp):
         self.nursery.start_soon(self.refresh_vault_info_periodically)
 
     async def shutdown(self):
+        self.restart_flag = False
         await self.api.stop()
         await self.close()
         self.shutdown_event.set()
