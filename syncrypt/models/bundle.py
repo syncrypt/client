@@ -17,6 +17,8 @@ from .base import Base, MetadataHolder
 
 logger = logging.getLogger(__name__)
 
+VERBOSE_DEBUG = False
+
 
 class Bundle(MetadataHolder, Base):
     'A Bundle represents a file and some additional information'
@@ -88,8 +90,9 @@ class Bundle(MetadataHolder, Base):
 
     @property
     def remote_hash_differs(self):
-        logger.debug('Remote hash: %s', self.hash)
-        logger.debug('Local hash:  %s', self.local_hash)
+        if VERBOSE_DEBUG:
+            logger.debug('Remote hash: %s', self.hash)
+            logger.debug('Local hash:  %s', self.local_hash)
         return self.hash is None or self.hash != self.local_hash
 
     async def load_key(self):
