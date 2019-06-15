@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from sqlalchemy.orm.exc import NoResultFound
@@ -40,7 +39,7 @@ class FlyingVaultManager:
             lst = await backend.list_vaults_for_identity(self.app.identity)
             for (vault, user_vault_key, encrypted_metadata) in lst:
 
-                await asyncio.sleep(0.001)
+                await trio.sleep(0.001)
 
                 vault_id = vault["id"].decode("utf-8")
 

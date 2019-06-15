@@ -4,7 +4,6 @@ import trio
 import trio_asyncio
 
 import argparse
-import asyncio
 import os.path
 import time
 

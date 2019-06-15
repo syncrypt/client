@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 import os.path
@@ -129,7 +128,7 @@ class APITests(VaultTestCase):
 
             self.assertEqual(len(app.vaults), 1) # one vault
             while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
-                await asyncio.sleep(0.2)
+                await trio.sleep(0.2)
             self.assertEqual(len(app.vaults), 1) # one vault
 
             r = await client.get('/v1/vault/')
@@ -158,7 +157,7 @@ class APITests(VaultTestCase):
             await r.release()
             self.assertEqual(r.status, 200)
 
-            await asyncio.sleep(0.1)
+            await trio.sleep(0.1)
 
             r = await client.get('/v1/vault/')
             self.assertEqual(r.status, 200)
@@ -180,7 +179,7 @@ class APITests(VaultTestCase):
             await r.release()
 
             while app.vaults[0].state in ('uninitialized', 'initializing', 'syncing'):
-                await asyncio.sleep(0.2)
+                await trio.sleep(0.2)
 
             r = await client.get('/v1/vault/')
             c = await r.json()
@@ -247,7 +246,7 @@ class APITests(VaultTestCase):
             self.assertEqual(c[0]['metadata'].get('name'), 'testvault')
 
             # TODO actually we need to wait for backend future here
-            await asyncio.sleep(1.0)
+            await trio.sleep(1.0)
 
         finally:
             await client.close()

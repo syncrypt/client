@@ -1,5 +1,4 @@
 # pylint: disable=not-async-context-manager
-import asyncio
 import logging
 import os.path
 import socket
@@ -632,7 +631,7 @@ class SyncryptApp(object):
                     await self.revisions.apply(revision, bundle.vault)
                     break
                 except SyncRequired:
-                    asyncio.sleep(1)
+                    await trio.sleep(1)
                     await self.sync_vault(bundle.vault)
 
             self.stats['uploads'] += 1
