@@ -65,7 +65,9 @@ class SyncryptDaemonApp(SyncryptApp):
                 return
 
     async def post_setup(self):
+        # It would be nice to have an erlang/elixir inspired supervisor here instead
         self.nursery.start_soon(self.refresh_vault_info_periodically)
+        self.nursery.start_soon(self.refresh_flying_vaults_periodically)
 
     async def shutdown(self):
         self.restart_flag = False
@@ -91,3 +93,11 @@ class SyncryptDaemonApp(SyncryptApp):
                 logger.exception('Exception while refreshing vaults')
             await trio.sleep(15.0)
 
+    async def refresh_flying_vaults_periodically(self):
+        while True:
+            try:
+                if self.flying_vaults:
+                    await self.flying_vaults.update()
+            except:
+                logger.exception('Exception while refreshing flying vaults')
+            await trio.sleep(30.0)

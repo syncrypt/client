@@ -1,5 +1,7 @@
 import logging
 
+import iso8601
+import trio
 from sqlalchemy.orm.exc import NoResultFound
 
 from syncrypt.models import FlyingVault, store
@@ -29,6 +31,7 @@ class FlyingVaultManager:
 
     async def update(self):
         "Update list from remote"
+        logger.info("Updating flying vaults...")
         backend = await self.app.open_backend()
 
         # Make a map from vault id -> vault info
@@ -62,9 +65,12 @@ class FlyingVaultManager:
                     logger.warning("No information for vault: %s, ignoring.", vault_id)
                     continue
 
-                modification_date = v_info.get("modification_date")
-                if isinstance(modification_date, bytes):
-                    modification_date = modification_date.decode()
+                # list_vaults should not return a dict, but a parsed
+                # instance of vault or similar
+                modification_date_str = v_info.get("modification_date")
+                if isinstance(modification_date_str, bytes):
+                    modification_date_str = modification_date_str.decode()
+                modification_date = iso8601.parse_date(modification_date_str)
 
                 fv = self.get_or_create_by_id(session, vault_id)
                 fv.byte_size = v_info.get("byte_size", 0)

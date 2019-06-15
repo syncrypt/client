@@ -1,7 +1,7 @@
 import json
 import logging
 
-from sqlalchemy import Column, Integer, String, types
+from sqlalchemy import Column, DateTime, Integer, String, types
 
 from .base import Base
 
@@ -33,7 +33,7 @@ class FlyingVault(Base):
     id = Column(String(128), primary_key=True)
     byte_size = Column(Integer())
     file_count = Column(Integer())
-    modification_date = Column(String(255))  # date?
+    modification_date = Column(DateTime())
     revision_count = Column(Integer())
     user_count = Column(Integer())
     vault_metadata = Column(JSON)
