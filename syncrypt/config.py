@@ -90,7 +90,7 @@ class BackendConfigMixin():
 
         # Syncrypt server host
         'host': 'storage.syncrypt.space',
-        'port': 1337,
+        'port': 41337,
         'ssl': True,
         'ssl_verify': True,
 
