@@ -315,11 +315,15 @@ class VaultResource(Resource):
         content = await request.content.read()
         request_dict = json.loads(content.decode())
 
+        if not 'folder' in request_dict or not request_dict['folder']:
+            raise ValueError("Invalid value for parameter: 'folder'")
+
         if 'id' in request_dict:
-            raise NotImplementedError()
-            #vault = await self.app.clone(request_dict['id'], request_dict['folder'])
-            #self.app.save_vault_dir_in_config(vault)
-            #asyncio.get_event_loop().create_task(pull_and_watch(vault))
+            vault = await self.app.clone(
+                    request_dict['id'],
+                    request_dict['folder'],
+                    async_init=True
+            )
         elif 'import_package' in request_dict:
             raise NotImplementedError()
             #vault = await self.app.import_package(
@@ -329,7 +333,8 @@ class VaultResource(Resource):
         else:
             vault = await self.app.add_vault(Vault(request_dict['folder']),
                         async_init=True,
-                        async_push=True)
+                        async_push=True
+            )
         return vault
 
     async def put_obj(self, request):

@@ -146,7 +146,11 @@ class SyncryptApp(object):
         await self.reset_vault_database(vault, remove_vault=True)
         with self.config.update_context():
             self.config.add_vault_dir(os.path.abspath(vault.folder))
-        await self.start_vault(vault, async_init=async_init, async_push=async_push)
+        await self.start_vault(
+            vault,
+            async_init=async_init,
+            async_push=async_push
+        )
         return vault
 
     def find_vault_by_id(self, vault_id):
@@ -427,7 +431,7 @@ class SyncryptApp(object):
                 else:
                     raise
 
-    async def clone(self, vault_id, local_directory):
+    async def clone(self, vault_id, local_directory, async_init=False):
         backend = await self.open_backend()
 
         logger.info('Retrieving encrypted key for vault %s (Fingerprint: %s)',
@@ -458,9 +462,10 @@ class SyncryptApp(object):
 
             vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
 
-        await self.add_vault(vault)
+        await self.add_vault(vault, async_init=async_init)
 
-        await self.pull_vault(vault, full=True)
+        if not async_init:
+            await self.pull_vault(vault, full=True)
 
         return vault
 
