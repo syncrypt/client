@@ -82,10 +82,7 @@ class SyncryptAPI():
         task.add_done_callback(cb)
         return JSONResponse({})
 
-    @require_auth_token
-    @trio_asyncio.trio_as_aio
-    async def get_config(self, request):
-
+    def app_config_response(self):
         cfg = self.app.config.as_dict()
 
         # prepare certain config values for json
@@ -94,6 +91,11 @@ class SyncryptAPI():
         cfg['gui']['is_first_launch'] = cfg['gui']['is_first_launch'] in ('1', 'yes')
 
         return JSONResponse(cfg)
+
+    @require_auth_token
+    @trio_asyncio.trio_as_aio
+    async def get_config(self, request):
+        return self.app_config_response()
 
     @require_auth_token
     @trio_asyncio.trio_as_aio
@@ -115,7 +117,7 @@ class SyncryptAPI():
 
                     self.app.config.set(setting, value)
 
-        return await self.get_config(request)
+        return self.app_config_response()
 
     @require_auth_token
     @trio_asyncio.trio_as_aio
