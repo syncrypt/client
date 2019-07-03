@@ -85,7 +85,7 @@ class Vault(MetadataHolder, Base):
         if not hasattr(self, "state"):
             self.state = VaultState.UNINITIALIZED
         self._bundle_cache = {}
-        self._identity = None  # type: Identity
+        self._identity = None
         self.logger = VaultLoggerAdapter(self, logger)
 
     @property

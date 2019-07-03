@@ -49,7 +49,7 @@ class Bundle(MetadataHolder, Base):
     def init_on_load(self):
         self.uptodate = False
         self.bytes_written = 0
-        self.local_hash = None # type: Optional[str]
+        self.local_hash = None
         self.relpath = self.relpath.decode() # why is this binary?!
 
     def update_store_hash(self):
