@@ -188,7 +188,8 @@ class Vault(MetadataHolder, Base):
         return folder_size(self.folder)
 
     async def close(self):
-        await self.backend.close()
+        if hasattr(self, '_backend'):
+            await self.backend.close()
 
     def clear_bundle_cache(self):
         self._bundle_cache = {}

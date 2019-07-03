@@ -11,9 +11,9 @@ import trio
 
 from syncrypt.app import SyncryptApp
 from syncrypt.backends import LocalStorageBackend
-from syncrypt.exceptions import AlreadyPresent, InvalidRevision
+from syncrypt.exceptions import AlreadyPresent, InvalidRevision, VaultFolderDoesNotExist
 from syncrypt.managers import UserVaultKeyManager
-from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault, store
+from syncrypt.models import Bundle, Identity, Revision, RevisionOp, Vault, VaultState, store
 
 from .base import assertSameFilesInFolder, local_app, local_vault, test_vault, working_dir
 
@@ -66,6 +66,13 @@ async def test_vault_metadata(local_app, local_vault):
 
     await backend.set_vault_metadata(app.identity)
     await app.pull()
+
+
+async def test_non_existent_vault(local_app):
+    app = local_app
+    await app.add_vault(Vault('non-existent'))
+    assert len(app.vaults) == 1
+    assert app.vaults[0].state == VaultState.FAILURE
 
 
 async def test_revision_increase_after_push(local_app, local_vault):
