@@ -3,7 +3,7 @@ import logging
 import iso8601
 import trio
 from sqlalchemy.orm.exc import NoResultFound
-
+from syncrypt.exceptions import InvalidAuthentification
 from syncrypt.models import FlyingVault, store
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,11 @@ class FlyingVaultManager:
     async def update(self):
         "Update list from remote"
         logger.info("Updating flying vaults...")
-        backend = await self.app.open_backend()
+        try:
+            backend = await self.app.open_backend()
+        except InvalidAuthentification:
+            logger.info("No login information found, skipping update.")
+            return
 
         # Make a map from vault id -> vault info
         # Maybe we can use VaultManager in the future?
