@@ -133,9 +133,6 @@ class Clone(NoVaultCmd):
         else:
             vault = await self.app.clone_by_name(vault_name, self.config.directory or vault_name)
 
-        if vault:
-            await self.app.pull_vault(vault)
-
 
 class Pull(MultipleVaultCmd):
     command = 'pull'

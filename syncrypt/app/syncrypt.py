@@ -117,7 +117,7 @@ class SyncryptApp(object):
     def vault_controller(self, vault):
         return VaultController(self, vault)
 
-    async def start_vault(self, vault, async_init=False, async_push=False):
+    async def start_vault(self, vault, async_init: bool = False, async_push: bool = False):
         logger.info("Registering vault %s", vault)
         assert vault.id not in self.vault_controllers
         self.vaults.append(vault)
@@ -138,7 +138,7 @@ class SyncryptApp(object):
         await self.reset_vault_database(vault, remove_vault=True)
         await self.stop_vault(vault)
 
-    async def add_vault(self, vault, async_init=False, async_push=False):
+    async def add_vault(self, vault, async_init: bool = False, async_push: bool = False):
         for v in self.vaults:
             if os.path.abspath(v.folder) == os.path.abspath(vault.folder):
                 raise VaultIsAlreadySyncing(v.folder)
@@ -303,7 +303,11 @@ class SyncryptApp(object):
             old_state = vault.state
             vault.state = new_state
             controller = self.vault_controllers.get(vault.id)
-            await controller.handle_state_transition(new_state, old_state)
+
+            if controller:
+                await controller.handle_state_transition(new_state, old_state)
+            else:
+                logger.debug('Ignoring vault state change for unregistered vault: %s', vault)
 
     async def clone_local(self, clone_target):
         import shutil
@@ -431,7 +435,7 @@ class SyncryptApp(object):
                 else:
                     raise
 
-    async def clone(self, vault_id, local_directory, async_init=False):
+    async def clone(self, vault_id, local_directory, async_init: bool = False):
         backend = await self.open_backend()
 
         logger.info('Retrieving encrypted key for vault %s (Fingerprint: %s)',
@@ -462,10 +466,10 @@ class SyncryptApp(object):
 
             vault = Vault.from_package_info(decrypted_package_info, local_directory, auth_token)
 
-        await self.add_vault(vault, async_init=async_init)
-
         if not async_init:
             await self.pull_vault(vault, full=True)
+
+        await self.add_vault(vault, async_init=async_init)
 
         return vault
 
