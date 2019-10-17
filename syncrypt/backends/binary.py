@@ -769,7 +769,7 @@ class BinaryStorageConnection():
         size = await self.read_response()
         return size
 
-    async def list_keys(self, user=None):
+    async def list_keys(self, user: str = None):
         if user:
             await self.write_term('list_user_keys', user)
         else:
@@ -960,7 +960,7 @@ class BinaryStorageManager():
     #@retry(retry=retry_if_exception_type() & retry_unless_exception_type(InvalidAuthentification),
     #       stop=stop_after_attempt(3),
     #       wait=wait_exponential(multiplier=1, max=10))
-    async def acquire_connection(self, vault, skip_login=False):
+    async def acquire_connection(self, vault: Vault, skip_login: bool = False):
         'return an available connection or block until one is free'
         #if self._monitor_task is None:
         #    self._monitor_task = \
@@ -1005,7 +1005,7 @@ class BinaryStorageManager():
                     raise
                 break
 
-        if len(self.slots) < self.concurrency:
+        if len(self.slots) < (self.concurrency or 1):
             # spawn a new connection
             conn = BinaryStorageConnection(self)
             await conn.connect()

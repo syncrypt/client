@@ -8,6 +8,8 @@ class SnappyCompress(Pipe):
         self.compressor = snappy.StreamCompressor()
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         contents = await self.input.read(count)
         return self.compressor.add_chunk(contents, compress=True)
 
@@ -16,6 +18,8 @@ class SnappyDecompress(Pipe):
         self.decompressor = snappy.StreamDecompressor()
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         data = b''
         while True:
             contents = await self.input.read(count)

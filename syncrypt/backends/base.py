@@ -64,3 +64,7 @@ class StorageBackend(Protocol):
 
     async def add_user_vault_key(self, identity: Identity, user_id: str, user_identity: Identity, vault_key_package: bytes):
         raise NotImplementedError
+
+    @abstractmethod
+    async def list_keys(self, user_id: str = None):
+        raise NotImplementedError

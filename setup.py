@@ -187,7 +187,8 @@ setup(
             'pytest-trio==0.5.2',
             'trio-websocket',
             'attrs>=17.4.0',
-            'mypy==0.711',  # used for static type checking
+            'mypy==0.740',  # used for static type checking
+            'mypy-extensions==0.4.2',
             'pylint'  # used for static code analysis
         ],
         'uvloop': [

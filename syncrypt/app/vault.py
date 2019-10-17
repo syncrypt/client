@@ -1,7 +1,7 @@
 import logging
 import os.path
 from functools import partial
-from typing import Tuple
+from typing import Optional, Tuple
 
 import trio
 from trio_typing import Nursery
@@ -31,7 +31,7 @@ class VaultController:
         self.app = app
         self.vault = vault
         self.ready = trio.Event()
-        self.nursery = None # type: Nursery
+        self.nursery = None # type: Optional[Nursery]
         self.update_on_idle = update_on_idle
         self.logger = VaultLoggerAdapter(self.vault, logging.getLogger(__name__))
         send_channel, receive_channel = trio.open_memory_channel(128) # type: Tuple[trio.abc.SendChannel, trio.abc.ReceiveChannel]
@@ -66,7 +66,8 @@ class VaultController:
         while True:
             await trio.sleep(interval)
             if self.vault.state == VaultState.READY:
-                self.nursery.start_soon(self.app.pull_vault, self.vault)
+                if self.nursery:
+                    self.nursery.start_soon(self.app.pull_vault, self.vault)
 
     async def watchdog_task(self):
         self.logger.debug("watchdog_task started")

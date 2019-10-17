@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+from typing import Optional
 
 
 def test_env():
@@ -225,6 +226,8 @@ def _get_coin(num_of_hits, ansi_art=False, coin=None):
 
 def gpg_cmd(cmd):
     gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    size = None  # type: Optional[str]
+    algo = None  # type: Optional[str]
     for lines in gpg.communicate()[0].decode('ascii').split('\n'):
         colons = lines.split(':')
         if colons[0] == 'pub':

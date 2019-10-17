@@ -1,9 +1,10 @@
+from typing import Optional
 
 
 class Pipe(object):
     def __init__(self):
         self._eof = False
-        self.input = None
+        self.input = None  # type: Optional[Pipe]
 
     async def read(self, count=-1):
         if self.input:
@@ -67,6 +68,8 @@ class Repeat(Pipe):
         super(Repeat, self).__init__()
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         if self.copies == 0:
             self.buf = await self.input.read()
             if len(self.buf) > 0:
@@ -74,6 +77,7 @@ class Repeat(Pipe):
         if self.copies > 0:
             self.copies -= 1
         return self.buf
+
 
 class BufferedFree(Pipe):
     '''
@@ -84,6 +88,8 @@ class BufferedFree(Pipe):
         super(BufferedFree, self).__init__()
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         if count == -1:
             raise NotImplementedError()
         else:
@@ -123,6 +129,8 @@ class Buffered(Pipe):
         super(Buffered, self).__init__()
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         assert count == -1 or count == self.buf_size or \
                 (not self.head and count == self.head_size)
 
@@ -156,6 +164,8 @@ class Limit(Pipe):
         super(Limit, self).__init__()
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         if self._eof: return b''
         # fill up buffer
         left = self.bytes_limit - self.bytes_read
@@ -169,6 +179,7 @@ class Limit(Pipe):
         self.bytes_read += len(buf)
         return buf
 
+
 class Count(Pipe):
     def __init__(self):
         super(Count, self).__init__()
@@ -179,6 +190,8 @@ class Count(Pipe):
         return self._bytes_passed
 
     async def read(self, count=-1):
+        if self.input is None:
+            raise ValueError("Input pipe not inititalized")
         buf = await self.input.read(count)
         self._bytes_passed += len(buf)
         return buf

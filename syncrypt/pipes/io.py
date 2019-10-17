@@ -6,13 +6,13 @@ from typing import Optional
 
 import trio
 
-from .base import Sink, Source
+from .base import Pipe, Sink, Source
 
 logger = logging.getLogger(__name__)
 
 
 class StreamReader(Source):
-    def __init__(self, reader):
+    def __init__(self, reader: Pipe):
         super(StreamReader, self).__init__()
         self.input = reader
 
