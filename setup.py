@@ -153,8 +153,9 @@ setup(
         'colorlog',
         'erlastic',
         'trio==0.11.0',
+        'outcome==1.0.0',
         'trio-asyncio==0.10.0',
-        'trio-typing',
+        'trio-typing==0.2.0',
         'async_generator', # for python 3.6
         'typing_extensions>=3.7.2',
         'iso8601',
@@ -183,7 +184,7 @@ setup(
         ],
         'test': [
             'pytest-runner',
-            'pytest>=3.6.0',
+            'pytest==3.6.0',
             'pytest-trio==0.5.2',
             'trio-websocket',
             'attrs>=17.4.0',
