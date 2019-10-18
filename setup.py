@@ -158,7 +158,7 @@ setup(
         'async_generator', # for python 3.6
         'typing_extensions>=3.7.2',
         'iso8601',
-        'pycryptodomex==3.8.1',
+        'pycryptodomex==3.9.0',
         'python-snappy',
         'smokesignal',
         'sqlalchemy>=1.2.13',
@@ -174,7 +174,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dist': [
-            'pyinstaller==3.4',
+            'pyinstaller==3.5',
             'six',
             'packaging'
         ],
