@@ -207,52 +207,56 @@ class SyncryptApp(object):
         controller.nursery.start_soon(push_scheduled, bundle)
 
     async def init_vault(self, vault, remote=None, upload_vault_key=True, upload_identity=True):
-        self.identity.assert_initialized()
+        async with self.vault_controllers[vault.id].lock:
+            self.identity.assert_initialized()
 
-        if remote:
-            # If remote was explicitly given, use it
-            vault.config.update('remote', remote)
-            vault.backend.host = self.config.get('remote.host')
-        else:
-            # otherwise, use remote from global config
-            vault.config.update('remote', self.config.remote)
-            vault.backend.host = self.config.get('remote.host')
+            if remote:
+                # If remote was explicitly given, use it
+                vault.config.update('remote', remote)
+                vault.backend.host = self.config.get('remote.host')
+            else:
+                # otherwise, use remote from global config
+                vault.config.update('remote', self.config.remote)
+                vault.backend.host = self.config.get('remote.host')
 
-        try:
-            await vault.backend.open()
-            logger.warning('Vault %s already initialized', vault.folder)
-            return
-        except (InvalidAuthentification, VaultNotInitialized):
-            pass
-        logger.info("Initializing %s", vault)
-        await vault.identity.init()
-        if vault.identity.state != IdentityState.INITIALIZED:
-            await vault.identity.generate_keys()
-        global_auth = self.config.remote.get('auth')
-        if global_auth:
-            logger.debug('Using user auth token to initialize vault.')
-            vault.backend.global_auth = global_auth
-        try:
-            revision = await vault.backend.init(self.identity)
-        except InvalidAuthentification:
-            vault.backend.global_auth = None
-            username, password = await self.auth_provider.get_auth(vault.backend)
-            vault.backend.set_auth(username, password)
-            revision = await vault.backend.init(self.identity)
+            try:
+                await vault.backend.open()
+                logger.warning('Vault %s already initialized', vault.folder)
+                return
+            except (InvalidAuthentification, VaultNotInitialized):
+                pass
 
-        logger.debug('Vault has been created by %s', revision)
+            logger.info("Initializing %s", vault)
+            await self.reset_vault_database(vault, remove_vault=True)
 
-        await self.revisions.apply(revision, vault)
+            await vault.identity.init()
+            if vault.identity.state != IdentityState.INITIALIZED:
+                await vault.identity.generate_keys()
+            global_auth = self.config.remote.get('auth')
+            if global_auth:
+                logger.debug('Using user auth token to initialize vault.')
+                vault.backend.global_auth = global_auth
+            try:
+                revision = await vault.backend.init(self.identity)
+            except InvalidAuthentification:
+                vault.backend.global_auth = None
+                username, password = await self.auth_provider.get_auth(vault.backend)
+                vault.backend.set_auth(username, password)
+                revision = await vault.backend.init(self.identity)
 
-        await self.set_vault_state(vault, VaultState.READY)
-        with vault.config.update_context():
-            vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
-        await self.update_vault_metadata(vault)
+            logger.debug('Vault has been created by %s', revision)
 
-        if upload_identity:
-            await vault.backend.upload_identity(self.identity)
-        if upload_vault_key:
-            await self.upload_vault_key(vault)
+            await self.revisions.apply(revision, vault)
+
+            await self.set_vault_state(vault, VaultState.READY)
+            with vault.config.update_context():
+                vault.config.set('vault.name', os.path.basename(os.path.abspath(vault.folder)))
+            await self.update_vault_metadata(vault)
+
+            if upload_identity:
+                await vault.backend.upload_identity(self.identity)
+            if upload_vault_key:
+                await self.upload_vault_key(vault)
 
     async def init(self, host: Optional[str] = None, upload_vault_key: bool = True):
         for vault in self.vaults:
@@ -607,17 +611,18 @@ class SyncryptApp(object):
             await self.sync_vault(vault)
             limit = trio.CapacityLimiter(1)
 
-            await self.set_vault_state(vault, VaultState.SYNCING)
-            async with trio.open_nursery() as nursery:
-                await vault.backend.open()
-                await self.update_vault_metadata(vault)
+            async with self.vault_controllers[vault.id].lock:
+                await self.set_vault_state(vault, VaultState.SYNCING)
+                async with trio.open_nursery() as nursery:
+                    await vault.backend.open()
+                    await self.update_vault_metadata(vault)
 
-                async for bundle in self.bundles.upload_bundles_for_vault(vault):
-                    async with limit:
-                        await self.push_bundle(bundle)
-                        #nursery.start_soon(self.push_bundle, bundle)
+                    async for bundle in self.bundles.upload_bundles_for_vault(vault):
+                        async with limit:
+                            await self.push_bundle(bundle)
+                            #nursery.start_soon(self.push_bundle, bundle)
 
-                await self.set_vault_state(vault, VaultState.READY)
+                    await self.set_vault_state(vault, VaultState.READY)
         except Exception:
             vault.logger.exception("Failure during vault push")
             await self.set_vault_state(vault, VaultState.FAILURE)
@@ -683,15 +688,16 @@ class SyncryptApp(object):
     #       wait=wait_exponential(multiplier=1, max=10))
     async def sync_vault(self, vault, full=False):
 
-        if full:
-            await self.reset_vault_database(vault)
+        async with self.vault_controllers[vault.id].lock:
+            if full:
+                await self.reset_vault_database(vault)
 
-        await self.open_or_init(vault)
-        async for revision in vault.backend.changes(vault.revision, None):
-            await self.set_vault_state(vault, VaultState.SYNCING)
-            await self.revisions.apply(revision, vault)
+            #await self.open_or_init(vault)
+            async for revision in vault.backend.changes(vault.revision, None):
+                await self.set_vault_state(vault, VaultState.SYNCING)
+                await self.revisions.apply(revision, vault)
 
-        await self.set_vault_state(vault, VaultState.READY)
+            await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_vault(self, vault, full=False):
         with trio.fail_after(5*60):
@@ -704,24 +710,25 @@ class SyncryptApp(object):
         # the vault (files, keys, ...). This is called "syncing".
         await self.sync_vault(vault, full=full)
 
-        await self.set_vault_state(vault, VaultState.SYNCING)
-        # Then, we will do a change detection for the local folder and download every bundle that
-        # has changed.
-        # TODO: do a change detection (.vault/metadata store vs filesystem)
-        limit = trio.CapacityLimiter(1)
+        async with self.vault_controllers[vault.id].lock:
+            await self.set_vault_state(vault, VaultState.SYNCING)
+            # Then, we will do a change detection for the local folder and download every bundle that
+            # has changed.
+            # TODO: do a change detection (.vault/metadata store vs filesystem)
+            limit = trio.CapacityLimiter(1)
 
-        try:
-            # here we should use trimeter too allow for parallel processing
-            async with trio.open_nursery():
-                async for bundle in self.bundles.download_bundles_for_vault(vault):
-                    async with limit:
-                        await self.pull_bundle(bundle)
+            try:
+                # here we should use trimeter too allow for parallel processing
+                async with trio.open_nursery():
+                    async for bundle in self.bundles.download_bundles_for_vault(vault):
+                        async with limit:
+                            await self.pull_bundle(bundle)
 
-                await self.set_vault_state(vault, VaultState.READY)
-        except Exception:
-            vault.logger.exception("Failure while pulling vault")
-            await self.set_vault_state(vault, VaultState.FAILURE)
-        await self.set_vault_state(vault, VaultState.READY)
+                    await self.set_vault_state(vault, VaultState.READY)
+            except Exception:
+                vault.logger.exception("Failure while pulling vault")
+                await self.set_vault_state(vault, VaultState.FAILURE)
+            await self.set_vault_state(vault, VaultState.READY)
 
     async def pull_bundle(self, bundle):
         'download the bundle'

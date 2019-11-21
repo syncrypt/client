@@ -144,6 +144,7 @@ async def local_vault(local_app, test_vault):
     "Return a vault that is a clone of the test vault AND is already added to the local app"
 
     await local_app.add_vault(test_vault)
+    await local_app.init_vault(test_vault)
     yield test_vault
 
 
@@ -152,4 +153,5 @@ async def local_daemon_vault(local_daemon_app, working_dir, test_vault):
     "Return a vault that is a clone of the test vault AND is already added to the daemon app"
 
     await local_daemon_app.add_vault(test_vault)
+    await local_daemon_app.init_vault(test_vault)
     yield test_vault

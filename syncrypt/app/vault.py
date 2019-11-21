@@ -30,6 +30,7 @@ class VaultController:
     def __init__(self, app, vault, update_on_idle=False):
         self.app = app
         self.vault = vault
+        self.lock = trio.Lock()
         self.ready = trio.Event()
         self.nursery = None # type: Nursery
         self.update_on_idle = update_on_idle
@@ -65,7 +66,7 @@ class VaultController:
 
         while True:
             await trio.sleep(interval)
-            if self.vault.state == VaultState.READY:
+            if self.vault.state == VaultState.READY and not self.lock.locked():
                 self.nursery.start_soon(self.app.pull_vault, self.vault)
 
     async def watchdog_task(self):
