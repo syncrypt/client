@@ -108,7 +108,7 @@ class VaultController:
             self.nursery.cancel_scope.cancel()
         self.cancel_scope.cancel()
 
-    async def run(self, do_init, do_push, task_status=trio.TASK_STATUS_IGNORED):
+    async def run(self, do_init, do_push, do_pull, task_status=trio.TASK_STATUS_IGNORED):
         assert self.nursery is None
         with self.cancel_scope:
 
@@ -128,6 +128,7 @@ class VaultController:
             self.task_status = task_status
             self.do_init = do_init
             self.do_push = do_push
+            self.do_pull = do_pull
 
             if self.task_status:
                 self.task_status.started()
@@ -152,7 +153,7 @@ class VaultController:
                         await self.app.pull_vault(self.vault, full=full_pull)
                         await self.app.push_vault(self.vault)
                         self.do_push = None
-                    else:
+                    elif self.do_pull:
                         await self.app.pull_vault(self.vault)
 
                     if self.update_on_idle:

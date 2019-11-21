@@ -117,13 +117,14 @@ class SyncryptApp(object):
     def vault_controller(self, vault):
         return VaultController(self, vault)
 
-    async def start_vault(self, vault, async_init: bool = False, async_push: bool = False):
+    async def start_vault(self, vault, async_init: bool = False, async_push: bool = False,
+            async_pull: bool = False):
         logger.info("Registering vault %s", vault)
         assert vault.id not in self.vault_controllers
         self.vaults.append(vault)
         vault_controller = self.vault_controller(vault)
         self.vault_controllers[vault.id] = vault_controller
-        await self.nursery.start(vault_controller.run, async_init, async_push)
+        await self.nursery.start(vault_controller.run, async_init, async_push, async_pull)
 
     async def stop_vault(self, vault):
         assert vault.id in self.vault_controllers
@@ -138,7 +139,7 @@ class SyncryptApp(object):
         await self.reset_vault_database(vault, remove_vault=True)
         await self.stop_vault(vault)
 
-    async def add_vault(self, vault, async_init: bool = False, async_push: bool = False):
+    async def add_vault(self, vault, async_pull: bool = False, async_init: bool = False, async_push: bool = False):
         for v in self.vaults:
             if os.path.abspath(v.folder) == os.path.abspath(vault.folder):
                 raise VaultIsAlreadySyncing(v.folder)
@@ -148,6 +149,7 @@ class SyncryptApp(object):
             self.config.add_vault_dir(os.path.abspath(vault.folder))
         await self.start_vault(
             vault,
+            async_pull=async_pull,
             async_init=async_init,
             async_push=async_push
         )
@@ -648,8 +650,6 @@ class SyncryptApp(object):
         "Pull all registered vaults"
 
         self.identity.assert_initialized()
-
-        logger.debug('syncrypt.pull')
 
         async with trio.open_nursery() as nursery:
             for vault in self.vaults:
