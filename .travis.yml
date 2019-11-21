@@ -7,6 +7,9 @@ matrix:
     - os: linux
       dist: xenial
       python: 3.7
+    - os: linux
+      dist: xenial
+      python: 3.8
     - os: osx
       sudo: required
       language: generic
@@ -21,6 +24,13 @@ matrix:
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
       env: PYTHON_VERSION=3.7.1
+    - os: osx
+      sudo: required
+      language: generic
+      # This will build OS X 10.11 instead of default 10.12.
+      # We need this to get builds running on older OS X versions.
+      osx_image: xcode7.3
+      env: PYTHON_VERSION=3.8.0
 addons:
   apt:
     packages:
@@ -41,11 +51,13 @@ install: |
       $(pyenv root)/shims/python -m venv venv;
       source venv/bin/activate;
       pip install 'setuptools>=38.5'
+      pip install -e '.'
       pip install -e '.[dist]'
       pip install -e '.[test]'
       pip install --upgrade 'git+git://github.com/gorakhargosh/watchdog@17b3c30c4a2c420b450a6612ee995c4e1bb441e8'
   else
       pip install 'setuptools>=38.5'
+      pip install -e '.'
       pip install -e '.[dist]'
       pip install -e '.[test]'
   fi
@@ -60,12 +72,14 @@ before_script:
       py.test -m 'not (requires_server or external_resources)'
     fi
 
-# command to build
+# command to build, do not build on python 3.8 because pyinstaller doesn't support it yet
 script:
-  - python setup.py dist
-  # Try to run the compiled executables to see if we run in import errors
-  - "./dist/syncrypt-bin --help"
-  - "./dist/syncrypt_daemon -h"
+  - |
+    if [ ! $TRAVIS_PYTHON_VERSION == '3.8' ] && [ ! $PYTHON_VERSION == "3.8.0" ]; then
+      python setup.py dist;
+      ./dist/syncrypt-bin --help;
+      ./dist/syncrypt_daemon -h;
+    fi
 
 deploy:
   - provider: script
@@ -82,4 +96,3 @@ deploy:
       tags: true
       condition: |
         ( $TRAVIS_PYTHON_VERSION == '3.6' ) && ( $TRAVIS_OS_NAME == 'linux' )
-
