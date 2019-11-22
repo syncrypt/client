@@ -3,10 +3,10 @@ matrix:
   include:
     - os: linux
       python: 3.6
-      env: DEPLOY_ARTIFACT=true
     - os: linux
       dist: xenial
       python: 3.7
+      env: DEPLOY_ARTIFACT=true
     - os: linux
       dist: xenial
       python: 3.8
@@ -16,14 +16,14 @@ matrix:
       # This will build OS X 10.11 instead of default 10.12.
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
-      env: PYTHON_VERSION=3.6.5 DEPLOY_ARTIFACT=true
+      env: PYTHON_VERSION=3.6.5
     - os: osx
       sudo: required
       language: generic
       # This will build OS X 10.11 instead of default 10.12.
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
-      env: PYTHON_VERSION=3.7.1
+      env: PYTHON_VERSION=3.7.1 DEPLOY_ARTIFACT=true
     - os: osx
       sudo: required
       language: generic
@@ -75,7 +75,7 @@ before_script:
 # command to build, do not build on python 3.8 because pyinstaller doesn't support it yet
 script:
   - |
-    if [ ! $TRAVIS_PYTHON_VERSION == '3.8' ] && [ ! $PYTHON_VERSION == "3.8.0" ]; then
+    if [ ! "$TRAVIS_PYTHON_VERSION" == "3.8" ] && [ ! "$PYTHON_VERSION" == "3.8.0" ]; then
       python setup.py dist;
       ./dist/syncrypt-bin --help;
       ./dist/syncrypt_daemon -h;
