@@ -101,7 +101,7 @@ install:
   - "python -m pip install --disable-pip-version-check --user --upgrade pip==19.1.1 setuptools==41.0.1"
 
   # Install python-snappy from wheel
-  - "python -m pip install https://syncrypt.space/build/python_snappy-0.5.3-%WHEEL_PLATFORM%-%WHEEL_ARCH%.whl"
+  - "python -m pip install https://syncrypt.space/build/python_snappy-0.5.4-%WHEEL_PLATFORM%-%WHEEL_ARCH%.whl"
 
   # Install the build dependencies of the project. If some dependencies contain
   # compiled extensions and are not provided as pre-built wheel packages,
