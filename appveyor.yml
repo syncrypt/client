@@ -23,7 +23,7 @@ environment:
       DIST_PLATFORM: "win-x86_64"
       WHEEL_ARCH: "win_amd64"
       WHEEL_PLATFORM: "cp36-cp36m"
-      DEPLOY_ARTIFACT: "true"
+      SYNCRYPT_DEPLOY: "true"
 
     - PYTHON: "C:\\Python37"
       PYTHON_VERSION: "3.7.x"
@@ -141,4 +141,4 @@ on_success:
   # Weird CMD way to set VERSION env var to current syncrypt version
   - "for /f %%i in ('dist\\syncrypt.exe --short-version') do set SYNCRYPT_VERSION=%%i"
   # Only push to artifact tray for the most recent python version
-  - "IF \"%DEPLOY_ARTIFACT%\" == \"true\" (curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VERSION%/\")"
+  - "IF \"%SYNCRYPT_DEPLOY%\" == \"true\" (curl -X POST --header \"Content-Type: application/octet-stream\" --data-binary \"@syncrypt-%SYNCRYPT_VER%.%DIST_PLATFORM%.zip\" \"%artifact_tray_url%syncrypt-%DIST_PLATFORM%-py%PYTHON_VERSION%.zip/%APPVEYOR_REPO_BRANCH%/%SYNCRYPT_VERSION%/\")"

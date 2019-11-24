@@ -6,7 +6,7 @@ matrix:
     - os: linux
       dist: xenial
       python: 3.7
-      env: DEPLOY_ARTIFACT=true
+      env: SYNCRYPT_DEPLOY=true
     - os: linux
       dist: xenial
       python: 3.8
@@ -23,7 +23,7 @@ matrix:
       # This will build OS X 10.11 instead of default 10.12.
       # We need this to get builds running on older OS X versions.
       osx_image: xcode7.3
-      env: PYTHON_VERSION=3.7.1 DEPLOY_ARTIFACT=true
+      env: PYTHON_VERSION=3.7.1 SYNCRYPT_DEPLOY=true
     - os: osx
       sudo: required
       language: generic
@@ -87,7 +87,7 @@ deploy:
     skip_cleanup: true
     on:
       all_branches: true
-      condition: ( $DEPLOY_ARTIFACT == 'true' )
+      condition: ( $SYNCRYPT_DEPLOY == 'true' )
   - provider: pypi
     user: lordi
     password:
