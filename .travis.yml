@@ -87,15 +87,16 @@ script:
       fi
       ./dist/syncrypt-bin --help;
       ./dist/syncrypt_daemon -h;
+      if [[ "$SYNCRYPT_DEPLOY" == "true" ]]; then
+        if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+          BRANCH=$TRAVIS_BRANCH ./venv/bin/python setup.py deploy
+        else
+          BRANCH=$TRAVIS_BRANCH python setup.py deploy
+        fi
+      fi
     fi
 
 deploy:
-  - provider: script
-    script: BRANCH=$TRAVIS_BRANCH python setup.py deploy
-    skip_cleanup: true
-    on:
-      all_branches: true
-      condition: ( $SYNCRYPT_DEPLOY == 'true' )
   - provider: pypi
     user: lordi
     password:
