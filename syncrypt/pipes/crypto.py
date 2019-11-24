@@ -11,6 +11,8 @@ from .base import Buffered, Pipe
 
 logger = logging.getLogger(__name__)
 
+VERBOSE_DEBUG = False
+
 
 class Hash(Pipe):
     'Hash everything that goes through this pipe'
@@ -107,7 +109,8 @@ class EncryptAES(AESPipe):
         if self.aes is None:
             self.iv = os.urandom(self.block_size)
             self.aes = AES.new(self.key, AES.MODE_CBC, self.iv)
-            logger.debug('Writing IV of %d bytes', len(self.iv))
+            if VERBOSE_DEBUG:
+                logger.debug('Writing IV of %d bytes', len(self.iv))
             enc_data += self.iv
         enc_data += self.aes.encrypt(data)
         logger.debug('Encrypting %d bytes -> %d bytes', len(data), len(enc_data))
@@ -145,7 +148,8 @@ class EncryptRSA(Buffered):
         self.public_key = public_key
         self.block_size = self.get_block_size()
         self.cipher = self.protocol.new(self.public_key)
-        logger.debug('Encrypting block size: %d bytes', self.block_size)
+        if VERBOSE_DEBUG:
+            logger.debug('Encrypting block size: %d bytes', self.block_size)
         super(EncryptRSA, self).__init__(self.block_size)
 
     def get_block_size(self) -> int:
@@ -155,7 +159,8 @@ class EncryptRSA(Buffered):
         data = await super(EncryptRSA, self).read(-1)
         if len(data) > 0:
             enc_data = self.cipher.encrypt(data)
-            logger.debug('RSA Encrypted %d -> %d bytes', len(data), len(enc_data))
+            if VERBOSE_DEBUG:
+                logger.debug('RSA Encrypted %d -> %d bytes', len(data), len(enc_data))
             return enc_data
         else:
             return data
@@ -172,7 +177,8 @@ class DecryptRSA(Buffered):
         self.private_key = private_key
         self.block_size = self.get_block_size()
         self.cipher = self.protocol.new(self.private_key)
-        logger.debug('Decrypting block size: %d bytes', self.block_size)
+        if VERBOSE_DEBUG:
+            logger.debug('Decrypting block size: %d bytes', self.block_size)
         super(DecryptRSA, self).__init__(self.block_size)
 
     def get_block_size(self) -> int:
@@ -183,7 +189,8 @@ class DecryptRSA(Buffered):
         if len(data) > 0:
             sentinel = 0
             dec_data = self.cipher.decrypt(data, sentinel)
-            logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
+            if VERBOSE_DEBUG:
+                logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
             return dec_data
         else:
             return data
@@ -208,7 +215,8 @@ class DecryptRSA_PKCS1_OAEP(DecryptRSA):
         data = await super(DecryptRSA, self).read(-1)  # pylint: disable=bad-super-call
         if len(data) > 0:
             dec_data = self.cipher.decrypt(data)
-            logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
+            if VERBOSE_DEBUG:
+                logger.debug('RSA Decrypted %d -> %d bytes', len(data), len(dec_data))
             return dec_data
         else:
             return data
