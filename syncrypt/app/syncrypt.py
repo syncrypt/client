@@ -605,7 +605,6 @@ class SyncryptApp(object):
             await self.sync_vault(vault)
             limit = trio.CapacityLimiter(1)
 
-
             await self.set_vault_state(vault, VaultState.SYNCING)
             async with trio.open_nursery() as nursery:
                 await vault.backend.open()
