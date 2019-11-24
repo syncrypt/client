@@ -77,7 +77,14 @@ async def run_syncrypt():
 
             smokesignal.emit('shutdown', app=app)
             will_restart = app.restart_flag
-    except Exception:
+    except KeyboardInterrupt:
+        pass
+    except trio.MultiError as e:
+        if all([not isinstance(child, KeyboardInterrupt) for child in e.exceptions]):
+            logger.exception("Uncaught multi-exception, restarting daemon...")
+            will_restart = True
+            return
+    except BaseException:
         logger.exception("Uncaught exception, restarting daemon...")
         will_restart = True
         return
@@ -85,14 +92,13 @@ async def run_syncrypt():
 
 
 def main():
+    global will_restart
+
     while True:
         will_restart = True
-        try:
-            trio_asyncio.run(run_syncrypt)
-            if not will_restart:
-                break
-        except Exception:
-            logger.exception("Uncaught trio exception, restarting daemon...")
+        trio_asyncio.run(run_syncrypt)
+        if not will_restart:
+            break
         time.sleep(2)
 
 

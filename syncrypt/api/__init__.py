@@ -377,8 +377,15 @@ class SyncryptAPI():
             logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
                     .format(self.app.config))
             self.ready.set()
-            await self.shutdown.wait()
-            await trio_asyncio.aio_as_trio(site.stop)
+            try:
+                await self.shutdown.wait()
+
+                # Default safe API shutdown
+                await trio_asyncio.aio_as_trio(site.stop)
+            except:
+                # Emergency API shutdown to free the API port
+                await site.stop()
+                raise
 
         self.dead.set()
 

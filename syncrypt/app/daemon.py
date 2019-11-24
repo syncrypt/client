@@ -89,7 +89,7 @@ class SyncryptDaemonApp(SyncryptApp):
             try:
                 if self.vaults:
                     await self.refresh_vault_info()
-            except:
+            except Exception:
                 logger.exception('Exception while refreshing vaults')
             await trio.sleep(15.0)
 
@@ -98,6 +98,6 @@ class SyncryptDaemonApp(SyncryptApp):
             try:
                 if self.flying_vaults:
                     await self.flying_vaults.update()
-            except:
+            except Exception:
                 logger.exception('Exception while refreshing flying vaults')
             await trio.sleep(30.0)
