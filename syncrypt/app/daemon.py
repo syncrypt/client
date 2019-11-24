@@ -68,6 +68,7 @@ class SyncryptDaemonApp(SyncryptApp):
         # It would be nice to have an erlang/elixir inspired supervisor here instead
         self.nursery.start_soon(self.refresh_vault_info_periodically)
         self.nursery.start_soon(self.refresh_flying_vaults_periodically)
+        await self.pull()
 
     async def shutdown(self):
         self.restart_flag = False
