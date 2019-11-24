@@ -44,7 +44,9 @@ class DistCommand(Command):
             os.system('pyinstaller --onefile scripts/syncrypt_daemon')
         else:
             os.system('rm -rf ./dist/syncrypt')
-            os.system('PYTHONPATH=lib/python3.5/site-packages/ pyinstaller syncrypt.spec')
+            exit_code = os.system(('{0} syncrypt.spec').format(os.environ.get("PYINSTALLER", "pyinstaller")))
+            if exit_code != 0:
+                raise OSError('pyinstaller ({0}) did not run correctly'.format(os.environ.get("PYINSTALLER", "pyinstaller")))
             os.system('mkdir ./dist/syncrypt')
             os.system('cp README.md LICENSE ./dist/syncrypt')
             os.system('cp dist/syncrypt-bin ./dist/syncrypt/syncrypt')

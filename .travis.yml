@@ -81,7 +81,7 @@ script:
   - |
     if [ ! "$TRAVIS_PYTHON_VERSION" == "3.8" ] && [ ! "$PYTHON_VERSION" == "3.8.0" ]; then
       if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-        ./venv/bin/python setup.py dist;
+        PYINSTALLER=./venv/bin/pyinstaller ./venv/bin/python setup.py dist;
       else
         python setup.py dist;
       fi
