@@ -49,12 +49,11 @@ install: |
       pyenv local $PYTHON_VERSION;
       pyenv global $PYTHON_VERSION;
       $(pyenv root)/shims/python -m venv venv;
-      source venv/bin/activate;
-      pip install 'setuptools>=38.5'
-      pip install -e '.'
-      pip install -e '.[dist]'
-      pip install -e '.[test]'
-      pip install --upgrade 'git+git://github.com/gorakhargosh/watchdog@17b3c30c4a2c420b450a6612ee995c4e1bb441e8'
+      ./venv/bin/pip install 'setuptools>=38.5'
+      ./venv/bin/pip install -e '.'
+      ./venv/bin/pip install -e '.[dist]'
+      ./venv/bin/pip install -e '.[test]'
+      ./venv/bin/pip install --upgrade 'git+git://github.com/gorakhargosh/watchdog@17b3c30c4a2c420b450a6612ee995c4e1bb441e8'
   else
       pip install 'setuptools>=38.5'
       pip install -e '.'
@@ -63,11 +62,16 @@ install: |
   fi
 
 before_script:
-  - mypy syncrypt tests scripts/syncrypt_daemon
+  - | 
+    if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+      ./venv/bin/mypy syncrypt tests scripts/syncrypt_daemon
+    else
+      mypy syncrypt tests scripts/syncrypt_daemon
+    fi
   #- pylint syncrypt scripts
   - |
     if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-      py.test -m 'not (requires_server or external_resources)'
+      ./venv/bin/py.test -m 'not (requires_server or external_resources)'
     else
       py.test -m 'not (requires_server or external_resources)'
     fi
@@ -76,7 +80,11 @@ before_script:
 script:
   - |
     if [ ! "$TRAVIS_PYTHON_VERSION" == "3.8" ] && [ ! "$PYTHON_VERSION" == "3.8.0" ]; then
-      python setup.py dist;
+      if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+        ./venv/bin/python setup.py dist;
+      else
+        python setup.py dist;
+      fi
       ./dist/syncrypt-bin --help;
       ./dist/syncrypt_daemon -h;
     fi
