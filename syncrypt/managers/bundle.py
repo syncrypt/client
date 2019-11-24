@@ -40,6 +40,17 @@ class BundleManager:
         if os.path.isdir(os.path.join(vault.folder, relpath)):
             return None
 
+        with store.session() as session:
+            try:
+                bundle = session.query(Bundle).filter(Bundle.vault==vault,
+                        Bundle.relpath==relpath.encode()).one()
+                # vault is loaded lazily. We already have the vault
+                # object here, so just set it.
+                bundle.vault = vault
+                return bundle
+            except NoResultFound:
+                bundle = Bundle(relpath=relpath, vault=vault, vault_id=vault.id)
+
         bundle = Bundle(relpath=relpath, vault=vault, vault_id=vault.id)
         bundle.update_store_hash()
         return bundle
