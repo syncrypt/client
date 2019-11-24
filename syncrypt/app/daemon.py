@@ -92,7 +92,7 @@ class SyncryptDaemonApp(SyncryptApp):
                     await self.refresh_vault_info()
             except Exception:
                 logger.exception('Exception while refreshing vaults')
-            await trio.sleep(15.0)
+            await trio.sleep(30.0)
 
     async def refresh_flying_vaults_periodically(self):
         while True:
