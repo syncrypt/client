@@ -129,7 +129,6 @@ class SyncryptAPI():
                     credentials['email'], credentials['password']),
                 num_tries=1)
         logger.info('Successfully logged in and stored auth token.')
-        await backend.close()
         await self.app.upload_identity()
         return JSONResponse({
             'status': 'ok'
@@ -156,7 +155,6 @@ class SyncryptAPI():
         connected = False
         try:
             await backend.open()
-            await backend.close()
             connected = True
         except InvalidAuthentification:
             pass
@@ -227,7 +225,6 @@ class SyncryptAPI():
         '''
         backend = await self.app.open_backend()
         user_info = await backend.user_info()
-        await backend.close()
         return JSONResponse(user_info)
 
     @require_auth_token
@@ -242,7 +239,6 @@ class SyncryptAPI():
         logger.info('Sending user feedback: %d bytes', len(feedback_text))
         backend = await self.app.open_backend()
         await backend.user_feedback(feedback_text.encode('utf-8'))
-        await backend.close()
         return JSONResponse({'status': 'ok'})
 
     @require_auth_token

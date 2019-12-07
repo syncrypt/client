@@ -85,5 +85,3 @@ class FlyingVaultManager:
                 fv.vault_metadata = metadata
 
                 session.add(fv)
-
-            await backend.close()

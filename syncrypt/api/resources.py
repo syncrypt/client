@@ -414,7 +414,6 @@ class UserResource(Resource):
             'created_at': key['created_at'],
             'fingerprint': key['fingerprint']
         } for key in key_list])
-        await backend.close()
         return response
 
 

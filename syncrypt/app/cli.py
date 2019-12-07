@@ -44,11 +44,9 @@ class SyncryptCLIApp(SyncryptApp):
         # Already logged in?
         try:
             backend = await self.open_backend(num_tries=1)
-            await backend.close()
             print("Already logged in.")
         except InvalidAuthentification:
             backend = await self.open_backend(always_ask_for_creds=True)
-            await backend.close()
             await self.upload_identity()
 
     async def register(self):
@@ -109,7 +107,6 @@ class SyncryptCLIApp(SyncryptApp):
         backend = await self.open_backend()
         key_list = (await backend.list_keys(user))
         self.print_key_list(key_list, with_art=with_art)
-        await backend.close()
 
     def print_key_list(self, key_list, with_art=False):
         for key in key_list:
@@ -198,7 +195,6 @@ class SyncryptCLIApp(SyncryptApp):
                 size_unit
             )
             print(fmt_str)
-        await backend.close()
 
     async def print_log(self, sync=False, verbose=False):
         # the following behaviour is deprecated, we want to sync the vault and then show the log

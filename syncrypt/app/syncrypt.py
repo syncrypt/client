@@ -291,7 +291,6 @@ class SyncryptApp(object):
         await backend.upload_identity(self.identity, description)
         logger.info('Uploaded public key with fingerprint "{0}".'.format(
             format_fingerprint(self.identity.get_fingerprint())))
-        await backend.close()
 
     async def open_or_init(self, vault):
         try:
@@ -358,8 +357,6 @@ class SyncryptApp(object):
                     name = metadata['name']
 
             vaults.append((vault_id, name))
-
-        await backend.close()
 
         return vaults
 
@@ -448,8 +445,6 @@ class SyncryptApp(object):
                 vault_id, format_fingerprint(self.identity.get_fingerprint()))
         auth_token, package_info = await \
                 backend.get_user_vault_key(self.identity.get_fingerprint(), vault_id)
-
-        await backend.close()
 
         # decrypt package
         export_pipe = Once(package_info) \
@@ -586,8 +581,6 @@ class SyncryptApp(object):
                                 session.add(v)
                     except SyncryptBaseException:
                         pass
-
-        await backend.close()
 
     async def push(self):
         "Push all registered vaults"
