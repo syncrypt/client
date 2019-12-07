@@ -8,7 +8,7 @@ import zipfile
 from collections import OrderedDict
 from enum import Enum
 from io import BytesIO, StringIO
-from typing import TYPE_CHECKING, Dict  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Dict, Optional  # pylint: disable=unused-import
 
 from sqlalchemy import Column, DateTime, Integer, LargeBinary, String, orm
 
@@ -72,7 +72,7 @@ class Vault(MetadataHolder, Base):
         self.state = VaultState.UNINITIALIZED
         self.folder = folder
         self._bundle_cache = {}  # type: Dict[str, Bundle]
-        self._identity = None  # type: Identity
+        self._identity = None  # type: Optional[Identity]
 
         self.logger = VaultLoggerAdapter(self, logger)
 
@@ -89,9 +89,9 @@ class Vault(MetadataHolder, Base):
         self.logger = VaultLoggerAdapter(self, logger)
 
     @property
-    def config(self):
+    def config(self) -> VaultConfig:
         try:
-            return self._config
+            return self._config  # type: ignore
         except AttributeError:
             self.check_existence()
             self._config = VaultConfig(self.config_path)
@@ -188,8 +188,7 @@ class Vault(MetadataHolder, Base):
         return folder_size(self.folder)
 
     async def close(self):
-        if hasattr(self, '_backend'):
-            await self.backend.close()
+        pass
 
     def clear_bundle_cache(self):
         self._bundle_cache = {}

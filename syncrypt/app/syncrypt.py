@@ -178,15 +178,14 @@ class SyncryptApp(object):
             await self.delete_vault(vault)
 
     def cancel_push(self, bundle):
-        id = "{0}:{1}".format(bundle.vault.id, bundle.relpath)
-        if id in self._scheduled_pushes:
-            logger.debug('Cancel shedule for %s', id)
-            self._scheduled_pushes[id].cancel()
-            del self._scheduled_pushes[id]
+        if bundle in self._scheduled_pushes:
+            logger.debug('Cancel shedule for %s', bundle)
+            self._scheduled_pushes[bundle].cancel()
+            del self._scheduled_pushes[bundle]
         if bundle in self._running_pushes:
             logger.warning('Update/upload for %s is running, aborting it now.', bundle)
-            self._running_pushes[id].cancel()
-            del self._running_pushes[id]
+            self._running_pushes[bundle].cancel()
+            del self._running_pushes[bundle]
 
     def schedule_push(self, bundle):
         self.cancel_push(bundle)
@@ -195,15 +194,16 @@ class SyncryptApp(object):
 
         async def push_scheduled(bundle):
             with trio.CancelScope() as cancel_scope:
-                id = "{0}:{1}".format(bundle.vault.id, bundle.relpath)
-                if id in self._scheduled_pushes:
+                if bundle in self._scheduled_pushes:
                     return
-                self._scheduled_pushes[id] = cancel_scope
-                await trio.sleep(1)
-                del self._scheduled_pushes[id]
+                self._scheduled_pushes[bundle] = cancel_scope
+                await trio.sleep(1.0)
+                del self._scheduled_pushes[bundle]
                 logger.debug('Scheduled update is executing for %s', bundle)
+                assert controller.nursery is not None
                 controller.nursery.start_soon(self.maybe_push_bundle, bundle)
 
+        assert controller.nursery is not None
         controller.nursery.start_soon(push_scheduled, bundle)
 
     async def init_vault(self, vault, remote=None, upload_vault_key=True, upload_identity=True):
@@ -611,18 +611,17 @@ class SyncryptApp(object):
             await self.sync_vault(vault)
             limit = trio.CapacityLimiter(1)
 
-            async with self.vault_controllers[vault.id].lock:
-                await self.set_vault_state(vault, VaultState.SYNCING)
-                async with trio.open_nursery() as nursery:
-                    await vault.backend.open()
-                    await self.update_vault_metadata(vault)
+            await self.set_vault_state(vault, VaultState.SYNCING)
+            async with trio.open_nursery() as nursery:
+                await vault.backend.open()
+                await self.update_vault_metadata(vault)
 
-                    async for bundle in self.bundles.upload_bundles_for_vault(vault):
-                        async with limit:
-                            await self.push_bundle(bundle)
-                            #nursery.start_soon(self.push_bundle, bundle)
+                async for bundle in self.bundles.upload_bundles_for_vault(vault):
+                    async with limit:
+                        await self.push_bundle(bundle)
+                        # nursery.start_soon(self.push_bundle, bundle)
 
-                    await self.set_vault_state(vault, VaultState.READY)
+                await self.set_vault_state(vault, VaultState.READY)
         except Exception:
             vault.logger.exception("Failure during vault push")
             await self.set_vault_state(vault, VaultState.FAILURE)
@@ -647,7 +646,7 @@ class SyncryptApp(object):
                     break
                 except SyncRequired:
                     await trio.sleep(1)
-                    await self.sync_vault(bundle.vault)
+                    await self.sync_vault(bundle.vault) # deadlock?
 
             self.stats['uploads'] += 1
 

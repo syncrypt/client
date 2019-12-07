@@ -8,14 +8,17 @@ class SnappyCompress(Pipe):
         self.compressor = snappy.StreamCompressor()
 
     async def read(self, count=-1):
+        assert self.input is not None
         contents = await self.input.read(count)
         return self.compressor.add_chunk(contents, compress=True)
+
 
 class SnappyDecompress(Pipe):
     def __init__(self):
         self.decompressor = snappy.StreamDecompressor()
 
     async def read(self, count=-1):
+        assert self.input is not None
         data = b''
         while True:
             contents = await self.input.read(count)

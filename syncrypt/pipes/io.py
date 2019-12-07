@@ -2,7 +2,7 @@ import logging
 import os.path
 import shutil
 import sys
-from typing import Optional
+from typing import Optional, Any
 
 import trio
 
@@ -24,12 +24,13 @@ class StreamReader(Source):
 class FileReader(Source):
     def __init__(self, filename: str) -> None:
         self.filename = filename
-        self.handle = None # type: Optional[trio.abc.AsyncResource]
+        self.handle = None  # type: Any
         super(FileReader, self).__init__()
 
     async def read(self, count=-1):
         if self.handle is None and not self._eof:
             self.handle = await trio.open_file(self.filename, 'rb')
+        assert self.handle is not None
         return (await self.handle.read(count))
 
     async def close(self):
@@ -57,6 +58,7 @@ class StreamWriter(Sink):
         super(StreamWriter, self).__init__()
 
     async def read(self, count=-1):
+        assert self.input is not None
         buf = await self.input.read(count)
         if buf and len(buf) > 0:
             self.writer.write(buf)
@@ -67,6 +69,7 @@ class StreamWriter(Sink):
 
 class TrioStreamWriter(StreamWriter):
     async def read(self, count=-1):
+        assert self.input is not None
         buf = await self.input.read(count)
         if buf and len(buf) > 0:
             await self.writer.send_all(buf)
@@ -100,7 +103,9 @@ class FileWriter(Sink):
                 fn = self.get_temporary_filename(fn)
             logger.debug('Writing to %s', fn)
             self.handle = await trio.open_file(fn, 'wb')
+        assert self.input is not None
         contents = await self.input.read(count)
+        assert self.handle is not None
         await self.handle.write(contents)
         return contents
 

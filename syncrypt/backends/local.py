@@ -3,7 +3,7 @@ import os
 import pickle
 import shutil
 from datetime import datetime
-from typing import Any, List, cast  # pylint: disable=unused-import
+from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 from uuid import uuid4
 
 from syncrypt.exceptions import VaultNotInitialized
@@ -102,6 +102,9 @@ class LocalStorageBackend(StorageBackend):
         revision.sign(identity=identity)
 
         return self.add_revision(revision)
+
+    async def list_keys(self, user: Optional[str] = None) -> List[Any]:
+        return []
 
     async def list_vaults(self) -> List[Any]:
         return []
@@ -230,9 +233,6 @@ class LocalStorageBackend(StorageBackend):
         return self.add_revision(revision)
 
     def set_auth(self, username: str, password: str):
-        pass
-
-    async def close(self):
         pass
 
     async def upload_identity(self, identity: Identity, description: str=""):

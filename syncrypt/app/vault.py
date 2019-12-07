@@ -1,7 +1,7 @@
 import logging
 import os.path
 from functools import partial
-from typing import Tuple
+from typing import Optional, Tuple
 
 import trio
 from trio_typing import Nursery
@@ -31,8 +31,8 @@ class VaultController:
         self.app = app
         self.vault = vault
         self.lock = trio.Lock()
-        self.ready = trio.Event()
-        self.nursery = None # type: Nursery
+        self.ready = False
+        self.nursery = None  # type: Optional[Nursery]
         self.update_on_idle = update_on_idle
         self.logger = VaultLoggerAdapter(self.vault, logging.getLogger(__name__))
         send_channel, receive_channel = trio.open_memory_channel(128) # type: Tuple[trio.abc.SendChannel, trio.abc.ReceiveChannel]
@@ -48,9 +48,9 @@ class VaultController:
         self.logger.debug('State transition: %s -> %s', old_state, new_state)
 
         if new_state == VaultState.READY:
-            self.ready.set()
+            self.ready = True
         else:
-            self.ready.clear()
+            self.ready = False
 
         if new_state == VaultState.SHUTDOWN:
             await self.vault.close()
@@ -58,7 +58,8 @@ class VaultController:
     async def autopull_vault_task(self):
         'Install a regular autopull for the given vault'
 
-        await self.ready.wait()
+        while not self.ready:
+            await trio.sleep(1.0)
 
         folder = os.path.abspath(self.vault.folder)
         interval = int(self.vault.config.get('vault.pull_interval')) / 30
@@ -67,16 +68,21 @@ class VaultController:
         while True:
             await trio.sleep(interval)
             if self.vault.state == VaultState.READY and not self.lock.locked():
-                self.nursery.start_soon(self.app.pull_vault, self.vault)
+                if self.nursery:
+                    self.nursery.start_soon(self.app.pull_vault, self.vault)
 
     async def watchdog_task(self):
         self.logger.debug("watchdog_task started")
 
-        await self.ready.wait()
+        while not self.ready:
+            await trio.sleep(1.0)
 
         async with trio.open_nursery() as nursery:
             watchdog = Watchdog(self.vault.folder,
-                event_handler=MemoryChannelEventHandler(self.file_changes_send_channel)
+                event_handler=MemoryChannelEventHandler(
+                    self.file_changes_send_channel,
+                    trio.hazmat.current_trio_token()
+                )
             )
             watchdog.start()
             try:
@@ -126,14 +132,12 @@ class VaultController:
 
             self.logger.debug("Finished vault initialization successfully.")
 
-            self.task_status = task_status
             self.do_init = do_init
             self.do_push = do_push
             self.do_pull = do_pull
 
-            if self.task_status:
-                self.task_status.started()
-                self.task_status = None
+            if task_status:
+                task_status.started()
 
             await self.loop()
 

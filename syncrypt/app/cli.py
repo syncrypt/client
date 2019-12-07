@@ -222,6 +222,5 @@ class SyncryptCLIApp(SyncryptApp):
                         .format(
                             created_at=revision.created_at,
                             creator=revision.creator_id,
-                            fingerprint=revision.user_fingerprint,
                             op=revision.operation
                         ))

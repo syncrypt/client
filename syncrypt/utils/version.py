@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# type: ignore
 # Author: Douglas Creager <dcreager@dcreager.net>
 # This file is placed into the public domain.
 
@@ -39,8 +40,7 @@ from subprocess import STDOUT, CalledProcessError, check_output
 
 __all__ = ("get_git_version")
 
-script_dir = os.path.abspath(os.path.dirname(inspect.getfile(
-                                             inspect.currentframe())))
+script_dir = os.path.abspath(os.path.dirname(inspect.getfile(inspect.currentframe())))  # type: ignore
 ROOT = os.path.abspath(os.path.join(script_dir, os.pardir, os.pardir))
 VERSION_FILE = os.path.join(ROOT, "syncrypt", "RELEASE-VERSION")
 

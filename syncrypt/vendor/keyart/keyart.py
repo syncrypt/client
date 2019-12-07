@@ -223,6 +223,7 @@ def _get_coin(num_of_hits, ansi_art=False, coin=None):
         coin = coins[num_of_hits]
     return '{}{}{}'.format(color, coin, reset)
 
+
 def gpg_cmd(cmd):
     gpg = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     for lines in gpg.communicate()[0].decode('ascii').split('\n'):
@@ -232,8 +233,9 @@ def gpg_cmd(cmd):
             algo = colons[3]
         elif colons[0] == 'fpr':
             print(draw_art(size, algo, colons[9]))
-            size = None
-            algo = None
+            size = None  # type: ignore
+            algo = None  # type: ignore
+
 
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser(

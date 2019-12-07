@@ -155,10 +155,10 @@ setup(
         'certifi',
         'colorlog',
         'erlastic',
-        'trio==0.11.0',
+        'trio==0.13.0',
         'outcome==1.0.0',
         'trio-asyncio==0.10.0',
-        'trio-typing==0.2.0',
+        'trio-typing==0.3.0',
         'async_generator', # for python 3.6
         'typing_extensions>=3.7.2',
         'iso8601',
@@ -190,8 +190,8 @@ setup(
             'pytest==3.6.0',
             'pytest-trio==0.5.2',
             'trio-websocket',
-            'attrs>=17.4.0',
-            'mypy==0.711',  # used for static type checking
+            'attrs>=19.2.0',
+            'mypy==0.750',  # used for static type checking
             'pylint'  # used for static code analysis
         ],
         'uvloop': [

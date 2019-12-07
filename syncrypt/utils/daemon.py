@@ -150,7 +150,7 @@ class Daemon(object):
 
         # Start the daemon
         self.daemonize()
-        self.run(*args, **kwargs)
+        self.run(*args, **kwargs)  # type: ignore
 
     def stop(self):
         """

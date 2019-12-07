@@ -53,4 +53,4 @@ class MetadataHolder:
 
     async def update_serialized_metadata(self, stream):
         serialized_metadata = await stream.read()
-        self._metadata = self.unserialize_metadata(serialized_metadata)
+        self._metadata = self.unserialize_metadata(serialized_metadata)  # type: ignore

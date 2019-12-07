@@ -90,6 +90,7 @@ class BundleManager:
                         continue
                     abspath = os.path.join(folder, file)
                     relpath = os.path.relpath(abspath, vault.folder)
+                    #logger.debug("%s, %s", abspath, registered_paths)
                     if relpath in registered_paths:
                         continue
                     if os.path.isdir(abspath):

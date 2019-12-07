@@ -88,6 +88,7 @@ class URLWriter(Sink, AiohttpClientSessionMixin):
 
             @trio_asyncio.trio_as_aio
             async def read_from_input():
+                assert self.input is not None
                 return (await self.input.read())
 
             async def feed_http_upload():
@@ -148,6 +149,7 @@ class ChunkedURLWriter(Sink, AiohttpClientSessionMixin):
         self.input = input >> BufferedFree()
 
     async def read(self, count=-1):
+        assert self.input is not None
         if self._url_idx >= len(self._urls):
             return b""
         url = self._urls[self._url_idx]

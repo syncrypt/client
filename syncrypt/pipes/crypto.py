@@ -33,6 +33,7 @@ class Hash(Pipe):
         return self._hash
 
     async def read(self, count=-1):
+        assert self.input is not None
         data = await self.input.read(count)
         if len(data) != 0:
             self._hash.update(data)
@@ -52,6 +53,7 @@ class PadAES(AESPipe):
         self.next_block = None
 
     async def read(self, count=-1):
+        assert self.input is not None
         if self.next_block is None:
             this_block = await self.input.read(count)
         else:
@@ -77,6 +79,7 @@ class UnpadAES(AESPipe):
         self.next_block = None
 
     async def read(self, count=-1):
+        assert self.input is not None
         if self.next_block is None:
             this_block = await self.input.read(count)
         else:
@@ -102,6 +105,7 @@ class EncryptAES(AESPipe):
         self.iv = None
 
     async def read(self, count=-1):
+        assert self.input is not None
         data = await self.input.read(count)
         if len(data) == 0:
             return b''
@@ -124,6 +128,7 @@ class DecryptAES(AESPipe):
         super(DecryptAES, self).__init__()
 
     async def read(self, count=-1):
+        assert self.input is not None
         if self.aes is None:
             iv = await self.input.read(self.block_size)
             if len(iv) != self.block_size:
@@ -147,7 +152,7 @@ class EncryptRSA(Buffered):
     def __init__(self, public_key):
         self.public_key = public_key
         self.block_size = self.get_block_size()
-        self.cipher = self.protocol.new(self.public_key)
+        self.cipher = self.protocol.new(self.public_key)  # type: ignore
         if VERBOSE_DEBUG:
             logger.debug('Encrypting block size: %d bytes', self.block_size)
         super(EncryptRSA, self).__init__(self.block_size)
@@ -176,7 +181,7 @@ class DecryptRSA(Buffered):
     def __init__(self, private_key):
         self.private_key = private_key
         self.block_size = self.get_block_size()
-        self.cipher = self.protocol.new(self.private_key)
+        self.cipher = self.protocol.new(self.private_key)  # type: ignore
         if VERBOSE_DEBUG:
             logger.debug('Decrypting block size: %d bytes', self.block_size)
         super(DecryptRSA, self).__init__(self.block_size)

@@ -1,5 +1,4 @@
 import logging
-import os.path
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 import trio
@@ -33,9 +32,7 @@ class SyncryptDaemonApp(SyncryptApp):
 
     async def start(self):
         try:
-            # TODO: Look into nursery.start, maybe ready.wait() is not needed
-            self.nursery.start_soon(self.api.start)
-            await self.api.ready.wait()
+            await self.nursery.start(self.api.start)
         except OSError:
             logger.error('Port is blocked, could not start API REST server')
             logger.info('Attempting to query running server for version...')

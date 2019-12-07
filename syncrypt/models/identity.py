@@ -5,6 +5,7 @@ import os.path
 import zipfile
 from enum import Enum
 from io import BytesIO
+from typing import Tuple, Optional
 
 import Cryptodome.Util.number
 from Cryptodome.Hash import SHA256
@@ -44,6 +45,7 @@ class Identity(object):
         self.id_rsa_pub_path = id_rsa_pub_path
         self.config = config
         self.state = IdentityState.UNINITIALIZED
+        self._keypair = (None, None)  # type: Tuple[Optional[RSA.RsaKey], Optional[RSA.RsaKey]]
 
     @classmethod
     def from_key(cls, key, config, private_key=None):

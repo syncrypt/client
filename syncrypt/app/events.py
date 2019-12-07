@@ -14,10 +14,10 @@ class MemoryChannelEventHandler:
     controller app.
     '''
 
-    def __init__(self, channel: trio.abc.SendChannel):
+    def __init__(self, channel: trio.abc.SendChannel, token: trio.hazmat.TrioToken):
         self.channel = channel
-        self.portal = trio.BlockingTrioPortal()
         self.lock = threading.Lock()
+        self.token = token
         super(MemoryChannelEventHandler, self).__init__()
 
     def dispatch(self, event):
@@ -28,11 +28,11 @@ class MemoryChannelEventHandler:
         '''
         with self.lock:
             try:
-                self.portal.run(self.handle_event, event)
+                trio.from_thread.run(self.handle_event, event, trio_token=self.token)
             except (trio.RunFinishedError, trio.Cancelled):
                 pass
-            except Exception as e:
-                logger.exception('Unknown exception during portal.run')
+            except Exception:
+                logger.exception('Unknown exception during trio.from_thread.run')
 
     async def handle_event(self, event):
         '''

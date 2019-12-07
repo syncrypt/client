@@ -40,9 +40,8 @@ class AccessLogger(AbstractAccessLogger):
 class SyncryptAPI():
     def __init__(self, app):
         self.app = app
-        self.web_app = None
+        self.web_app = None  # Optional[web.Application]
         self.server = None
-        self.ready = trio.Event()
         self.shutdown = trio.Event()
         self.dead = trio.Event()
 
@@ -362,10 +361,12 @@ class SyncryptAPI():
     async def dispatch_options(self, request):
         return JSONResponse({})
 
-    async def start(self):
+    async def start(self, task_status=trio.TASK_STATUS_IGNORED):
+
         async with trio_asyncio.open_loop():
 
             self.initialize()
+            assert self.web_app is not None
 
             runner = web.AppRunner(self.web_app)
             await trio_asyncio.aio_as_trio(runner.setup)
@@ -376,7 +377,10 @@ class SyncryptAPI():
             await trio_asyncio.aio_as_trio(site.start)
             logger.info("REST API Server started at http://{0.api[host]}:{0.api[port]}"\
                     .format(self.app.config))
-            self.ready.set()
+
+            if task_status:
+                task_status.started()
+
             try:
                 await self.shutdown.wait()
 

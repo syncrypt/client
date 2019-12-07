@@ -100,18 +100,18 @@ class BackendConfigMixin():
 
     @property
     def backend_cls(self):
-        if self._config['remote']['type'] == 'local':
+        if self._config['remote']['type'] == 'local':  # type: ignore
             from .backends import LocalStorageBackend
             return LocalStorageBackend
-        elif self._config['remote']['type'] == 'binary':
+        elif self._config['remote']['type'] == 'binary':  # type: ignore
             from .backends import BinaryStorageBackend
             return BinaryStorageBackend
         else:
-            raise Exception(self._config['remote']['type'])
+            raise Exception(self._config['remote']['type'])  # type: ignore
 
     @property
     def backend_kwargs(self):
-        kwargs = dict(self._config['remote']) # copy dict
+        kwargs = dict(self._config['remote'])  # type: ignore
         if 'ssl' in kwargs and kwargs['type'] == 'binary':
             kwargs['ssl'] = not (kwargs['ssl'].lower() in ['no', 'false', '0'])
         else:

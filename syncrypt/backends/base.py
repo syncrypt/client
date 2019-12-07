@@ -1,6 +1,6 @@
 import asyncio  # pylint: disable=unused-import
 from abc import abstractmethod
-from typing import List, Any, NewType, Union  # pylint: disable=unused-import
+from typing import Any, List, NewType, Optional, Union  # pylint: disable=unused-import
 
 from typing_extensions import Protocol
 
@@ -17,6 +17,10 @@ class StorageBackend(Protocol):
 
     @abstractmethod
     def set_auth(self, username: str, password: str):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def list_keys(self, username: Optional[str] = None):
         raise NotImplementedError()
 
     @abstractmethod

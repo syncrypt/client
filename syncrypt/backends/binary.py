@@ -2,7 +2,6 @@ import logging
 import math
 import ssl
 import struct
-import sys
 from typing import Any, List, Optional, cast  # pylint: disable=unused-import
 
 import certifi
@@ -27,8 +26,6 @@ try:
     from contextlib import asynccontextmanager # type: ignore
 except ImportError: # on Python 3.6
     from async_generator import asynccontextmanager # type: ignore
-
-
 
 
 logger = logging.getLogger(__name__)
@@ -89,16 +86,15 @@ class BinaryStorageConnection():
         self.logger = BinaryStorageConnectionLoggerAdapter(self, logger)
 
         # State
-        self.vault = None # type: Optional[Vault]
-        self.available = trio.Event()
-        self.available.clear()
+        self.vault = None  # type: Optional[Vault]
+        self.available = False
         self.connected = False
         self.connecting = False
 
     @property
     def state(self):
         if self.connected:
-            if self.available.is_set():
+            if self.available:
                 return 'idle'
             else:
                 return 'busy'
@@ -115,6 +111,7 @@ class BinaryStorageConnection():
 
     async def read_term(self, assert_ok=True):
         '''reads a BERT tuple, asserts that first item is "ok"'''
+        assert self.stream is not None
         pl_read = (await self.stream.receive_some(4))
 
         if len(pl_read) != 4:
@@ -156,6 +153,7 @@ class BinaryStorageConnection():
 
     async def write_term(self, *term):
         '''write a BERT tuple'''
+        assert self.stream is not None
         if BINARY_DEBUG:
             self.logger.debug('[WRITE] Unserialized: %s', term)
         packet = bert.encode((Atom(term[0]),) + term[1:])
@@ -169,6 +167,12 @@ class BinaryStorageConnection():
 
         if not self.connected:
             sc = None
+
+            if not self.manager.port:
+                raise ValueError('Manager has no port')
+
+            if not self.manager.host:
+                raise ValueError('Manager has no host')
 
             if self.manager.ssl:
                 sc = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
@@ -244,7 +248,7 @@ class BinaryStorageConnection():
                 login_response = await self.read_term(assert_ok=False)
 
                 if login_response[0] == Atom('ok') and login_response[1] != '':
-                    auth = login_response[1].decode(self.vault.config.encoding)
+                    auth = login_response[1].decode(vault.config.encoding)
                     with vault.config.update_context():
                         vault.config.update('remote', {
                             'auth': auth
@@ -255,7 +259,7 @@ class BinaryStorageConnection():
 
         self.connected = True
         self.connecting = False
-        self.available.set()
+        self.available = True
 
     async def create_vault(self, identity: Identity) -> Revision:
         vault = self.vault
@@ -323,7 +327,7 @@ class BinaryStorageConnection():
         self.connected = False
         self.connecting = False
         self.vault = None
-        self.available.clear()
+        self.available = False
 
     async def upload(self, bundle, identity: Identity) -> Revision:
 
@@ -706,6 +710,8 @@ class BinaryStorageConnection():
     async def download(self, bundle):
 
         vault = self.vault
+        assert vault is not None
+        assert self.stream is not None
 
         self.logger.info('Downloading %s', bundle)
 
@@ -757,7 +763,7 @@ class BinaryStorageConnection():
 
         if not hash_ok:
             # alert server of hash mismatch
-            await self.write_term('invalid_content_hash', bundle.store_hash, self.vault.revision)
+            await self.write_term('invalid_content_hash', bundle.store_hash, vault.revision)
 
 
     async def vault_size(self, vault):
@@ -769,7 +775,7 @@ class BinaryStorageConnection():
         size = await self.read_response()
         return size
 
-    async def list_keys(self, user=None):
+    async def list_keys(self, user: Optional[str] = None):
         if user:
             await self.write_term('list_user_keys', user)
         else:
@@ -860,6 +866,7 @@ class BinaryStorageConnection():
         vault id on the server. If it is not given, this will delete the current vault for this
         connection.
         '''
+        assert self.vault is not None
         if vault_id is None:
             vault_id = self.vault.config.id
         self.logger.info('Wiping vault: %s', vault_id)
@@ -952,7 +959,7 @@ class BinaryStorageManager():
                              ''.join([sign_for_state(slot.state) for slot in self.slots]))
 
             for conn in self.slots:
-                if conn.connected and conn.available.is_set():
+                if conn.connected and conn.available:
                     logger.debug('Closing due to idleness: %s', conn)
                     await conn.disconnect()
                     break
@@ -970,8 +977,8 @@ class BinaryStorageManager():
         prio_slots = sorted(self.slots, key=lambda c: c.vault == vault, reverse=True)
 
         for conn in prio_slots:
-            if conn.connected and conn.available.is_set():
-                conn.available.clear()
+            if conn.connected and conn.available:
+                conn.available = False
                 if conn.vault != vault:
                     logger.debug('Found an available connection, but we need to switch the vault to %s', vault)
                     conn.connecting = True
@@ -986,7 +993,7 @@ class BinaryStorageManager():
                     logger.debug('Found an available connection for %s', vault)
                 else:
                     logger.debug('Found an available connection %s', conn)
-                conn.available.clear()
+                conn.available = False
                 return conn
 
         # Try to find an unconnected slot and open a connection
@@ -997,7 +1004,7 @@ class BinaryStorageManager():
                     await conn.connect()
                     if not skip_login:
                         await conn.login(vault)
-                    conn.available.clear()
+                    conn.available = False
                     logger.debug("Choosing %s", conn)
                     return conn
                 except:
@@ -1005,13 +1012,13 @@ class BinaryStorageManager():
                     raise
                 break
 
-        if len(self.slots) < self.concurrency:
+        if len(self.slots) < (1 if self.concurrency is None else self.concurrency):
             # spawn a new connection
             conn = BinaryStorageConnection(self)
             await conn.connect()
             if not skip_login:
                 await conn.login(vault)
-            conn.available.clear()
+            conn.available = False
             self.slots.append(conn)
             logger.debug("Created and using %s", conn)
             return conn
@@ -1094,7 +1101,7 @@ class BinaryStorageBackend(StorageBackend):
             await conn.clear_connection()
             raise
         finally:
-            conn.available.set()
+            conn.available = True
 
     async def init(self, identity: Identity) -> Revision:
         self.auth = None
@@ -1172,6 +1179,10 @@ class BinaryStorageBackend(StorageBackend):
         async with self._acquire_connection() as conn:
             return (await conn.list_vaults())
 
+    async def list_keys(self, user: Optional[str] = None):
+        async with self._acquire_connection() as conn:
+            return (await conn.list_keys(user))
+
     async def user_info(self):
         async with self._acquire_connection() as conn:
             return (await conn.user_info())
@@ -1190,9 +1201,3 @@ class BinaryStorageBackend(StorageBackend):
                 result = await getattr(conn, name)(*args, **kwargs)
             return result
         return myco
-
-    async def close(self):
-        # Closing a binary connection is a no-op, because unused connections
-        # automatically close and we wanna keep the connection to the server
-        # in case we wanna reuse the slot later.
-        pass
