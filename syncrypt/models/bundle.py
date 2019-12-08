@@ -57,6 +57,14 @@ class Bundle(MetadataHolder, Base):
         h.update(self.encode_path(self.relpath))
         self.store_hash = h.hexdigest()
 
+    def __hash__(self):
+        return hash(self.vault_id + self.relpath)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Bundle):
+            return NotImplemented
+        return self.vault_id == other.vault_id and self.relpath == other.relpath
+
     @property
     def _metadata(self):
         return {
@@ -97,7 +105,8 @@ class Bundle(MetadataHolder, Base):
 
     async def load_key(self):
         async with await trio.open_file(self.path_metadata, 'rb') as md_file:
-            metadata_contents = await md_file.read() # type: ignore
+            metadata_contents = await md_file.read()  # type: ignore
+
         metadata = umsgpack.loads(metadata_contents)
 
         if not isinstance(metadata, dict):

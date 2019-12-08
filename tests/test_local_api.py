@@ -307,11 +307,11 @@ async def test_api_watchdog(local_daemon_app, local_api_client, empty_vault):
     while app.vaults[0].state in (VaultState.UNINITIALIZED, VaultState.SYNCING):
         await trio.sleep(0.1)
 
-    # Create a new file and do three changes to it
+    # Create a new file and do five fast-paced changes to it
     for i in range(3):
         with open(os.path.join(test_vault.folder, "test.txt"), "a") as f:
-            f.write('hello')
-        await trio.sleep(0.2)
+            f.write('hello' + str(i))
+        await trio.sleep(0.1)
 
     # TODO
     await trio.sleep(8.0)
@@ -320,3 +320,5 @@ async def test_api_watchdog(local_daemon_app, local_api_client, empty_vault):
     assert len(c['items']) >= 3
     assert c['items'][-1]['operation'] == "OP_UPLOAD"
     assert c['items'][-1]['path'] == "test.txt"
+    # Despite multiple changes to test.txt, there should only be one upload
+    assert c['items'][-2]['operation'] != "OP_UPLOAD"
