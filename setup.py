@@ -162,7 +162,7 @@ setup(
         'async_generator', # for python 3.6
         'typing_extensions>=3.7.2',
         'iso8601',
-        'pycryptodomex==3.9.0',
+        'pycryptodomex==3.19.1',
         'python-snappy',
         'smokesignal',
         'sqlalchemy>=1.2.13',
